@@ -1,5 +1,15 @@
-import { Bell, Circle, CircleDashed, CircleDot, Plus, RefreshCw, Settings } from 'lucide-react'
-import { useMemo } from 'react'
+import {
+  Bell,
+  Circle,
+  CircleDashed,
+  CircleDot,
+  Plus,
+  RefreshCw,
+  Search,
+  Settings,
+  X,
+} from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 import { SessionsSection } from '@/components/SessionsSection'
@@ -86,10 +96,28 @@ export function Sidebar({
   const { t } = useTranslation()
   const formatTime = useFormatTime()
   const navigate = useNavigate()
+  const [searchQuery, setSearchQuery] = useState('')
+  const trimmedQuery = searchQuery.trim()
   const openSessionKeys = useMemo(() => new Set(openSessions.keys()), [openSessions])
   const hasOpen = openSessions.size > 0
   const hasArchived = projects.some((p) => p.sessions.some((s) => s.archived))
   const { applyOrder, moveSlug } = useProjectOrder()
+
+  const searchHasResults = useMemo(() => {
+    if (!trimmedQuery) return true
+    const q = trimmedQuery.toLowerCase()
+    for (const p of projects) {
+      for (const s of p.sessions) {
+        if (s.id.toLowerCase().includes(q)) return true
+        if (s.preview?.toLowerCase().includes(q)) return true
+      }
+    }
+    for (const launch of openSessions.values()) {
+      if (launch.sessionKey.toLowerCase().includes(q)) return true
+      if (launch.label?.toLowerCase().includes(q)) return true
+    }
+    return false
+  }, [trimmedQuery, projects, openSessions])
 
   const reloadTooltip = refreshedAt
     ? t('sidebar.reloadListAt', { time: formatTime(refreshedAt) })
@@ -114,6 +142,30 @@ export function Sidebar({
         <Button size="sm" variant="primary" onClick={onOpenNewSession}>
           <Plus size={14} /> {t('sidebar.newSession')}
         </Button>
+        <div className="relative">
+          <Search
+            size={12}
+            className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('sidebar.search')}
+            aria-label={t('sidebar.searchAria')}
+            className="w-full rounded border border-border bg-background py-1 pl-7 pr-7 text-xs text-foreground placeholder:text-muted-foreground focus:border-sky-500 focus:outline-none"
+          />
+          {searchQuery ? (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              aria-label={t('sidebar.searchClear')}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"
+            >
+              <X size={12} />
+            </button>
+          ) : null}
+        </div>
         {error ? (
           <p className="text-xs text-red-400">{t('common.errorPrefix', { message: error })}</p>
         ) : null}
@@ -142,6 +194,7 @@ export function Sidebar({
               renderState={renderState}
               applyProjectOrder={applyOrder}
               onReorderProject={moveSlug}
+              searchQuery={trimmedQuery}
             />
             <hr className="my-2 border-t border-border/60" />
           </>
@@ -149,6 +202,12 @@ export function Sidebar({
 
         {projects.length === 0 && !loading ? (
           <p className="px-2 py-3 text-xs text-muted-foreground">{t('sidebar.noSessions')}</p>
+        ) : null}
+
+        {trimmedQuery && !searchHasResults ? (
+          <p className="px-2 py-3 text-xs text-muted-foreground">
+            {t('sidebar.searchEmpty', { query: trimmedQuery })}
+          </p>
         ) : null}
 
         <SessionsSection
@@ -192,6 +251,7 @@ export function Sidebar({
               renderState={renderState}
               applyProjectOrder={applyOrder}
               onReorderProject={moveSlug}
+              searchQuery={trimmedQuery}
             />
           </>
         ) : null}

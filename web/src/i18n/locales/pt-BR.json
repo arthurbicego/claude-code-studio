@@ -27,6 +27,10 @@
     "reloadList": "Recarregar lista",
     "reloadListAt": "Recarregar lista · {{time}}",
     "noSessions": "Nenhuma sessão encontrada. Crie uma nova.",
+    "search": "Buscar sessões…",
+    "searchAria": "Buscar sessões por texto ou ID",
+    "searchClear": "Limpar busca",
+    "searchEmpty": "Nenhum resultado para \"{{query}}\".",
     "section": {
       "open": "Abertas",
       "history": "Histórico",

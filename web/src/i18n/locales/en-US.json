@@ -27,6 +27,10 @@
     "reloadList": "Reload list",
     "reloadListAt": "Reload list · {{time}}",
     "noSessions": "No sessions found. Create a new one.",
+    "search": "Search sessions…",
+    "searchAria": "Search sessions by text or ID",
+    "searchClear": "Clear search",
+    "searchEmpty": "No results for \"{{query}}\".",
     "section": {
       "open": "Open",
       "history": "History",
