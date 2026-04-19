@@ -288,6 +288,7 @@ export default function App() {
         <Toolbar
           disabled={!activeLaunch}
           status={status}
+          sessionId={activeLaunch ? activeSessionKey : null}
           openPanelKinds={openPanelKinds}
           onTogglePanel={togglePanel}
         />
