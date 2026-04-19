@@ -1,15 +1,7 @@
-import {
-  Archive,
-  ArchiveRestore,
-  ArrowDownAZ,
-  ChevronRight,
-  FolderTree,
-  List,
-  Trash2,
-  X,
-} from 'lucide-react'
+import { ArrowDownAZ, ChevronRight, FolderTree, List, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { CopyableField } from '@/components/ui/CopyableField'
+import { DropdownMenu, type DropdownMenuItem } from '@/components/ui/DropdownMenu'
 import { InfoPopover } from '@/components/ui/InfoPopover'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { cn } from '@/lib/utils'
@@ -361,6 +353,12 @@ function SessionRow({
 }: RowProps) {
   const isArchived = variant === 'archived'
   const isOpen = variant === 'open'
+  const menuItems: DropdownMenuItem[] = [
+    isArchived
+      ? { label: 'Desarquivar', onSelect: () => onUnarchive(session.id) }
+      : { label: 'Arquivar', onSelect: () => onArchive(session.id) },
+    { label: 'Apagar', destructive: true, onSelect: () => onDelete(session) },
+  ]
   return (
     <div
       className={cn(
@@ -385,7 +383,7 @@ function SessionRow({
           {new Date(session.mtime).toLocaleString('pt-BR')}
         </span>
       </button>
-      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/row:opacity-100">
+      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
         {isOpen && onCloseSession ? (
           <Tooltip content="Fechar sessão">
             <button
@@ -400,45 +398,7 @@ function SessionRow({
             </button>
           </Tooltip>
         ) : null}
-        {isArchived ? (
-          <Tooltip content="Desarquivar">
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onUnarchive(session.id)
-              }}
-              className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"
-              aria-label="Desarquivar"
-            >
-              <ArchiveRestore size={12} />
-            </button>
-          </Tooltip>
-        ) : (
-          <Tooltip content="Arquivar">
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onArchive(session.id)
-              }}
-              className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"
-              aria-label="Arquivar"
-            >
-              <Archive size={12} />
-            </button>
-          </Tooltip>
-        )}
-        <Tooltip content="Apagar definitivamente">
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onDelete(session)
-            }}
-            className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-red-300 cursor-pointer"
-            aria-label="Apagar"
-          >
-            <Trash2 size={12} />
-          </button>
-        </Tooltip>
+        <DropdownMenu items={menuItems} ariaLabel="Ações da sessão" />
       </div>
     </div>
   )
