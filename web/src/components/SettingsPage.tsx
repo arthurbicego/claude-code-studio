@@ -21,6 +21,13 @@ import type { Project, SandboxPlatform, SandboxScope, SandboxSettings } from '@/
 
 type TabId = 'sessions' | 'sandbox' | 'memory' | 'agents' | 'skills'
 
+type StandbyUnit = 'seconds' | 'minutes'
+
+const STANDBY_UNIT_OPTIONS: { id: StandbyUnit; label: string }[] = [
+  { id: 'seconds', label: 'Segundos' },
+  { id: 'minutes', label: 'Minutos' },
+]
+
 type JsonFieldState = {
   text: string
   error: string | null
@@ -137,7 +144,8 @@ export function SettingsPage() {
     scopeNeedsProject(sandboxScope) ? sandboxProjectCwd : null,
   )
 
-  const [standbyMinutes, setStandbyMinutes] = useState<string>('')
+  const [standbyUnit, setStandbyUnit] = useState<StandbyUnit>('minutes')
+  const [standbyValue, setStandbyValue] = useState<string>('')
   const [sandbox, setSandbox] = useState<SandboxSettings>(emptySandbox)
   const [jsonState, setJsonState] = useState<Record<JsonFieldKey, JsonFieldState>>(() => ({
     network: { text: '', error: null },
@@ -156,9 +164,20 @@ export function SettingsPage() {
     }
   }, [sandboxScope, sandboxProjectCwd, projects])
 
+  /* eslint-disable react-hooks/set-state-in-effect -- hydrate form state from server data when it arrives or scope changes */
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate form state from server data when it arrives or scope changes
-    if (config) setStandbyMinutes(String(Math.round(config.standbyTimeoutMs / 60000)))
+    if (!config) return
+    const ms = config.standbyTimeoutMs
+    if (ms % 60000 === 0) {
+      setStandbyUnit('minutes')
+      setStandbyValue(String(ms / 60000))
+    } else {
+      setStandbyUnit('seconds')
+      setStandbyValue(String(Math.round(ms / 1000)))
+    }
+  }, [config])
+
+  useEffect(() => {
     if (cs.settings) {
       setSandbox(cs.settings.sandbox)
       setJsonState({
@@ -176,11 +195,31 @@ export function SettingsPage() {
         seccomp: { text: '', error: null },
       })
     }
-  }, [config, cs.settings])
+  }, [cs.settings])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  const minMinutes = bounds ? Math.round(bounds.standbyTimeoutMs.min / 60000) : 1
-  const maxMinutes = bounds ? Math.round(bounds.standbyTimeoutMs.max / 60000) : 1440
-  const defaultMinutes = defaults ? Math.round(defaults.standbyTimeoutMs / 60000) : 10
+  const standbyFactor = standbyUnit === 'minutes' ? 60000 : 1000
+  const standbyUnitLabel = standbyUnit === 'minutes' ? 'minutos' : 'segundos'
+  const minStandbyMs = bounds?.standbyTimeoutMs.min ?? 60000
+  const maxStandbyMs = bounds?.standbyTimeoutMs.max ?? 24 * 60 * 60 * 1000
+  const defaultStandbyMs = defaults?.standbyTimeoutMs ?? 10 * 60 * 1000
+  const minStandby = Math.max(1, Math.ceil(minStandbyMs / standbyFactor))
+  const maxStandby = Math.floor(maxStandbyMs / standbyFactor)
+  const defaultStandby = Math.round(defaultStandbyMs / standbyFactor)
+
+  const changeStandbyUnit = (next: StandbyUnit) => {
+    if (next === standbyUnit) return
+    const current = Number(standbyValue)
+    if (Number.isFinite(current)) {
+      const ms = current * standbyFactor
+      const nextFactor = next === 'minutes' ? 60000 : 1000
+      const converted = ms / nextFactor
+      setStandbyValue(
+        Number.isInteger(converted) ? String(converted) : String(Number(converted.toFixed(3))),
+      )
+    }
+    setStandbyUnit(next)
+  }
 
   const linuxEnabled = sandbox.enabledPlatforms.includes('linux')
 
@@ -193,9 +232,10 @@ export function SettingsPage() {
     !scopeNeedsProject(sandboxScope) || sandboxProjectCwd != null
 
   const save = async () => {
-    const n = Number(standbyMinutes)
-    if (!Number.isFinite(n) || n < minMinutes || n > maxMinutes) {
-      setSaveError(`Standby deve estar entre ${minMinutes} e ${maxMinutes} minutos.`)
+    const n = Number(standbyValue)
+    const ms = Math.round(n * standbyFactor)
+    if (!Number.isFinite(n) || ms < minStandbyMs || ms > maxStandbyMs) {
+      setSaveError(`Standby deve estar entre ${minStandby} e ${maxStandby} ${standbyUnitLabel}.`)
       setTab('sessions')
       return
     }
@@ -222,7 +262,7 @@ export function SettingsPage() {
     setSaving(true)
     setSaveError(null)
     try {
-      await update({ standbyTimeoutMs: Math.round(n * 60000) })
+      await update({ standbyTimeoutMs: ms })
       if (canSaveSandbox) {
         const payload: SandboxSettings = {
           ...sandbox,
@@ -294,17 +334,38 @@ export function SettingsPage() {
           ) : tab === 'sessions' ? (
             <Section title="Sessões">
               <Field
-                label="Timeout de standby (minutos)"
-                hint={`Sessões em standby são finalizadas após este tempo. Entre ${minMinutes} e ${maxMinutes}. Padrão: ${defaultMinutes}.`}
+                label={`Timeout de standby (${standbyUnitLabel})`}
+                hint={`Sessões em standby são finalizadas após este tempo. Entre ${minStandby} e ${maxStandby} ${standbyUnitLabel}. Padrão: ${defaultStandby}.`}
               >
-                <input
-                  type="number"
-                  min={minMinutes}
-                  max={maxMinutes}
-                  value={standbyMinutes}
-                  onChange={(e) => setStandbyMinutes(e.target.value)}
-                  className="w-32 rounded border border-border bg-background px-2 py-1.5 font-mono text-xs text-foreground focus:border-sky-500 focus:outline-none"
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={minStandby}
+                    max={maxStandby}
+                    value={standbyValue}
+                    onChange={(e) => setStandbyValue(e.target.value)}
+                    className="w-32 rounded border border-border bg-background px-2 py-1.5 font-mono text-xs text-foreground focus:border-sky-500 focus:outline-none"
+                  />
+                  <div className="flex rounded border border-border overflow-hidden">
+                    {STANDBY_UNIT_OPTIONS.map((opt) => {
+                      const isActive = opt.id === standbyUnit
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => changeStandbyUnit(opt.id)}
+                          className={`cursor-pointer px-3 py-1.5 text-xs font-medium transition-colors ${
+                            isActive
+                              ? 'bg-sky-700 text-white'
+                              : 'bg-background text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
               </Field>
             </Section>
           ) : tab === 'memory' ? (
