@@ -96,9 +96,10 @@ export function SessionsSection({
 
   const filteredProjects = useMemo(() => {
     const sessionFilter = (s: SessionMeta) => {
-      if (variant === 'archived') return s.archived
-      if (variant === 'open') return !s.archived && (openSessionKeys?.has(s.id) ?? false)
-      return !s.archived && !(openSessionKeys?.has(s.id) ?? false)
+      const isOpen = openSessionKeys?.has(s.id) ?? false
+      if (variant === 'archived') return s.archived && !isOpen
+      if (variant === 'open') return isOpen
+      return !s.archived && !isOpen
     }
     const filtered = projects
       .map((p) => ({
