@@ -35,6 +35,7 @@ function buildWsUrl(launch: SessionLaunch, skip?: Props['skipDefaults']) {
     ) {
       params.set('permissionMode', launch.permissionMode)
     }
+    if (launch.worktree) params.set('worktree', launch.worktree)
   }
   const proto = location.protocol === 'https:' ? 'wss' : 'ws'
   return `${proto}://${location.host}/pty?${params.toString()}`

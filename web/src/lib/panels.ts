@@ -5,6 +5,7 @@ export const PANEL_LABELS: Record<PanelKind, string> = {
   terminal: 'Terminal',
   tasks: 'Tasks',
   plan: 'Plan',
+  worktrees: 'Worktrees',
 }
 
 export const MAX_PER_COLUMN = 2

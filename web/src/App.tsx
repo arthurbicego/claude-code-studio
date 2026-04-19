@@ -6,18 +6,32 @@ import { SessionActions } from '@/components/SessionActions'
 import { SessionFooter } from '@/components/SessionFooter'
 import { NewSessionModal } from '@/components/NewSessionModal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import {
+  WorktreeCloseDialog,
+  type WorktreeCloseChoice,
+} from '@/components/WorktreeCloseDialog'
 import { ColumnResizer } from '@/components/panels/ColumnResizer'
 import { RowResizer } from '@/components/panels/RowResizer'
 import { DiffPanel } from '@/components/panels/DiffPanel'
 import { ShellPanel } from '@/components/panels/ShellPanel'
 import { TasksPanel } from '@/components/panels/TasksPanel'
 import { PlanPanel } from '@/components/panels/PlanPanel'
+import { WorktreesPanel } from '@/components/panels/WorktreesPanel'
 import { useSessionList } from '@/hooks/useSessionList'
 import { useSessionDefaults } from '@/hooks/useSessionDefaults'
 import { useLiveSessions } from '@/hooks/useLiveSessions'
 import { useSessionFooter } from '@/hooks/useSessionFooter'
 import { layoutColumns } from '@/lib/panels'
-import type { OpenPanel, PanelKind, Project, SessionLaunch, SessionMeta } from '@/types'
+import type {
+  OpenPanel,
+  PanelKind,
+  Project,
+  SessionFooter as SessionFooterData,
+  SessionLaunch,
+  SessionMeta,
+  Worktree,
+  WorktreesResult,
+} from '@/types'
 
 function newSessionKey(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -38,6 +52,17 @@ export default function App() {
   const [openSessions, setOpenSessions] = useState<Map<string, SessionLaunch>>(new Map())
   const [activeSessionKey, setActiveSessionKey] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [modalInitial, setModalInitial] = useState<
+    { cwd?: string; isolate?: boolean } | null
+  >(null)
+  const [pendingCloseWorktree, setPendingCloseWorktree] = useState<{
+    sessionKey: string
+    worktree: Worktree
+    base: string | null
+    projectCwd: string
+  } | null>(null)
+  const [closingBusy, setClosingBusy] = useState(false)
+  const [closingError, setClosingError] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<SessionMeta | null>(null)
   const [pendingArchive, setPendingArchive] = useState<
     { id: string; action: 'archive' | 'unarchive' } | null
@@ -51,6 +76,13 @@ export default function App() {
 
   const activeLaunch = activeSessionKey ? openSessions.get(activeSessionKey) ?? null : null
   const footer = useSessionFooter(activeLaunch ? activeSessionKey : null)
+  const liveCwds = useMemo(() => {
+    const set = new Set<string>()
+    liveSessions.forEach((s) => {
+      if (s.cwd) set.add(s.cwd)
+    })
+    return set
+  }, [liveSessions])
   const openPanels = useMemo(
     () => (activeSessionKey ? openPanelsBySession.get(activeSessionKey) ?? [] : []),
     [openPanelsBySession, activeSessionKey],
@@ -176,9 +208,33 @@ export default function App() {
     (launch: SessionLaunch) => {
       activateLaunch({ ...launch, sessionKey: launch.sessionKey || newSessionKey() })
       setModalOpen(false)
+      setModalInitial(null)
     },
     [activateLaunch],
   )
+
+  const launchInWorktree = useCallback(
+    (worktreePath: string) => {
+      activateLaunch({
+        sessionKey: newSessionKey(),
+        cwd: worktreePath,
+        model: (defaults.model as SessionLaunch['model']) ?? undefined,
+        effort: (defaults.effort as SessionLaunch['effort']) ?? undefined,
+        permissionMode: (defaults.permissionMode as SessionLaunch['permissionMode']) ?? undefined,
+      })
+    },
+    [activateLaunch, defaults],
+  )
+
+  const openCreateWorktreeModal = useCallback((cwd: string) => {
+    setModalInitial({ cwd, isolate: true })
+    setModalOpen(true)
+  }, [])
+
+  const openNewSessionModal = useCallback(() => {
+    setModalInitial(null)
+    setModalOpen(true)
+  }, [])
 
   const closeSession = useCallback(
     async (sessionKey: string) => {
@@ -205,6 +261,117 @@ export default function App() {
       })
     },
     [openSessions],
+  )
+
+  const closeSessionWithGuard = useCallback(
+    async (sessionKey: string) => {
+      const launch = openSessions.get(sessionKey)
+      if (!launch) {
+        await closeSession(sessionKey)
+        return
+      }
+      try {
+        const footerRes = await fetch(
+          `/api/sessions/${encodeURIComponent(sessionKey)}/footer`,
+          { cache: 'no-store' },
+        )
+        if (!footerRes.ok) throw new Error('footer unavailable')
+        const footer = (await footerRes.json()) as SessionFooterData
+        if (!footer?.worktree) {
+          await closeSession(sessionKey)
+          return
+        }
+        const params = new URLSearchParams({ cwd: launch.cwd })
+        const wtRes = await fetch(`/api/worktrees?${params.toString()}`, { cache: 'no-store' })
+        if (!wtRes.ok) throw new Error('worktrees unavailable')
+        const data = (await wtRes.json()) as WorktreesResult
+        const match = data.worktrees.find((w) => w.path === footer.worktree?.path) ?? null
+        if (!match || match.isMain) {
+          await closeSession(sessionKey)
+          return
+        }
+        const needsDecision = (!match.clean || match.ahead > 0) && match.liveSessionCount <= 1
+        if (!needsDecision) {
+          await closeSession(sessionKey)
+          return
+        }
+        setClosingError(null)
+        setPendingCloseWorktree({
+          sessionKey,
+          worktree: match,
+          base: data.base,
+          projectCwd: launch.cwd,
+        })
+      } catch {
+        await closeSession(sessionKey)
+      }
+    },
+    [openSessions, closeSession],
+  )
+
+  const handleWorktreeCloseChoice = useCallback(
+    async (choice: WorktreeCloseChoice, payload: { commitMessage?: string }) => {
+      if (!pendingCloseWorktree) return
+      const { sessionKey, worktree, projectCwd, base } = pendingCloseWorktree
+      setClosingBusy(true)
+      setClosingError(null)
+      try {
+        if (choice === 'commit') {
+          if (!payload.commitMessage) {
+            setClosingError('mensagem de commit obrigatória')
+            return
+          }
+          const res = await fetch('/api/worktrees/commit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              cwd: projectCwd,
+              path: worktree.path,
+              message: payload.commitMessage,
+            }),
+          })
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}))
+            throw new Error(body.error || `HTTP ${res.status}`)
+          }
+          await closeSession(sessionKey)
+        } else if (choice === 'keep') {
+          await closeSession(sessionKey)
+        } else if (choice === 'merge') {
+          await closeSession(sessionKey)
+          const res = await fetch('/api/worktrees/merge', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              cwd: projectCwd,
+              path: worktree.path,
+              base: base ?? undefined,
+            }),
+          })
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}))
+            throw new Error(body.error || `HTTP ${res.status}`)
+          }
+        } else if (choice === 'discard') {
+          await closeSession(sessionKey)
+          const res = await fetch('/api/worktrees/discard', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cwd: projectCwd, path: worktree.path }),
+          })
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}))
+            throw new Error(body.error || `HTTP ${res.status}`)
+          }
+        }
+        setPendingCloseWorktree(null)
+      } catch (err) {
+        setClosingError(err instanceof Error ? err.message : String(err))
+      } finally {
+        setClosingBusy(false)
+      }
+    },
+    [pendingCloseWorktree, closeSession],
   )
 
   useEffect(() => {
@@ -287,9 +454,9 @@ export default function App() {
         liveSessions={liveSessions}
         activeSessionKey={activeSessionKey}
         onRefresh={refresh}
-        onOpenNewSession={() => setModalOpen(true)}
+        onOpenNewSession={openNewSessionModal}
         onResumeSession={onResumeSession}
-        onCloseSession={closeSession}
+        onCloseSession={closeSessionWithGuard}
         onArchiveSession={(id) => setPendingArchive({ id, action: 'archive' })}
         onUnarchiveSession={(id) => setPendingArchive({ id, action: 'unarchive' })}
         onDeleteSession={(s) => setPendingDelete(s)}
@@ -365,10 +532,17 @@ export default function App() {
                                 sessionId={activeSessionKey}
                                 onClose={() => closePanel(panel.kind, panel.id)}
                               />
-                            ) : (
+                            ) : panel.kind === 'plan' ? (
                               <PlanPanel
                                 sessionId={activeSessionKey}
                                 onClose={() => closePanel(panel.kind, panel.id)}
+                              />
+                            ) : (
+                              <WorktreesPanel
+                                cwd={activeLaunch.cwd}
+                                onClose={() => closePanel(panel.kind, panel.id)}
+                                onLaunchInWorktree={launchInWorktree}
+                                onOpenCreate={openCreateWorktreeModal}
                               />
                             )}
                           </div>
@@ -396,7 +570,12 @@ export default function App() {
         open={modalOpen}
         defaults={defaults}
         projects={projects}
-        onClose={() => setModalOpen(false)}
+        liveCwds={liveCwds}
+        initial={modalInitial}
+        onClose={() => {
+          setModalOpen(false)
+          setModalInitial(null)
+        }}
         onLaunch={onLaunchNew}
       />
 
@@ -413,6 +592,20 @@ export default function App() {
         confirmLabel={pendingArchive?.action === 'unarchive' ? 'Desarquivar' : 'Arquivar'}
         onConfirm={confirmArchive}
         onClose={() => setPendingArchive(null)}
+      />
+
+      <WorktreeCloseDialog
+        open={!!pendingCloseWorktree}
+        worktree={pendingCloseWorktree?.worktree ?? null}
+        projectCwd={pendingCloseWorktree?.projectCwd ?? null}
+        base={pendingCloseWorktree?.base ?? null}
+        pending={closingBusy}
+        error={closingError}
+        onChoose={handleWorktreeCloseChoice}
+        onCancel={() => {
+          setPendingCloseWorktree(null)
+          setClosingError(null)
+        }}
       />
 
       <ConfirmDialog

@@ -3,7 +3,7 @@ const expressWs = require('express-ws');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 const pty = require('node-pty');
 
 const PORT = process.env.PORT || 3000;
@@ -1146,6 +1146,7 @@ function buildFooterPayload(id) {
   const cwd = cache?.workspace?.current_dir || cache?.cwd || null;
   const { branch, dirty } = gitInfo(cwd);
   const { added: linesAdded, removed: linesRemoved } = uncommittedLineStats(cwd);
+  const worktree = detectWorktree(cwd);
 
   const ctxPct = cache?.context_window?.used_percentage;
   const exceeds200k = cache?.exceeds_200k_tokens === true;
@@ -1173,6 +1174,7 @@ function buildFooterPayload(id) {
       try { return fs.statSync(path.join(STATUSLINE_CACHE_DIR, `${id}.json`)).mtimeMs; } catch { return null; }
     })() : null,
     globalUpdatedAt: global?.at ? global.at * 1000 : null,
+    worktree,
   };
 }
 
@@ -1198,6 +1200,127 @@ function runGit(cwd, args) {
   }
 }
 
+function runGitArgs(cwd, args) {
+  try {
+    return execFileSync('git', ['--no-optional-locks', ...args], {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      maxBuffer: 16 * 1024 * 1024,
+    });
+  } catch {
+    return '';
+  }
+}
+
+function runGitArgsOrThrow(cwd, args) {
+  return execFileSync('git', ['--no-optional-locks', ...args], {
+    cwd,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    maxBuffer: 16 * 1024 * 1024,
+  });
+}
+
+const BRANCH_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,255}$/;
+const WORKTREE_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+
+function listWorktrees(cwd) {
+  const raw = runGitArgs(cwd, ['worktree', 'list', '--porcelain']);
+  if (!raw) return [];
+  const entries = [];
+  let current = null;
+  const flush = () => { if (current) { entries.push(current); current = null; } };
+  for (const rawLine of raw.split('\n')) {
+    const line = rawLine.replace(/\r$/, '');
+    if (!line) { flush(); continue; }
+    const sp = line.indexOf(' ');
+    const key = sp === -1 ? line : line.slice(0, sp);
+    const val = sp === -1 ? '' : line.slice(sp + 1);
+    if (key === 'worktree') {
+      flush();
+      current = { path: val, branch: null, head: null, bare: false, detached: false, prunable: false };
+    } else if (current && key === 'HEAD') current.head = val;
+    else if (current && key === 'branch') current.branch = val.replace(/^refs\/heads\//, '');
+    else if (current && key === 'bare') current.bare = true;
+    else if (current && key === 'detached') current.detached = true;
+    else if (current && key === 'prunable') current.prunable = true;
+  }
+  flush();
+  return entries;
+}
+
+function worktreeStatus(wtPath) {
+  if (!wtPath || !fs.existsSync(wtPath)) return { clean: true, modifiedCount: 0 };
+  const status = runGitArgs(wtPath, ['status', '--porcelain']);
+  const lines = status.split('\n').map((s) => s.trim()).filter(Boolean);
+  return { clean: lines.length === 0, modifiedCount: lines.length };
+}
+
+function worktreeAheadBehind(wtPath, base) {
+  if (!wtPath || !base) return { ahead: 0, behind: 0 };
+  const out = runGitArgs(wtPath, ['rev-list', '--left-right', '--count', `${base}...HEAD`]).trim();
+  if (!out) return { ahead: 0, behind: 0 };
+  const parts = out.split(/\s+/);
+  if (parts.length !== 2) return { ahead: 0, behind: 0 };
+  return { behind: parseInt(parts[0], 10) || 0, ahead: parseInt(parts[1], 10) || 0 };
+}
+
+function worktreeDiffStat(wtPath, base) {
+  if (!wtPath || !base) return { added: 0, removed: 0 };
+  const raw = runGitArgs(wtPath, ['diff', '--numstat', `${base}...HEAD`]);
+  return parseNumstat(raw);
+}
+
+function guessDefaultBranch(cwd) {
+  const head = runGitArgs(cwd, ['symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD']).trim();
+  if (head) return head.replace(/^refs\/remotes\//, '');
+  for (const cand of ['main', 'master']) {
+    if (runGitArgs(cwd, ['rev-parse', '--verify', '--quiet', cand]).trim()) return cand;
+  }
+  return '';
+}
+
+function detectWorktree(cwd) {
+  if (!cwd || !fs.existsSync(cwd)) return null;
+  const gitDir = runGitArgs(cwd, ['rev-parse', '--git-dir']).trim();
+  const commonDir = runGitArgs(cwd, ['rev-parse', '--git-common-dir']).trim();
+  if (!gitDir || !commonDir) return null;
+  const absGit = path.isAbsolute(gitDir) ? gitDir : path.resolve(cwd, gitDir);
+  const absCommon = path.isAbsolute(commonDir) ? commonDir : path.resolve(cwd, commonDir);
+  try {
+    const realGit = fs.realpathSync(absGit);
+    const realCommon = fs.realpathSync(absCommon);
+    if (realGit === realCommon) return null;
+  } catch {
+    if (absGit === absCommon) return null;
+  }
+  const top = runGitArgs(cwd, ['rev-parse', '--show-toplevel']).trim();
+  if (!top) return null;
+  return { path: top, name: path.basename(top) };
+}
+
+function liveSessionWorkspaces() {
+  const counts = new Map();
+  for (const [key, entry] of liveSessions) {
+    let target = entry.cwd || null;
+    try {
+      const cache = readJsonSafe(path.join(STATUSLINE_CACHE_DIR, `${key}.json`));
+      const wd = cache?.workspace?.current_dir || cache?.cwd;
+      if (wd) target = wd;
+    } catch {}
+    if (!target) continue;
+    let resolved = target;
+    try { resolved = fs.realpathSync(target); } catch {}
+    counts.set(resolved, (counts.get(resolved) || 0) + 1);
+  }
+  return counts;
+}
+
+function realpathSafe(p) {
+  try { return fs.realpathSync(p); } catch { return p; }
+}
+
 app.get('/api/sessions/:id/diff', (req, res) => {
   res.set('Cache-Control', 'no-store');
   const id = String(req.params.id || '').trim();
@@ -1212,6 +1335,213 @@ app.get('/api/sessions/:id/diff', (req, res) => {
   const untrackedRaw = runGit(cwd, 'ls-files --others --exclude-standard');
   const untracked = untrackedRaw.split('\n').map((s) => s.trim()).filter(Boolean);
   res.json({ cwd, branch, unstaged, staged, untracked });
+});
+
+function pickMainWorktree(entries) {
+  for (const e of entries) {
+    if (!e.detached && !e.bare && !e.prunable) return e;
+  }
+  return entries[0] || null;
+}
+
+function isPathWithinCwd(candidate, cwd) {
+  if (!candidate || !cwd) return false;
+  const resolved = realpathSafe(path.resolve(candidate));
+  const base = realpathSafe(path.resolve(cwd));
+  return resolved === base || resolved.startsWith(base + path.sep);
+}
+
+app.get('/api/worktrees', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const cwd = isAllowedProjectCwd(req.query.cwd);
+  if (!cwd) return res.status(400).json({ error: 'cwd inválido' });
+  const rawBase = typeof req.query.base === 'string' ? req.query.base.trim() : '';
+  const base = rawBase && BRANCH_NAME_RE.test(rawBase) ? rawBase : guessDefaultBranch(cwd);
+
+  const entries = listWorktrees(cwd);
+  const main = pickMainWorktree(entries);
+  const mainRealPath = main ? realpathSafe(main.path) : realpathSafe(cwd);
+  const workspaceCounts = liveSessionWorkspaces();
+
+  const worktrees = entries.map((e) => {
+    const realPath = realpathSafe(e.path);
+    const isMain = realPath === mainRealPath;
+    const status = worktreeStatus(e.path);
+    let ahead = 0, behind = 0, linesAdded = 0, linesRemoved = 0;
+    if (!isMain && base && !e.detached && e.branch) {
+      const ab = worktreeAheadBehind(e.path, base);
+      ahead = ab.ahead; behind = ab.behind;
+      const ns = worktreeDiffStat(e.path, base);
+      linesAdded = ns.added; linesRemoved = ns.removed;
+    }
+    let mtime = null;
+    try { mtime = fs.statSync(e.path).mtimeMs; } catch {}
+    return {
+      path: e.path,
+      branch: e.branch,
+      head: e.head,
+      detached: e.detached,
+      prunable: e.prunable,
+      isMain,
+      clean: status.clean,
+      modifiedCount: status.modifiedCount,
+      ahead,
+      behind,
+      linesAdded,
+      linesRemoved,
+      liveSessionCount: workspaceCounts.get(realPath) || 0,
+      mtime,
+    };
+  });
+
+  res.json({ cwd, base: base || null, mainPath: main ? main.path : null, worktrees });
+});
+
+app.get('/api/worktrees/diff', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const cwd = isAllowedProjectCwd(req.query.cwd);
+  if (!cwd) return res.status(400).json({ error: 'cwd inválido' });
+  const rawPath = typeof req.query.path === 'string' ? req.query.path : '';
+  const resolved = path.resolve(rawPath);
+  if (!isPathWithinCwd(resolved, cwd) || !fs.existsSync(resolved)) {
+    return res.status(400).json({ error: 'worktree path inválido' });
+  }
+  const rawBase = typeof req.query.base === 'string' ? req.query.base.trim() : '';
+  const base = rawBase && BRANCH_NAME_RE.test(rawBase) ? rawBase : guessDefaultBranch(cwd);
+  const branch = runGitArgs(resolved, ['symbolic-ref', '--short', 'HEAD']).trim() || null;
+  const committed = base ? runGitArgs(resolved, ['diff', '--no-color', `${base}...HEAD`]) : '';
+  const unstaged = runGitArgs(resolved, ['diff', '--no-color']);
+  const staged = runGitArgs(resolved, ['diff', '--no-color', '--staged']);
+  const untrackedRaw = runGitArgs(resolved, ['ls-files', '--others', '--exclude-standard']);
+  const untracked = untrackedRaw.split('\n').map((s) => s.trim()).filter(Boolean);
+  res.json({ cwd: resolved, branch, base: base || null, committed, unstaged, staged, untracked });
+});
+
+app.delete('/api/worktrees', (req, res) => {
+  const cwd = isAllowedProjectCwd(req.query.cwd);
+  if (!cwd) return res.status(400).json({ error: 'cwd inválido' });
+  const rawPath = typeof req.query.path === 'string' ? req.query.path : '';
+  const resolved = path.resolve(rawPath);
+  if (!isPathWithinCwd(resolved, cwd)) {
+    return res.status(400).json({ error: 'worktree path fora do cwd' });
+  }
+  const force = req.query.force === '1' || req.query.force === 'true';
+  const entries = listWorktrees(cwd);
+  const main = pickMainWorktree(entries);
+  if (main && realpathSafe(main.path) === realpathSafe(resolved)) {
+    return res.status(400).json({ error: 'não é possível remover o worktree principal' });
+  }
+  const counts = liveSessionWorkspaces();
+  if ((counts.get(realpathSafe(resolved)) || 0) > 0) {
+    return res.status(409).json({ error: 'há sessões ativas neste worktree' });
+  }
+  try {
+    const args = ['worktree', 'remove'];
+    if (force) args.push('--force');
+    args.push(resolved);
+    runGitArgsOrThrow(cwd, args);
+  } catch (err) {
+    return res.status(500).json({ error: err.stderr?.toString() || err.message });
+  }
+  res.json({ ok: true });
+});
+
+app.post('/api/worktrees/commit', (req, res) => {
+  const cwd = isAllowedProjectCwd(req.body?.cwd);
+  if (!cwd) return res.status(400).json({ error: 'cwd inválido' });
+  const rawPath = typeof req.body?.path === 'string' ? req.body.path : '';
+  const resolved = path.resolve(rawPath);
+  if (!isPathWithinCwd(resolved, cwd) || !fs.existsSync(resolved)) {
+    return res.status(400).json({ error: 'worktree path inválido' });
+  }
+  const message = typeof req.body?.message === 'string' ? req.body.message.trim() : '';
+  if (!message || message.length > 4096) {
+    return res.status(400).json({ error: 'mensagem obrigatória (máx 4096 chars)' });
+  }
+  try {
+    runGitArgsOrThrow(resolved, ['add', '-A']);
+    runGitArgsOrThrow(resolved, ['commit', '-m', message]);
+  } catch (err) {
+    return res.status(500).json({ error: err.stderr?.toString() || err.message });
+  }
+  res.json({ ok: true });
+});
+
+app.post('/api/worktrees/discard', (req, res) => {
+  const cwd = isAllowedProjectCwd(req.body?.cwd);
+  if (!cwd) return res.status(400).json({ error: 'cwd inválido' });
+  const rawPath = typeof req.body?.path === 'string' ? req.body.path : '';
+  const resolved = path.resolve(rawPath);
+  if (!isPathWithinCwd(resolved, cwd) || !fs.existsSync(resolved)) {
+    return res.status(400).json({ error: 'worktree path inválido' });
+  }
+  const entries = listWorktrees(cwd);
+  const main = pickMainWorktree(entries);
+  if (main && realpathSafe(main.path) === realpathSafe(resolved)) {
+    return res.status(400).json({ error: 'não é possível descartar o worktree principal' });
+  }
+  const counts = liveSessionWorkspaces();
+  if ((counts.get(realpathSafe(resolved)) || 0) > 0) {
+    return res.status(409).json({ error: 'há sessões ativas neste worktree' });
+  }
+  try {
+    runGitArgs(resolved, ['reset', '--hard', 'HEAD']);
+    runGitArgs(resolved, ['clean', '-fd']);
+    runGitArgsOrThrow(cwd, ['worktree', 'remove', '--force', resolved]);
+  } catch (err) {
+    return res.status(500).json({ error: err.stderr?.toString() || err.message });
+  }
+  res.json({ ok: true });
+});
+
+app.post('/api/worktrees/merge', (req, res) => {
+  const cwd = isAllowedProjectCwd(req.body?.cwd);
+  if (!cwd) return res.status(400).json({ error: 'cwd inválido' });
+  const rawPath = typeof req.body?.path === 'string' ? req.body.path : '';
+  const resolved = path.resolve(rawPath);
+  if (!isPathWithinCwd(resolved, cwd) || !fs.existsSync(resolved)) {
+    return res.status(400).json({ error: 'worktree path inválido' });
+  }
+  const rawBase = typeof req.body?.base === 'string' ? req.body.base.trim() : '';
+  const base = rawBase && BRANCH_NAME_RE.test(rawBase) ? rawBase : guessDefaultBranch(cwd);
+  if (!base) return res.status(400).json({ error: 'não foi possível determinar a base' });
+
+  const entries = listWorktrees(cwd);
+  const main = pickMainWorktree(entries);
+  if (!main) return res.status(400).json({ error: 'worktree principal não encontrado' });
+  const mainPath = main.path;
+
+  const branch = runGitArgs(resolved, ['symbolic-ref', '--short', 'HEAD']).trim();
+  if (!branch || !BRANCH_NAME_RE.test(branch)) {
+    return res.status(400).json({ error: 'branch do worktree não detectada' });
+  }
+
+  const status = worktreeStatus(resolved);
+  if (!status.clean) {
+    return res.status(409).json({
+      error: 'worktree tem mudanças não commitadas — commite antes de mergear',
+    });
+  }
+  const mainStatus = worktreeStatus(mainPath);
+  if (!mainStatus.clean) {
+    return res.status(409).json({
+      error: 'worktree principal tem mudanças não commitadas — sincronize antes',
+    });
+  }
+
+  const baseLocal = base.replace(/^origin\//, '');
+  const mainBranch = runGitArgs(mainPath, ['symbolic-ref', '--short', 'HEAD']).trim();
+  let switched = false;
+  try {
+    if (mainBranch !== baseLocal) {
+      runGitArgsOrThrow(mainPath, ['switch', baseLocal]);
+      switched = true;
+    }
+    runGitArgsOrThrow(mainPath, ['merge', '--ff-only', branch]);
+    res.json({ ok: true, base: baseLocal, branch, switched });
+  } catch (err) {
+    res.status(500).json({ error: err.stderr?.toString() || err.message });
+  }
 });
 
 function scanJsonlLines(filePath, onLine) {
@@ -1338,7 +1668,7 @@ function buildStatusLineSettingsArg() {
   });
 }
 
-function buildPtyArgs({ resume, sessionId, model, effort, permissionMode }) {
+function buildPtyArgs({ resume, sessionId, model, effort, permissionMode, worktree }) {
   const args = [];
   const tapSettings = buildStatusLineSettingsArg();
   if (tapSettings) args.push('--settings', tapSettings);
@@ -1350,6 +1680,13 @@ function buildPtyArgs({ resume, sessionId, model, effort, permissionMode }) {
     if (effort && VALID_EFFORT.has(effort)) args.push('--effort', effort);
     if (permissionMode && VALID_PERMISSION_MODE.has(permissionMode)) {
       args.push('--permission-mode', permissionMode);
+    }
+    if (typeof worktree === 'string' && worktree.length > 0) {
+      if (worktree === '1' || worktree === 'true') {
+        args.push('--worktree');
+      } else if (WORKTREE_NAME_RE.test(worktree)) {
+        args.push('--worktree', worktree);
+      }
     }
   }
   return args;

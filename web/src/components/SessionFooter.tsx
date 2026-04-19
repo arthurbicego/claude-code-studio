@@ -1,3 +1,5 @@
+import { GitBranch } from 'lucide-react'
+import { Tooltip } from '@/components/ui/Tooltip'
 import type { SessionFooter as SessionFooterData } from '@/types'
 
 type Props = {
@@ -46,6 +48,17 @@ export function SessionFooter({ data }: Props) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 border-t border-border bg-muted/20 px-4 py-1.5 font-mono text-[11px] text-foreground/80">
       {field('dir', <span className="text-sky-400">{data.dirLabel ?? DASH}</span>)}
+      {data.worktree ? (
+        <>
+          <span className="text-muted-foreground/40">·</span>
+          <Tooltip content={`Worktree em ${data.worktree.path}`}>
+            <span className="inline-flex items-center gap-1 rounded bg-indigo-500/15 px-1.5 py-0.5 text-indigo-300">
+              <GitBranch size={10} />
+              <span className="font-mono text-[10px]">{data.worktree.name}</span>
+            </span>
+          </Tooltip>
+        </>
+      ) : null}
       {data.branch && (
         <>
           <span className="text-muted-foreground/40">·</span>
