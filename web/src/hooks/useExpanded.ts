@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
-const KEY = 'claude-code-studio.collapsed'
+const KEY = 'claude-code-studio.expanded'
 
 function load(): Set<string> {
   try {
@@ -14,19 +14,19 @@ function load(): Set<string> {
   }
 }
 
-export function useCollapsed() {
-  const [collapsed, setCollapsed] = useState<Set<string>>(() => load())
+export function useExpanded() {
+  const [expanded, setExpanded] = useState<Set<string>>(() => load())
 
   useEffect(() => {
     try {
-      localStorage.setItem(KEY, JSON.stringify([...collapsed]))
+      localStorage.setItem(KEY, JSON.stringify([...expanded]))
     } catch {
       /* quota/private mode */
     }
-  }, [collapsed])
+  }, [expanded])
 
   const toggle = useCallback((slug: string) => {
-    setCollapsed((prev) => {
+    setExpanded((prev) => {
       const next = new Set(prev)
       if (next.has(slug)) next.delete(slug)
       else next.add(slug)
@@ -34,7 +34,7 @@ export function useCollapsed() {
     })
   }, [])
 
-  const isCollapsed = useCallback((slug: string) => collapsed.has(slug), [collapsed])
+  const isExpanded = useCallback((slug: string) => expanded.has(slug), [expanded])
 
-  return { collapsed, toggle, isCollapsed }
+  return { expanded, toggle, isExpanded }
 }
