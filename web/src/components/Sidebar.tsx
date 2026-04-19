@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { SessionsSection } from '@/components/SessionsSection'
 import { cn } from '@/lib/utils'
+import { useProjectOrder } from '@/hooks/useProjectOrder'
 import type { LiveSession, LiveSessionState, Project, SessionLaunch, SessionMeta } from '@/types'
 
 type Props = {
@@ -104,6 +105,7 @@ export function Sidebar({
 }: Props) {
   const openList = Array.from(openSessions.values())
   const hasArchived = projects.some((p) => p.sessions.some((s) => s.archived))
+  const { applyOrder, moveSlug } = useProjectOrder()
 
   return (
     <aside className="flex w-80 flex-col border-r border-border bg-card/40">
@@ -194,6 +196,8 @@ export function Sidebar({
           onUnarchive={onUnarchiveSession}
           onDelete={onDeleteSession}
           renderState={renderState}
+          applyProjectOrder={applyOrder}
+          onReorderProject={moveSlug}
         />
 
         {hasArchived ? (
@@ -210,6 +214,8 @@ export function Sidebar({
             onUnarchive={onUnarchiveSession}
             onDelete={onDeleteSession}
             renderState={renderState}
+            applyProjectOrder={applyOrder}
+            onReorderProject={moveSlug}
           />
         ) : null}
       </div>
