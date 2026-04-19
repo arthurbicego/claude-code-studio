@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { Express, Request, Response } from 'express';
+import { ERR, sendError, sendInternalError } from '../lib/errors';
 import { isAllowedProjectCwd } from '../paths';
 
 function resolveVSCodeBin(): string | null {
@@ -28,26 +29,29 @@ export function register(app: Express): void {
   app.post('/api/open/vscode', (req: Request, res: Response) => {
     const rawPath = typeof req.body?.path === 'string' ? req.body.path : '';
     const target = isAllowedProjectCwd(rawPath);
-    if (!target) return res.status(400).json({ error: 'path inválido' });
+    if (!target) return sendError(res, 400, ERR.PATH_INVALID, 'invalid path');
     try {
       const st = fs.statSync(target);
-      if (!st.isDirectory()) return res.status(400).json({ error: 'path não é um diretório' });
+      if (!st.isDirectory())
+        return sendError(res, 400, ERR.PATH_NOT_DIRECTORY, 'path is not a directory');
     } catch {
-      return res.status(404).json({ error: 'path não encontrado' });
+      return sendError(res, 404, ERR.PATH_NOT_FOUND, 'path not found');
     }
     const bin = resolveVSCodeBin();
     if (!bin) {
-      return res.status(500).json({
-        error:
-          'binário `code` do VS Code não encontrado — instale via "Shell Command: Install \'code\' command in PATH"',
-      });
+      return sendError(
+        res,
+        500,
+        ERR.INTERNAL,
+        'VS Code `code` binary not found — install via "Shell Command: Install \'code\' command in PATH"',
+      );
     }
     try {
       const child = spawn(bin, [target], { detached: true, stdio: 'ignore' });
       child.on('error', () => {});
       child.unref();
     } catch (err) {
-      return res.status(500).json({ error: (err as Error).message });
+      return sendInternalError(res, err);
     }
     res.json({ ok: true });
   });
@@ -85,7 +89,7 @@ export function register(app: Express): void {
     try {
       const abs = path.resolve(requested);
       const st = fs.statSync(abs);
-      if (!st.isDirectory()) return res.status(400).json({ error: 'not a directory' });
+      if (!st.isDirectory()) return sendError(res, 400, ERR.PATH_NOT_DIRECTORY, 'not a directory');
       const entries = fs
         .readdirSync(abs, { withFileTypes: true })
         .filter((e) => e.isDirectory() && (showHidden || !e.name.startsWith('.')))
@@ -98,7 +102,7 @@ export function register(app: Express): void {
         entries,
       });
     } catch (e) {
-      res.status(400).json({ error: (e as Error).message });
+      return sendError(res, 400, ERR.PATH_INVALID, (e as Error).message);
     }
   });
 }

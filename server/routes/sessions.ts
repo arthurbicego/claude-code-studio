@@ -4,6 +4,7 @@ import type { SessionsListResponse } from '@shared/types';
 import type { Express, Request, Response } from 'express';
 import { buildFooterPayload, removeFooterCacheFor } from '../footer';
 import { runGit } from '../git';
+import { ERR, sendError, sendInternalError } from '../lib/errors';
 import { liveSessions } from '../live-sessions';
 import { CLAUDE_PROJECTS } from '../paths';
 import {
@@ -66,7 +67,7 @@ export function register(app: Express): void {
 
   app.post('/api/sessions/:id/archive', (req: Request, res: Response) => {
     const id = String(req.params.id || '').trim();
-    if (!id) return res.status(400).json({ error: 'id obrigatório' });
+    if (!id) return sendError(res, 400, ERR.SESSION_ID_REQUIRED, 'session id is required');
     appState.archived.add(id);
     saveState(appState);
     broadcastInvalidate();
@@ -75,7 +76,7 @@ export function register(app: Express): void {
 
   app.post('/api/sessions/:id/unarchive', (req: Request, res: Response) => {
     const id = String(req.params.id || '').trim();
-    if (!id) return res.status(400).json({ error: 'id obrigatório' });
+    if (!id) return sendError(res, 400, ERR.SESSION_ID_REQUIRED, 'session id is required');
     appState.archived.delete(id);
     saveState(appState);
     broadcastInvalidate();
@@ -84,13 +85,13 @@ export function register(app: Express): void {
 
   app.delete('/api/sessions/:id', (req: Request, res: Response) => {
     const id = String(req.params.id || '').trim();
-    if (!id) return res.status(400).json({ error: 'id obrigatório' });
+    if (!id) return sendError(res, 400, ERR.SESSION_ID_REQUIRED, 'session id is required');
     const fpath = findSessionFile(id);
-    if (!fpath) return res.status(404).json({ error: 'sessão não encontrada' });
+    if (!fpath) return sendError(res, 404, ERR.SESSION_NOT_FOUND, 'session not found');
     try {
       fs.unlinkSync(fpath);
     } catch (err) {
-      return res.status(500).json({ error: (err as Error).message });
+      return sendInternalError(res, err);
     }
     removeFooterCacheFor(id);
     if (appState.archived.delete(id)) saveState(appState);
@@ -101,7 +102,8 @@ export function register(app: Express): void {
   app.get('/api/sessions/:id/diff', (req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store');
     const id = String(req.params.id || '').trim();
-    if (!FOOTER_ID_RE.test(id)) return res.status(400).json({ error: 'id inválido' });
+    if (!FOOTER_ID_RE.test(id))
+      return sendError(res, 400, ERR.SESSION_ID_INVALID, 'invalid session id');
     const cwd = resolveSessionCwd(id);
     if (!cwd || !fs.existsSync(cwd)) {
       return res.json({ cwd: null, branch: null, unstaged: '', staged: '', untracked: [] });
@@ -120,7 +122,8 @@ export function register(app: Express): void {
   app.get('/api/sessions/:id/tasks', (req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store');
     const id = String(req.params.id || '').trim();
-    if (!FOOTER_ID_RE.test(id)) return res.status(400).json({ error: 'id inválido' });
+    if (!FOOTER_ID_RE.test(id))
+      return sendError(res, 400, ERR.SESSION_ID_INVALID, 'invalid session id');
     const fpath = findSessionFile(id);
     if (!fpath) return res.json({ todos: [], updatedAt: null });
     const last = findLastToolUse(fpath, 'TodoWrite');
@@ -131,7 +134,8 @@ export function register(app: Express): void {
   app.get('/api/sessions/:id/plan', (req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store');
     const id = String(req.params.id || '').trim();
-    if (!FOOTER_ID_RE.test(id)) return res.status(400).json({ error: 'id inválido' });
+    if (!FOOTER_ID_RE.test(id))
+      return sendError(res, 400, ERR.SESSION_ID_INVALID, 'invalid session id');
     const fpath = findSessionFile(id);
     if (!fpath) return res.json({ plan: null, updatedAt: null });
     const last = findLastToolUse(fpath, 'ExitPlanMode');
@@ -142,14 +146,15 @@ export function register(app: Express): void {
   app.get('/api/sessions/:id/footer', (req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store');
     const id = String(req.params.id || '').trim();
-    if (!FOOTER_ID_RE.test(id)) return res.status(400).json({ error: 'id inválido' });
+    if (!FOOTER_ID_RE.test(id))
+      return sendError(res, 400, ERR.SESSION_ID_INVALID, 'invalid session id');
     res.json(buildFooterPayload(id));
   });
 
   app.post('/api/sessions/:key/close', async (req: Request, res: Response) => {
     const key = String(req.params.key || '').trim();
     const entry = liveSessions.get(key);
-    if (!entry) return res.status(404).json({ error: 'session not live' });
+    if (!entry) return sendError(res, 404, ERR.SESSION_NOT_LIVE, 'session is not live');
     try {
       entry.pty.kill();
     } catch {

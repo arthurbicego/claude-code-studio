@@ -11,6 +11,7 @@ import type {
 } from '@shared/types';
 import type { Express, Request, Response } from 'express';
 import { buildFrontmatter, parseFrontmatter } from '../frontmatter';
+import { ERR, sendError, sendInternalError } from '../lib/errors';
 import { isAllowedProjectCwd, USER_AGENTS_DIR, USER_SKILLS_DIR } from '../paths';
 import { isValidName } from '../validators';
 
@@ -186,21 +187,23 @@ export function register(app: Express): void {
     res.set('Cache-Control', 'no-store');
     const { scope, name } = req.query;
     const dir = resolveScopeDir(scope, 'agent', req.query.cwd);
-    if (!dir) return res.status(400).json({ error: 'scope inválido' });
-    if (!isValidName(name)) return res.status(400).json({ error: 'nome inválido' });
+    if (!dir) return sendError(res, 400, ERR.SCOPE_INVALID, 'invalid scope');
+    if (!isValidName(name)) return sendError(res, 400, ERR.NAME_INVALID, 'invalid name');
     const data = agentResponse(name, dir);
-    if (!data) return res.status(404).json({ error: 'agente não encontrado' });
+    if (!data) return sendError(res, 404, ERR.AGENT_NOT_FOUND, 'agent not found');
     res.json(data);
   });
 
   app.put('/api/agents/file', (req: Request, res: Response) => {
     const body = (req.body || {}) as Record<string, unknown>;
     const dir = resolveScopeDir(body.scope, 'agent', body.cwd);
-    if (!dir) return res.status(400).json({ error: 'scope inválido' });
+    if (!dir) return sendError(res, 400, ERR.SCOPE_INVALID, 'invalid scope');
     const name = body.name;
-    if (!isValidName(name)) return res.status(400).json({ error: 'nome inválido (use a-z 0-9 -)' });
+    if (!isValidName(name))
+      return sendError(res, 400, ERR.NAME_INVALID, 'invalid name (use a-z 0-9 -)');
     const description = typeof body.description === 'string' ? body.description.trim() : '';
-    if (!description) return res.status(400).json({ error: 'description obrigatório' });
+    if (!description)
+      return sendError(res, 400, ERR.DESCRIPTION_REQUIRED, 'description is required');
     const model = typeof body.model === 'string' ? body.model.trim() : '';
     const tools = Array.isArray(body.tools)
       ? (body.tools as unknown[]).filter(
@@ -226,30 +229,42 @@ export function register(app: Express): void {
       if (previousName && previousName !== name) {
         const oldFile = path.join(dir, `${previousName}.md`);
         if (fs.existsSync(targetFile)) {
-          return res.status(409).json({ error: `já existe um agente chamado "${name}"` });
+          return sendError(
+            res,
+            409,
+            ERR.AGENT_ALREADY_EXISTS,
+            `an agent named "${name}" already exists`,
+            { name },
+          );
         }
         if (fs.existsSync(oldFile)) fs.renameSync(oldFile, targetFile);
       } else if (!previousName && fs.existsSync(targetFile)) {
-        return res.status(409).json({ error: `já existe um agente chamado "${name}"` });
+        return sendError(
+          res,
+          409,
+          ERR.AGENT_ALREADY_EXISTS,
+          `an agent named "${name}" already exists`,
+          { name },
+        );
       }
       fs.writeFileSync(targetFile, fullContent, 'utf8');
       res.json(agentResponse(name, dir));
     } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
+      sendInternalError(res, err);
     }
   });
 
   app.delete('/api/agents/file', (req: Request, res: Response) => {
     const { scope, name } = req.query;
     const dir = resolveScopeDir(scope, 'agent', req.query.cwd);
-    if (!dir) return res.status(400).json({ error: 'scope inválido' });
-    if (!isValidName(name)) return res.status(400).json({ error: 'nome inválido' });
+    if (!dir) return sendError(res, 400, ERR.SCOPE_INVALID, 'invalid scope');
+    if (!isValidName(name)) return sendError(res, 400, ERR.NAME_INVALID, 'invalid name');
     const filePath = path.join(dir, `${name}.md`);
     try {
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       res.json({ ok: true });
     } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
+      sendInternalError(res, err);
     }
   });
 
@@ -267,21 +282,23 @@ export function register(app: Express): void {
     res.set('Cache-Control', 'no-store');
     const { scope, name } = req.query;
     const dir = resolveScopeDir(scope, 'skill', req.query.cwd);
-    if (!dir) return res.status(400).json({ error: 'scope inválido' });
-    if (!isValidName(name)) return res.status(400).json({ error: 'nome inválido' });
+    if (!dir) return sendError(res, 400, ERR.SCOPE_INVALID, 'invalid scope');
+    if (!isValidName(name)) return sendError(res, 400, ERR.NAME_INVALID, 'invalid name');
     const data = skillResponse(name, dir);
-    if (!data) return res.status(404).json({ error: 'skill não encontrada' });
+    if (!data) return sendError(res, 404, ERR.SKILL_NOT_FOUND, 'skill not found');
     res.json(data);
   });
 
   app.put('/api/skills/file', (req: Request, res: Response) => {
     const body = (req.body || {}) as Record<string, unknown>;
     const dir = resolveScopeDir(body.scope, 'skill', body.cwd);
-    if (!dir) return res.status(400).json({ error: 'scope inválido' });
+    if (!dir) return sendError(res, 400, ERR.SCOPE_INVALID, 'invalid scope');
     const name = body.name;
-    if (!isValidName(name)) return res.status(400).json({ error: 'nome inválido (use a-z 0-9 -)' });
+    if (!isValidName(name))
+      return sendError(res, 400, ERR.NAME_INVALID, 'invalid name (use a-z 0-9 -)');
     const description = typeof body.description === 'string' ? body.description.trim() : '';
-    if (!description) return res.status(400).json({ error: 'description obrigatório' });
+    if (!description)
+      return sendError(res, 400, ERR.DESCRIPTION_REQUIRED, 'description is required');
     const promptBody = typeof body.body === 'string' ? body.body : '';
     const previousName =
       typeof body.previousName === 'string' && isValidName(body.previousName)
@@ -298,31 +315,43 @@ export function register(app: Express): void {
       if (previousName && previousName !== name) {
         const oldDir = path.join(dir, previousName);
         if (fs.existsSync(targetDir)) {
-          return res.status(409).json({ error: `já existe uma skill chamada "${name}"` });
+          return sendError(
+            res,
+            409,
+            ERR.SKILL_ALREADY_EXISTS,
+            `a skill named "${name}" already exists`,
+            { name },
+          );
         }
         if (fs.existsSync(oldDir)) fs.renameSync(oldDir, targetDir);
       } else if (!previousName && fs.existsSync(targetDir)) {
-        return res.status(409).json({ error: `já existe uma skill chamada "${name}"` });
+        return sendError(
+          res,
+          409,
+          ERR.SKILL_ALREADY_EXISTS,
+          `a skill named "${name}" already exists`,
+          { name },
+        );
       }
       fs.mkdirSync(targetDir, { recursive: true });
       fs.writeFileSync(path.join(targetDir, 'SKILL.md'), fullContent, 'utf8');
       res.json(skillResponse(name, dir));
     } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
+      sendInternalError(res, err);
     }
   });
 
   app.delete('/api/skills/file', (req: Request, res: Response) => {
     const { scope, name } = req.query;
     const dir = resolveScopeDir(scope, 'skill', req.query.cwd);
-    if (!dir) return res.status(400).json({ error: 'scope inválido' });
-    if (!isValidName(name)) return res.status(400).json({ error: 'nome inválido' });
+    if (!dir) return sendError(res, 400, ERR.SCOPE_INVALID, 'invalid scope');
+    if (!isValidName(name)) return sendError(res, 400, ERR.NAME_INVALID, 'invalid name');
     const skillDir = path.join(dir, name);
     try {
       if (fs.existsSync(skillDir)) rmDirRecursive(skillDir);
       res.json({ ok: true });
     } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
+      sendInternalError(res, err);
     }
   });
 
