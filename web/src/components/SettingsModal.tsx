@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { Modal } from '@/components/Modal'
 import { Button } from '@/components/ui/Button'
@@ -221,7 +221,7 @@ export function SettingsModal({ open, onClose }: Props) {
       open={open}
       onClose={onClose}
       title="Configurações"
-      className="w-[min(640px,94vw)]"
+      className="h-[92vh] max-h-[92vh] w-[min(1400px,96vw)]"
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
