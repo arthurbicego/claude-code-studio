@@ -1,17 +1,20 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Info, X } from 'lucide-react'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { cn } from '@/lib/utils'
 
 type Props = {
   ariaLabel?: string
   triggerClassName?: string
+  tooltip?: string
   children: ReactNode
 }
 
 export function InfoPopover({
   ariaLabel = 'Mostrar informações',
   triggerClassName,
+  tooltip,
   children,
 }: Props) {
   const [open, setOpen] = useState(false)
@@ -52,25 +55,29 @@ export function InfoPopover({
     }
   }, [open])
 
+  const triggerButton = (
+    <button
+      ref={anchorRef}
+      type="button"
+      className={cn(
+        'inline-flex rounded p-0.5 cursor-pointer',
+        open ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+        triggerClassName,
+      )}
+      onClick={(e) => {
+        e.stopPropagation()
+        setOpen((v) => !v)
+      }}
+      aria-label={ariaLabel}
+      aria-expanded={open}
+    >
+      <Info size={12} />
+    </button>
+  )
+
   return (
     <>
-      <button
-        ref={anchorRef}
-        type="button"
-        className={cn(
-          'inline-flex rounded p-0.5 cursor-pointer',
-          open ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
-          triggerClassName,
-        )}
-        onClick={(e) => {
-          e.stopPropagation()
-          setOpen((v) => !v)
-        }}
-        aria-label={ariaLabel}
-        aria-expanded={open}
-      >
-        <Info size={12} />
-      </button>
+      {tooltip && !open ? <Tooltip content={tooltip}>{triggerButton}</Tooltip> : triggerButton}
       {open && typeof document !== 'undefined'
         ? createPortal(
             <div

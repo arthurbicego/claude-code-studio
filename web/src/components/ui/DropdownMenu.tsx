@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { MoreVertical } from 'lucide-react'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { cn } from '@/lib/utils'
 
 export type DropdownMenuItem = {
@@ -13,9 +14,15 @@ type Props = {
   items: DropdownMenuItem[]
   ariaLabel?: string
   triggerClassName?: string
+  tooltip?: string
 }
 
-export function DropdownMenu({ items, ariaLabel = 'Abrir menu', triggerClassName }: Props) {
+export function DropdownMenu({
+  items,
+  ariaLabel = 'Abrir menu',
+  triggerClassName,
+  tooltip,
+}: Props) {
   const [open, setOpen] = useState(false)
   const anchorRef = useRef<HTMLButtonElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
@@ -54,28 +61,32 @@ export function DropdownMenu({ items, ariaLabel = 'Abrir menu', triggerClassName
     }
   }, [open])
 
+  const triggerButton = (
+    <button
+      ref={anchorRef}
+      type="button"
+      className={cn(
+        'rounded p-1 cursor-pointer',
+        open
+          ? 'bg-accent text-foreground'
+          : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+        triggerClassName,
+      )}
+      onClick={(e) => {
+        e.stopPropagation()
+        setOpen((v) => !v)
+      }}
+      aria-label={ariaLabel}
+      aria-expanded={open}
+      aria-haspopup="menu"
+    >
+      <MoreVertical size={12} />
+    </button>
+  )
+
   return (
     <>
-      <button
-        ref={anchorRef}
-        type="button"
-        className={cn(
-          'rounded p-1 cursor-pointer',
-          open
-            ? 'bg-accent text-foreground'
-            : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-          triggerClassName,
-        )}
-        onClick={(e) => {
-          e.stopPropagation()
-          setOpen((v) => !v)
-        }}
-        aria-label={ariaLabel}
-        aria-expanded={open}
-        aria-haspopup="menu"
-      >
-        <MoreVertical size={12} />
-      </button>
+      {tooltip && !open ? <Tooltip content={tooltip}>{triggerButton}</Tooltip> : triggerButton}
       {open && typeof document !== 'undefined'
         ? createPortal(
             <div

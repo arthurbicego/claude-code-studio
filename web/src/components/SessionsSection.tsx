@@ -165,9 +165,11 @@ export function SessionsSection({
             className={cn('transition-transform', sectionOpen && 'rotate-90')}
           />
           <span className="flex-1">{title}</span>
-          <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-medium normal-case text-muted-foreground">
-            {total}
-          </span>
+          <Tooltip content={`${total} ${total === 1 ? 'sessão' : 'sessões'}`}>
+            <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-medium normal-case text-muted-foreground">
+              {total}
+            </span>
+          </Tooltip>
         </button>
         {sectionOpen ? (
           <>
@@ -263,9 +265,11 @@ export function SessionsSection({
                     )}
                   />
                   <span className="flex-1 truncate">{basename(p.cwd)}</span>
-                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                    {sessions.length}
-                  </span>
+                  <Tooltip content={`${sessions.length} ${sessions.length === 1 ? 'sessão' : 'sessões'}`}>
+                    <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                      {sessions.length}
+                    </span>
+                  </Tooltip>
                   <PathPopover path={p.cwd} />
                 </div>
                 {expanded ? (
@@ -398,7 +402,7 @@ function SessionRow({
             </button>
           </Tooltip>
         ) : null}
-        <DropdownMenu items={menuItems} ariaLabel="Ações da sessão" />
+        <DropdownMenu items={menuItems} ariaLabel="Ações da sessão" tooltip="Ações da sessão" />
       </div>
     </div>
   )
@@ -406,7 +410,7 @@ function SessionRow({
 
 function PathPopover({ path }: { path: string }) {
   return (
-    <InfoPopover ariaLabel="Mostrar caminho do projeto">
+    <InfoPopover ariaLabel="Mostrar caminho do projeto" tooltip="Caminho do projeto">
       <CopyableField
         label="Caminho do projeto"
         value={path}
