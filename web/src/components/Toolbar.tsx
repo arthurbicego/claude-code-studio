@@ -1,15 +1,25 @@
 import { Ban, KeyRound, Sparkles, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { PanelMenu } from '@/components/panels/PanelMenu'
+import type { PanelKind } from '@/types'
 
 type Props = {
   onSendInput: (text: string) => void
   onInterrupt: () => void
   disabled: boolean
+  openPanelKinds: Set<PanelKind>
+  onTogglePanel: (kind: PanelKind) => void
 }
 
 const SLASH_COMMANDS = ['/compact', '/clear', '/cost', '/help']
 
-export function Toolbar({ onSendInput, onInterrupt, disabled }: Props) {
+export function Toolbar({
+  onSendInput,
+  onInterrupt,
+  disabled,
+  openPanelKinds,
+  onTogglePanel,
+}: Props) {
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-border bg-card/40 p-2">
       {SLASH_COMMANDS.map((cmd) => (
@@ -58,6 +68,7 @@ export function Toolbar({ onSendInput, onInterrupt, disabled }: Props) {
       <Button size="sm" variant="warn" disabled={disabled} onClick={onInterrupt}>
         <Ban size={14} /> Ctrl+C
       </Button>
+      <PanelMenu openKinds={openPanelKinds} onToggle={onTogglePanel} disabled={disabled} />
     </div>
   )
 }

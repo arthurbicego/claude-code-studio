@@ -104,6 +104,37 @@ export type ClaudeSettings = {
   sandbox: SandboxSettings
 }
 
+export type PanelKind = 'diff' | 'terminal' | 'tasks' | 'plan'
+
+export type OpenPanel = {
+  kind: PanelKind
+  id: string
+}
+
+export type DiffResult = {
+  cwd: string | null
+  branch: string | null
+  unstaged: string
+  staged: string
+  untracked: string[]
+}
+
+export type TodoItem = {
+  content: string
+  activeForm?: string
+  status: 'pending' | 'in_progress' | 'completed'
+}
+
+export type TasksResult = {
+  todos: TodoItem[]
+  updatedAt: string | null
+}
+
+export type PlanResult = {
+  plan: string | null
+  updatedAt: string | null
+}
+
 export type SessionFooter = {
   hasCache: boolean
   cwd: string | null
