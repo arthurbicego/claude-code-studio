@@ -39,6 +39,9 @@ export default function App() {
   const [activeSessionKey, setActiveSessionKey] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<SessionMeta | null>(null)
+  const [pendingArchive, setPendingArchive] = useState<
+    { id: string; action: 'archive' | 'unarchive' } | null
+  >(null)
   const [status, setStatus] = useState('Selecione uma sessão na barra lateral ou crie uma nova.')
   const [interruptSignal, setInterruptSignal] = useState(0)
   const [inputSignal, setInputSignal] = useState<{ seq: number; text: string } | null>(null)
@@ -236,6 +239,16 @@ export default function App() {
     [refresh],
   )
 
+  const confirmArchive = useCallback(async () => {
+    const target = pendingArchive
+    if (!target) return
+    if (target.action === 'archive') {
+      await archiveSession(target.id)
+    } else {
+      await unarchiveSession(target.id)
+    }
+  }, [pendingArchive, archiveSession, unarchiveSession])
+
   const confirmDelete = useCallback(async () => {
     const target = pendingDelete
     if (!target) return
@@ -277,8 +290,8 @@ export default function App() {
         onOpenNewSession={() => setModalOpen(true)}
         onResumeSession={onResumeSession}
         onCloseSession={closeSession}
-        onArchiveSession={archiveSession}
-        onUnarchiveSession={unarchiveSession}
+        onArchiveSession={(id) => setPendingArchive({ id, action: 'archive' })}
+        onUnarchiveSession={(id) => setPendingArchive({ id, action: 'unarchive' })}
         onDeleteSession={(s) => setPendingDelete(s)}
       />
       <main className="flex min-w-0 flex-1 flex-col">
@@ -385,6 +398,21 @@ export default function App() {
         projects={projects}
         onClose={() => setModalOpen(false)}
         onLaunch={onLaunchNew}
+      />
+
+      <ConfirmDialog
+        open={!!pendingArchive}
+        title={pendingArchive?.action === 'unarchive' ? 'Desarquivar sessão' : 'Arquivar sessão'}
+        description={
+          pendingArchive
+            ? pendingArchive.action === 'unarchive'
+              ? `A sessão (${pendingArchive.id.slice(0, 8)}…) voltará para o histórico.`
+              : `A sessão (${pendingArchive.id.slice(0, 8)}…) será movida para Arquivadas.`
+            : ''
+        }
+        confirmLabel={pendingArchive?.action === 'unarchive' ? 'Desarquivar' : 'Arquivar'}
+        onConfirm={confirmArchive}
+        onClose={() => setPendingArchive(null)}
       />
 
       <ConfirmDialog
