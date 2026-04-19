@@ -1,4 +1,14 @@
-import { Archive, ArchiveRestore, ArrowDownAZ, ChevronRight, FolderTree, List, Trash2, X } from 'lucide-react'
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowDownAZ,
+  ChevronRight,
+  FolderCode,
+  FolderTree,
+  List,
+  Trash2,
+  X,
+} from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { CopyableField } from '@/components/ui/CopyableField'
 import { DropdownMenu, type DropdownMenuItem } from '@/components/ui/DropdownMenu'
@@ -26,6 +36,9 @@ type Props = {
   onUnarchive: (id: string) => void
   onDelete: (session: SessionMeta) => void
   onCloseSession?: (sessionKey: string) => void
+  onOpenProjectInVSCode: (project: Project) => void
+  onArchiveProject: (project: Project) => void
+  onDeleteProject: (project: Project) => void
   renderState: (live: LiveSession | undefined) => React.ReactNode
   applyProjectOrder: <T extends { slug: string }>(items: T[]) => T[]
   onReorderProject: (fromSlug: string, toSlug: string, position: 'before' | 'after') => void
@@ -76,6 +89,9 @@ export function SessionsSection({
   onUnarchive,
   onDelete,
   onCloseSession,
+  onOpenProjectInVSCode,
+  onArchiveProject,
+  onDeleteProject,
   renderState,
   applyProjectOrder,
   onReorderProject,
@@ -271,6 +287,36 @@ export function SessionsSection({
                     </span>
                   </Tooltip>
                   <PathPopover path={p.cwd} />
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    role="presentation"
+                  >
+                    <DropdownMenu
+                      items={[
+                        {
+                          label: 'Abrir no VS Code',
+                          icon: FolderCode,
+                          onSelect: () => onOpenProjectInVSCode(p),
+                        },
+                        {
+                          label: 'Arquivar sessões',
+                          icon: Archive,
+                          onSelect: () => onArchiveProject(p),
+                        },
+                        {
+                          label: 'Apagar sessões',
+                          icon: Trash2,
+                          destructive: true,
+                          onSelect: () => onDeleteProject(p),
+                        },
+                      ]}
+                      ariaLabel="Ações do projeto"
+                      tooltip="Ações do projeto"
+                    />
+                  </div>
                 </div>
                 {expanded ? (
                   <>
