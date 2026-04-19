@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { fetchJson } from '@/lib/fetchJson'
 
 export type AgentSummary = {
   name: string
@@ -27,15 +28,6 @@ type ListState = {
 }
 
 const INITIAL_LIST: ListState = { user: [], project: [], loading: false, error: null }
-
-async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init)
-  if (!res.ok) {
-    const err = (await res.json().catch(() => ({}))) as { error?: string }
-    throw new Error(err.error || `HTTP ${res.status}`)
-  }
-  return (await res.json()) as T
-}
 
 export function useAgentList(projectCwd: string | null) {
   const [state, setState] = useState<ListState>(INITIAL_LIST)
