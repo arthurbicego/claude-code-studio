@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { Tooltip } from '@/components/ui/Tooltip'
 
 type Props = {
   title: string
@@ -15,14 +16,16 @@ export function PanelContainer({ title, onClose, headerExtra, children }: Props)
         <span className="text-xs font-medium">{title}</span>
         <div className="flex-1" />
         {headerExtra}
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-          aria-label={`Fechar ${title}`}
-        >
-          <X size={14} />
-        </button>
+        <Tooltip content={`Fechar ${title}`}>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            aria-label={`Fechar ${title}`}
+          >
+            <X size={14} />
+          </button>
+        </Tooltip>
       </div>
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">{children}</div>
     </div>

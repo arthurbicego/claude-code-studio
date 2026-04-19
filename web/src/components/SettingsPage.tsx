@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { useConfig } from '@/hooks/useConfig'
 import { useClaudeSettings } from '@/hooks/useClaudeSettings'
 import {
@@ -310,9 +311,11 @@ export function SettingsPage() {
   return (
     <div className="flex h-full flex-col bg-background">
       <header className="flex items-center gap-3 border-b border-border px-4 py-3">
-        <Button variant="ghost" size="icon" onClick={goBack} aria-label="Voltar">
-          <ArrowLeft size={16} />
-        </Button>
+        <Tooltip content="Voltar">
+          <Button variant="ghost" size="icon" onClick={goBack} aria-label="Voltar">
+            <ArrowLeft size={16} />
+          </Button>
+        </Tooltip>
         <h1 className="text-sm font-semibold text-foreground">Configurações</h1>
       </header>
       <div className="flex min-h-0 flex-1 flex-col">
@@ -776,16 +779,18 @@ function StringListEditor({
               disabled={disabled}
               className="flex-1 rounded border border-border bg-background px-2 py-1.5 font-mono text-xs text-foreground focus:border-sky-500 focus:outline-none disabled:cursor-not-allowed"
             />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => removeAt(idx)}
-              disabled={disabled}
-              aria-label="Remover"
-            >
-              <Trash2 size={14} />
-            </Button>
+            <Tooltip content="Remover">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => removeAt(idx)}
+                disabled={disabled}
+                aria-label="Remover"
+              >
+                <Trash2 size={14} />
+              </Button>
+            </Tooltip>
           </div>
         ))
       )}

@@ -93,14 +93,16 @@ export function InfoPopover({
               onMouseDown={(e) => e.stopPropagation()}
             >
               <div className="min-w-0 flex-1">{children}</div>
-              <button
-                type="button"
-                className="mt-0.5 shrink-0 text-muted-foreground hover:text-foreground cursor-pointer"
-                onClick={() => setOpen(false)}
-                aria-label="Fechar"
-              >
-                <X size={12} />
-              </button>
+              <Tooltip content="Fechar">
+                <button
+                  type="button"
+                  className="mt-0.5 shrink-0 text-muted-foreground hover:text-foreground cursor-pointer"
+                  onClick={() => setOpen(false)}
+                  aria-label="Fechar"
+                >
+                  <X size={12} />
+                </button>
+              </Tooltip>
             </div>,
             document.body,
           )

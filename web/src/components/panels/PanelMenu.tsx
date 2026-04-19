@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { PANEL_LABELS } from '@/lib/panels'
 import { cn } from '@/lib/utils'
+import { Tooltip } from '@/components/ui/Tooltip'
 import type { PanelKind } from '@/types'
 
 type Props = {
@@ -39,22 +40,25 @@ export function PanelMenu({ openKinds, onToggle, disabled }: Props) {
     return () => document.removeEventListener('mousedown', onDocClick)
   }, [open])
 
+  const trigger = (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => setOpen((v) => !v)}
+      className={cn(
+        'flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground',
+        'hover:bg-accent hover:text-accent-foreground',
+        'disabled:pointer-events-none disabled:opacity-50',
+      )}
+      aria-label="Abrir menu de painéis"
+    >
+      <PanelRight size={14} />
+    </button>
+  )
+
   return (
     <div ref={wrapRef} className="relative">
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => setOpen((v) => !v)}
-        className={cn(
-          'flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground',
-          'hover:bg-accent hover:text-accent-foreground',
-          'disabled:pointer-events-none disabled:opacity-50',
-        )}
-        title="Painéis"
-        aria-label="Abrir menu de painéis"
-      >
-        <PanelRight size={14} />
-      </button>
+      {open ? trigger : <Tooltip content="Painéis">{trigger}</Tooltip>}
       {open ? (
         <div className="absolute right-0 top-9 z-30 min-w-[180px] rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-lg">
           {ORDER.map((kind) => {
