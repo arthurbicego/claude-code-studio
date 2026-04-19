@@ -164,7 +164,7 @@ export function SessionsSection({
             size={10}
             className={cn('transition-transform', sectionOpen && 'rotate-90')}
           />
-          <span>{title}</span>
+          <span className="flex-1">{title}</span>
           <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-medium normal-case text-muted-foreground">
             {total}
           </span>
