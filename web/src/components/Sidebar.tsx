@@ -8,6 +8,7 @@ import {
   Settings,
 } from 'lucide-react'
 import { useMemo } from 'react'
+import { useNavigate } from 'react-router'
 import { Button } from '@/components/ui/Button'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { SessionsSection } from '@/components/SessionsSection'
@@ -24,7 +25,6 @@ type Props = {
   activeSessionKey: string | null
   onRefresh: () => void
   onOpenNewSession: () => void
-  onOpenSettings: () => void
   onResumeSession: (project: Project, session: SessionMeta) => void
   onCloseSession: (sessionKey: string) => void
   onArchiveSession: (id: string) => void
@@ -82,13 +82,13 @@ export function Sidebar({
   activeSessionKey,
   onRefresh,
   onOpenNewSession,
-  onOpenSettings,
   onResumeSession,
   onCloseSession,
   onArchiveSession,
   onUnarchiveSession,
   onDeleteSession,
 }: Props) {
+  const navigate = useNavigate()
   const openSessionKeys = useMemo(() => new Set(openSessions.keys()), [openSessions])
   const hasOpen = openSessions.size > 0
   const hasArchived = projects.some((p) => p.sessions.some((s) => s.archived))
@@ -107,7 +107,7 @@ export function Sidebar({
             </Button>
           </Tooltip>
           <Tooltip content="Configurações">
-            <Button size="xs" variant="ghost" onClick={onOpenSettings}>
+            <Button size="xs" variant="ghost" onClick={() => navigate('/settings')}>
               <Settings size={14} />
             </Button>
           </Tooltip>

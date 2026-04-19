@@ -5,7 +5,6 @@ import { TerminalView } from '@/components/Terminal'
 import { SessionActions } from '@/components/SessionActions'
 import { SessionFooter } from '@/components/SessionFooter'
 import { NewSessionModal } from '@/components/NewSessionModal'
-import { SettingsModal } from '@/components/SettingsModal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ColumnResizer } from '@/components/panels/ColumnResizer'
 import { RowResizer } from '@/components/panels/RowResizer'
@@ -39,7 +38,6 @@ export default function App() {
   const [openSessions, setOpenSessions] = useState<Map<string, SessionLaunch>>(new Map())
   const [activeSessionKey, setActiveSessionKey] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<SessionMeta | null>(null)
   const [status, setStatus] = useState('Selecione uma sessão na barra lateral ou crie uma nova.')
   const [interruptSignal, setInterruptSignal] = useState(0)
@@ -277,7 +275,6 @@ export default function App() {
         activeSessionKey={activeSessionKey}
         onRefresh={refresh}
         onOpenNewSession={() => setModalOpen(true)}
-        onOpenSettings={() => setSettingsOpen(true)}
         onResumeSession={onResumeSession}
         onCloseSession={closeSession}
         onArchiveSession={archiveSession}
@@ -389,8 +386,6 @@ export default function App() {
         onClose={() => setModalOpen(false)}
         onLaunch={onLaunchNew}
       />
-
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       <ConfirmDialog
         open={!!pendingDelete}
