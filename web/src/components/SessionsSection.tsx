@@ -6,15 +6,16 @@ import {
   FolderTree,
   List,
   Trash2,
+  X,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { cn } from '@/lib/utils'
 import { useExpanded } from '@/hooks/useExpanded'
 import { useSectionPrefs } from '@/hooks/useSectionPrefs'
-import type { LiveSession, Project, SessionMeta, SessionSortBy } from '@/types'
+import type { LiveSession, Project, SessionLaunch, SessionMeta, SessionSortBy } from '@/types'
 
-type Variant = 'history' | 'archived'
+type Variant = 'history' | 'archived' | 'open'
 
 type Props = {
   variant: Variant
@@ -24,10 +25,13 @@ type Props = {
   activeSessionKey: string | null
   prefsKey: string
   defaultCollapsed?: boolean
+  openSessionKeys?: Set<string>
+  openLaunches?: Map<string, SessionLaunch>
   onResumeSession: (project: Project, session: SessionMeta) => void
   onArchive: (id: string) => void
   onUnarchive: (id: string) => void
   onDelete: (session: SessionMeta) => void
+  onCloseSession?: (sessionKey: string) => void
   renderState: (live: LiveSession | undefined) => React.ReactNode
   applyProjectOrder: <T extends { slug: string }>(items: T[]) => T[]
   onReorderProject: (fromSlug: string, toSlug: string, position: 'before' | 'after') => void
@@ -71,10 +75,13 @@ export function SessionsSection({
   activeSessionKey,
   prefsKey,
   defaultCollapsed = false,
+  openSessionKeys,
+  openLaunches,
   onResumeSession,
   onArchive,
   onUnarchive,
   onDelete,
+  onCloseSession,
   renderState,
   applyProjectOrder,
   onReorderProject,
@@ -83,17 +90,60 @@ export function SessionsSection({
   const { prefs, toggleGrouping, setSortBy } = useSectionPrefs(prefsKey)
   const [sectionOpen, setSectionOpen] = useState(!defaultCollapsed)
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
+  const groupsExpandedByDefault = variant === 'open'
 
-  const wantArchived = variant === 'archived'
   const filteredProjects = useMemo(() => {
+    const sessionFilter = (s: SessionMeta) => {
+      if (variant === 'archived') return s.archived
+      if (variant === 'open') return !s.archived && (openSessionKeys?.has(s.id) ?? false)
+      return !s.archived && !(openSessionKeys?.has(s.id) ?? false)
+    }
     const filtered = projects
       .map((p) => ({
         ...p,
-        sessions: p.sessions.filter((s) => s.archived === wantArchived),
+        sessions: p.sessions.filter(sessionFilter),
       }))
       .filter((p) => p.sessions.length > 0)
+
+    if (variant === 'open' && openLaunches) {
+      const knownIds = new Set<string>()
+      for (const p of filtered) for (const s of p.sessions) knownIds.add(s.id)
+      const orphans: { project: Project; session: SessionMeta }[] = []
+      for (const launch of openLaunches.values()) {
+        if (knownIds.has(launch.sessionKey)) continue
+        const synthSession: SessionMeta = {
+          id: launch.sessionKey,
+          mtime: Date.now(),
+          createdAt: Date.now(),
+          size: 0,
+          preview: launch.label ?? null,
+          archived: false,
+        }
+        const matchByCwd = projects.find((p) => p.cwd === launch.cwd)
+        if (matchByCwd) {
+          const existing = filtered.find((p) => p.slug === matchByCwd.slug)
+          if (existing) {
+            existing.sessions = [...existing.sessions, synthSession]
+          } else {
+            filtered.push({ ...matchByCwd, sessions: [synthSession] })
+          }
+        } else {
+          orphans.push({
+            project: {
+              slug: `__synth_${launch.sessionKey}`,
+              cwd: launch.cwd,
+              cwdResolved: false,
+              sessions: [synthSession],
+            },
+            session: synthSession,
+          })
+        }
+      }
+      for (const { project } of orphans) filtered.push(project)
+    }
+
     return applyProjectOrder(filtered)
-  }, [projects, wantArchived, applyProjectOrder])
+  }, [variant, projects, openSessionKeys, openLaunches, applyProjectOrder])
 
   const flat = useMemo(() => {
     const out: { project: Project; session: SessionMeta }[] = []
@@ -157,7 +207,8 @@ export function SessionsSection({
           {filteredProjects.map((p) => {
             const sessions = sortSessions(p.sessions, prefs.sortBy)
             const expandKey = `${prefsKey}:${p.slug}`
-            const expanded = isExpanded(expandKey)
+            const explicit = isExpanded(expandKey)
+            const expanded = groupsExpandedByDefault ? !explicit : explicit
             const showBefore =
               dropTarget?.slug === p.slug && dropTarget.position === 'before'
             const showAfter =
@@ -226,11 +277,12 @@ export function SessionsSection({
                           session={s}
                           live={liveSessions.get(s.id)}
                           active={s.id === activeSessionKey}
-                          archived={wantArchived}
+                          variant={variant}
                           onResumeSession={onResumeSession}
                           onArchive={onArchive}
                           onUnarchive={onUnarchive}
                           onDelete={onDelete}
+                          onCloseSession={onCloseSession}
                           renderState={renderState}
                         />
                       ))}
@@ -253,12 +305,13 @@ export function SessionsSection({
               session={session}
               live={liveSessions.get(session.id)}
               active={session.id === activeSessionKey}
-              archived={wantArchived}
+              variant={variant}
               showProject
               onResumeSession={onResumeSession}
               onArchive={onArchive}
               onUnarchive={onUnarchive}
               onDelete={onDelete}
+              onCloseSession={onCloseSession}
               renderState={renderState}
             />
           ))}
@@ -273,12 +326,13 @@ type RowProps = {
   session: SessionMeta
   live: LiveSession | undefined
   active: boolean
-  archived: boolean
+  variant: Variant
   showProject?: boolean
   onResumeSession: (project: Project, session: SessionMeta) => void
   onArchive: (id: string) => void
   onUnarchive: (id: string) => void
   onDelete: (session: SessionMeta) => void
+  onCloseSession?: (sessionKey: string) => void
   renderState: (live: LiveSession | undefined) => React.ReactNode
 }
 
@@ -287,14 +341,17 @@ function SessionRow({
   session,
   live,
   active,
-  archived,
+  variant,
   showProject,
   onResumeSession,
   onArchive,
   onUnarchive,
   onDelete,
+  onCloseSession,
   renderState,
 }: RowProps) {
+  const isArchived = variant === 'archived'
+  const isOpen = variant === 'open'
   return (
     <div
       className={cn(
@@ -320,7 +377,21 @@ function SessionRow({
         </span>
       </button>
       <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/row:opacity-100">
-        {archived ? (
+        {isOpen && onCloseSession ? (
+          <Tooltip content="Fechar sessão">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onCloseSession(session.id)
+              }}
+              className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"
+              aria-label="Fechar sessão"
+            >
+              <X size={12} />
+            </button>
+          </Tooltip>
+        ) : null}
+        {isArchived ? (
           <Tooltip content="Desarquivar">
             <button
               onClick={(e) => {

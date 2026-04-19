@@ -6,12 +6,11 @@ import {
   Plus,
   RefreshCw,
   Settings,
-  X,
 } from 'lucide-react'
+import { useMemo } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { SessionsSection } from '@/components/SessionsSection'
-import { cn } from '@/lib/utils'
 import { useProjectOrder } from '@/hooks/useProjectOrder'
 import type { LiveSession, LiveSessionState, Project, SessionLaunch, SessionMeta } from '@/types'
 
@@ -27,16 +26,10 @@ type Props = {
   onOpenNewSession: () => void
   onOpenSettings: () => void
   onResumeSession: (project: Project, session: SessionMeta) => void
-  onActivateOpen: (sessionKey: string) => void
   onCloseSession: (sessionKey: string) => void
   onArchiveSession: (id: string) => void
   onUnarchiveSession: (id: string) => void
   onDeleteSession: (session: SessionMeta) => void
-}
-
-function basename(cwd: string): string {
-  const parts = cwd.split('/').filter(Boolean)
-  return parts[parts.length - 1] || cwd
 }
 
 function formatTime(ts: number | null): string {
@@ -79,12 +72,6 @@ function renderState(live: LiveSession | undefined) {
   return <StateIndicator state={live.state} />
 }
 
-function launchLabel(l: SessionLaunch): string {
-  if (l.label) return l.label
-  if (l.resume) return l.resume.slice(0, 8)
-  return `Nova em ${basename(l.cwd)}`
-}
-
 export function Sidebar({
   projects,
   loading,
@@ -97,13 +84,13 @@ export function Sidebar({
   onOpenNewSession,
   onOpenSettings,
   onResumeSession,
-  onActivateOpen,
   onCloseSession,
   onArchiveSession,
   onUnarchiveSession,
   onDeleteSession,
 }: Props) {
-  const openList = Array.from(openSessions.values())
+  const openSessionKeys = useMemo(() => new Set(openSessions.keys()), [openSessions])
+  const hasOpen = openSessions.size > 0
   const hasArchived = projects.some((p) => p.sessions.some((s) => s.archived))
   const { applyOrder, moveSlug } = useProjectOrder()
 
@@ -132,50 +119,25 @@ export function Sidebar({
       </header>
 
       <div className="flex-1 overflow-y-auto p-2">
-        {openList.length > 0 ? (
-          <section className="mb-3">
-            <h2 className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Abertas
-            </h2>
-            <div className="flex flex-col gap-px">
-              {openList.map((l) => {
-                const live = liveSessions.get(l.sessionKey)
-                const state: LiveSessionState = live ? live.state : 'finalizado'
-                const active = l.sessionKey === activeSessionKey
-                return (
-                  <div
-                    key={l.sessionKey}
-                    className={cn(
-                      'group/row flex items-center gap-2 rounded border-l-2 border-transparent px-2 py-1.5 text-xs',
-                      active
-                        ? 'border-sky-500 bg-sky-900/30 text-foreground'
-                        : 'text-muted-foreground hover:bg-accent/60',
-                    )}
-                  >
-                    <StateIndicator state={state} />
-                    <button
-                      onClick={() => onActivateOpen(l.sessionKey)}
-                      className="flex min-w-0 flex-1 flex-col text-left cursor-pointer"
-                    >
-                      <span className="truncate">{launchLabel(l)}</span>
-                      <span className="truncate font-mono text-[10px] text-muted-foreground/70">
-                        {l.cwd}
-                      </span>
-                    </button>
-                    <Tooltip content="Fechar sessão">
-                      <button
-                        onClick={() => onCloseSession(l.sessionKey)}
-                        className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover/row:opacity-100 cursor-pointer"
-                        aria-label="Fechar sessão"
-                      >
-                        <X size={12} />
-                      </button>
-                    </Tooltip>
-                  </div>
-                )
-              })}
-            </div>
-          </section>
+        {hasOpen ? (
+          <SessionsSection
+            variant="open"
+            title="Abertas"
+            prefsKey="open"
+            projects={projects}
+            liveSessions={liveSessions}
+            activeSessionKey={activeSessionKey}
+            openSessionKeys={openSessionKeys}
+            openLaunches={openSessions}
+            onResumeSession={onResumeSession}
+            onArchive={onArchiveSession}
+            onUnarchive={onUnarchiveSession}
+            onDelete={onDeleteSession}
+            onCloseSession={onCloseSession}
+            renderState={renderState}
+            applyProjectOrder={applyOrder}
+            onReorderProject={moveSlug}
+          />
         ) : null}
 
         {projects.length === 0 && !loading ? (
@@ -191,6 +153,7 @@ export function Sidebar({
           projects={projects}
           liveSessions={liveSessions}
           activeSessionKey={activeSessionKey}
+          openSessionKeys={openSessionKeys}
           onResumeSession={onResumeSession}
           onArchive={onArchiveSession}
           onUnarchive={onUnarchiveSession}
