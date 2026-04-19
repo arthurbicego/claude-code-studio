@@ -51,6 +51,7 @@ export type SessionLaunch = {
   model?: Model
   effort?: Effort
   permissionMode?: PermissionMode
+  worktree?: string
 }
 
 export type LiveSessionState = 'ativo' | 'aguardando' | 'standby' | 'finalizado'
@@ -108,7 +109,7 @@ export type ClaudeSettings = {
   sandbox: SandboxSettings
 }
 
-export type PanelKind = 'diff' | 'terminal' | 'tasks' | 'plan'
+export type PanelKind = 'diff' | 'terminal' | 'tasks' | 'plan' | 'worktrees'
 
 export type OpenPanel = {
   kind: PanelKind
@@ -157,4 +158,44 @@ export type SessionFooter = {
   sevenDayResetsAt: number | null
   cacheUpdatedAt: number | null
   globalUpdatedAt: number | null
+  worktree: WorktreeRef | null
+}
+
+export type WorktreeRef = {
+  path: string
+  name: string
+}
+
+export type Worktree = {
+  path: string
+  branch: string | null
+  head: string | null
+  detached: boolean
+  prunable: boolean
+  isMain: boolean
+  clean: boolean
+  modifiedCount: number
+  ahead: number
+  behind: number
+  linesAdded: number
+  linesRemoved: number
+  liveSessionCount: number
+  mtime: number | null
+}
+
+export type WorktreesResult = {
+  cwd: string
+  base: string | null
+  mainPath: string | null
+  worktrees: Worktree[]
+}
+
+export type WorktreeDiffResult = {
+  cwd: string
+  branch: string | null
+  base: string | null
+  committed: string
+  unstaged: string
+  staged: string
+  untracked: string[]
 }

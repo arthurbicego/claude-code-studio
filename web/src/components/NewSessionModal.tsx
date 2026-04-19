@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
-import { ArrowUp, Folder, Home } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { AlertTriangle, ArrowUp, Folder, GitBranch, Home } from 'lucide-react'
 import { Modal } from '@/components/Modal'
 import { Button } from '@/components/ui/Button'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { useBrowser } from '@/hooks/useBrowser'
+import { cn } from '@/lib/utils'
 import type {
   Effort,
   Model,
@@ -17,6 +18,8 @@ type Props = {
   open: boolean
   defaults: SessionDefaults
   projects: Project[]
+  liveCwds: Set<string>
+  initial?: { cwd?: string; isolate?: boolean } | null
   onClose: () => void
   onLaunch: (l: SessionLaunch) => void
 }
@@ -31,6 +34,8 @@ const PERMISSION_MODES: PermissionMode[] = [
   'dontAsk',
   'bypassPermissions',
 ]
+
+const WORKTREE_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/
 
 function labelWithDefault<T extends string>(value: T, defaultValue: T | null | undefined): string {
   return value === defaultValue ? `${value} (padrão)` : value
@@ -68,7 +73,7 @@ function FieldSelect<T extends string>({ label, value, options, defaultValue, on
   )
 }
 
-export function NewSessionModal({ open, defaults, projects, onClose, onLaunch }: Props) {
+export function NewSessionModal({ open, defaults, projects, liveCwds, initial, onClose, onLaunch }: Props) {
   const initialModel = (defaults.model as Model) ?? MODELS[0]
   const initialEffort = (defaults.effort as Effort) ?? EFFORTS[2]
   const initialPermission = (defaults.permissionMode as PermissionMode) ?? 'default'
@@ -76,20 +81,70 @@ export function NewSessionModal({ open, defaults, projects, onClose, onLaunch }:
   const [model, setModel] = useState<Model>(initialModel)
   const [effort, setEffort] = useState<Effort>(initialEffort)
   const [permissionMode, setPermissionMode] = useState<PermissionMode>(initialPermission)
+  const [selectedCwd, setSelectedCwd] = useState<string | null>(null)
+  const [isolate, setIsolate] = useState(false)
+  const [userTouchedIsolate, setUserTouchedIsolate] = useState(false)
+  const [worktreeName, setWorktreeName] = useState('')
 
   const browser = useBrowser()
+
+  useEffect(() => {
+    if (!open) {
+      setSelectedCwd(null)
+      setIsolate(false)
+      setUserTouchedIsolate(false)
+      setWorktreeName('')
+      return
+    }
+    if (initial?.cwd) setSelectedCwd(initial.cwd)
+    if (initial?.isolate) {
+      setIsolate(true)
+      setUserTouchedIsolate(true)
+    }
+  }, [open, initial])
+
+  const effectiveCwd = selectedCwd ?? browser.data?.path ?? null
+  const conflictsWithLive = !!effectiveCwd && liveCwds.has(effectiveCwd)
+
+  useEffect(() => {
+    if (userTouchedIsolate) return
+    if (conflictsWithLive) setIsolate(true)
+    else setIsolate(false)
+  }, [conflictsWithLive, userTouchedIsolate])
 
   const sortedProjects = useMemo(
     () => [...projects].sort((a, b) => a.cwd.localeCompare(b.cwd)),
     [projects],
   )
 
-  const launch = (cwd: string) => {
+  const nameInvalid = isolate && worktreeName.length > 0 && !WORKTREE_NAME_RE.test(worktreeName)
+  const canLaunch = !!effectiveCwd && !nameInvalid
+
+  const launch = () => {
+    if (!effectiveCwd || nameInvalid) return
     const sessionKey =
       typeof crypto !== 'undefined' && 'randomUUID' in crypto
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(36).slice(2)}`
-    onLaunch({ sessionKey, cwd, model, effort, permissionMode })
+    const launchPayload: SessionLaunch = {
+      sessionKey,
+      cwd: effectiveCwd,
+      model,
+      effort,
+      permissionMode,
+    }
+    if (isolate) {
+      launchPayload.worktree = worktreeName.trim() || '1'
+    }
+    onLaunch(launchPayload)
+  }
+
+  const liveCountFor = (cwd: string) => {
+    let count = 0
+    liveCwds.forEach((c) => {
+      if (c === cwd) count++
+    })
+    return count
   }
 
   return (
@@ -103,12 +158,8 @@ export function NewSessionModal({ open, defaults, projects, onClose, onLaunch }:
           <Button variant="ghost" onClick={onClose}>
             Cancelar
           </Button>
-          <Button
-            variant="primary"
-            disabled={!browser.data?.path}
-            onClick={() => browser.data && launch(browser.data.path)}
-          >
-            Usar esta pasta
+          <Button variant="primary" disabled={!canLaunch} onClick={launch}>
+            Iniciar sessão
           </Button>
         </>
       }
@@ -127,27 +178,102 @@ export function NewSessionModal({ open, defaults, projects, onClose, onLaunch }:
 
         <section className="border-b border-border p-4">
           <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Worktree
+          </h3>
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-foreground">
+            <input
+              type="checkbox"
+              checked={isolate}
+              onChange={(e) => {
+                setUserTouchedIsolate(true)
+                setIsolate(e.target.checked)
+              }}
+            />
+            <GitBranch size={12} className="text-muted-foreground" />
+            <span>Isolar em worktree novo</span>
+          </label>
+          {isolate ? (
+            <div className="mt-2 flex flex-col gap-1">
+              <label className="flex flex-col gap-1 text-[11px] text-muted-foreground">
+                <span className="text-[10px] uppercase tracking-wide">Nome (opcional)</span>
+                <input
+                  type="text"
+                  value={worktreeName}
+                  onChange={(e) => setWorktreeName(e.target.value)}
+                  placeholder="deixar em branco para nome gerado"
+                  className={cn(
+                    'rounded border border-border bg-background px-2 py-1.5 font-mono text-xs text-foreground focus:border-sky-500 focus:outline-none',
+                    nameInvalid && 'border-rose-500',
+                  )}
+                />
+                {nameInvalid ? (
+                  <span className="text-[11px] text-rose-400">
+                    use apenas letras, números, ponto, traço ou sublinhado (até 64 caracteres)
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-muted-foreground/80">
+                    criado em <code className="font-mono">.claude/worktrees/&lt;nome&gt;</code> a partir de <code className="font-mono">origin/HEAD</code>
+                  </span>
+                )}
+              </label>
+            </div>
+          ) : null}
+          {conflictsWithLive && !isolate ? (
+            <div className="mt-2 flex items-start gap-2 rounded bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-200">
+              <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+              <span>
+                Já existe sessão ativa neste diretório — sessões paralelas no mesmo working tree podem sobrescrever arquivos uma da outra.
+              </span>
+            </div>
+          ) : null}
+          {conflictsWithLive && isolate && !userTouchedIsolate ? (
+            <div className="mt-2 flex items-start gap-2 rounded bg-sky-500/10 px-2 py-1.5 text-[11px] text-sky-200">
+              <GitBranch size={12} className="mt-0.5 shrink-0" />
+              <span>Já há sessão ativa aqui — pré-marcamos para isolar em worktree.</span>
+            </div>
+          ) : null}
+        </section>
+
+        <section className="border-b border-border p-4">
+          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             Projetos existentes
           </h3>
           <div className="flex max-h-44 flex-col gap-1 overflow-y-auto">
             {sortedProjects.length === 0 ? (
               <p className="text-xs text-muted-foreground">Nenhum projeto ainda.</p>
             ) : (
-              sortedProjects.map((p) => (
-                <button
-                  key={p.slug}
-                  onClick={() => launch(p.cwd)}
-                  className="flex items-center justify-between gap-2 rounded bg-accent/40 px-3 py-2 text-left text-xs hover:bg-accent cursor-pointer"
-                >
-                  <span className="flex flex-col">
-                    <span className="font-medium text-foreground">{basename(p.cwd)}</span>
-                    <span className="font-mono text-[10px] text-muted-foreground">{p.cwd}</span>
-                  </span>
-                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                    {p.sessions.length}
-                  </span>
-                </button>
-              ))
+              sortedProjects.map((p) => {
+                const active = selectedCwd === p.cwd
+                const liveCount = liveCountFor(p.cwd)
+                return (
+                  <button
+                    key={p.slug}
+                    onClick={() => setSelectedCwd(p.cwd)}
+                    className={cn(
+                      'flex items-center justify-between gap-2 rounded px-3 py-2 text-left text-xs cursor-pointer',
+                      active ? 'bg-sky-500/15 ring-1 ring-sky-500/50' : 'bg-accent/40 hover:bg-accent',
+                    )}
+                  >
+                    <span className="flex flex-col">
+                      <span className="font-medium text-foreground">{basename(p.cwd)}</span>
+                      <span className="font-mono text-[10px] text-muted-foreground">{p.cwd}</span>
+                    </span>
+                    <span className="flex items-center gap-1">
+                      {liveCount > 0 ? (
+                        <Tooltip content={`${liveCount} sessão(ões) ativa(s) aqui`}>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[10px] text-emerald-300">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                            {liveCount}
+                          </span>
+                        </Tooltip>
+                      ) : null}
+                      <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                        {p.sessions.length}
+                      </span>
+                    </span>
+                  </button>
+                )
+              })
             )}
           </div>
         </section>
@@ -184,6 +310,14 @@ export function NewSessionModal({ open, defaults, projects, onClose, onLaunch }:
             >
               {browser.data?.path ?? (browser.loading ? 'carregando…' : '')}
             </code>
+            <Button
+              size="xs"
+              variant={selectedCwd && browser.data && selectedCwd === browser.data.path ? 'primary' : 'ghost'}
+              disabled={!browser.data?.path}
+              onClick={() => browser.data && setSelectedCwd(browser.data.path)}
+            >
+              Selecionar
+            </Button>
             <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
               <input
                 type="checkbox"

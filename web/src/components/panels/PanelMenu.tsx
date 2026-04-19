@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   Check,
   FileDiff,
+  GitBranch,
   ListChecks,
   ListTodo,
   PanelRight,
@@ -23,9 +24,10 @@ const ICONS: Record<PanelKind, typeof FileDiff> = {
   terminal: TerminalSquare,
   tasks: ListTodo,
   plan: ListChecks,
+  worktrees: GitBranch,
 }
 
-const ORDER: PanelKind[] = ['diff', 'terminal', 'tasks', 'plan']
+const ORDER: PanelKind[] = ['diff', 'terminal', 'tasks', 'plan', 'worktrees']
 
 export function PanelMenu({ openKinds, onToggle, disabled }: Props) {
   const [open, setOpen] = useState(false)
