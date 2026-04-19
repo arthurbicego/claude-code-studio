@@ -29,7 +29,13 @@ type Props = {
   onUnarchive: (id: string) => void
   onDelete: (session: SessionMeta) => void
   renderState: (live: LiveSession | undefined) => React.ReactNode
+  applyProjectOrder: <T extends { slug: string }>(items: T[]) => T[]
+  onReorderProject: (fromSlug: string, toSlug: string, position: 'before' | 'after') => void
 }
+
+type DropTarget = { slug: string; position: 'before' | 'after' }
+
+const DRAG_MIME = 'application/x-claude-code-studio-project-slug'
 
 function basename(cwd: string): string {
   const parts = cwd.split('/').filter(Boolean)
@@ -70,20 +76,24 @@ export function SessionsSection({
   onUnarchive,
   onDelete,
   renderState,
+  applyProjectOrder,
+  onReorderProject,
 }: Props) {
   const { isExpanded, toggle } = useExpanded()
   const { prefs, toggleGrouping, setSortBy } = useSectionPrefs(prefsKey)
   const [sectionOpen, setSectionOpen] = useState(!defaultCollapsed)
+  const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
 
   const wantArchived = variant === 'archived'
   const filteredProjects = useMemo(() => {
-    return projects
+    const filtered = projects
       .map((p) => ({
         ...p,
         sessions: p.sessions.filter((s) => s.archived === wantArchived),
       }))
       .filter((p) => p.sessions.length > 0)
-  }, [projects, wantArchived])
+    return applyProjectOrder(filtered)
+  }, [projects, wantArchived, applyProjectOrder])
 
   const flat = useMemo(() => {
     const out: { project: Project; session: SessionMeta }[] = []
@@ -148,11 +158,48 @@ export function SessionsSection({
             const sessions = sortSessions(p.sessions, prefs.sortBy)
             const expandKey = `${prefsKey}:${p.slug}`
             const expanded = isExpanded(expandKey)
+            const showBefore =
+              dropTarget?.slug === p.slug && dropTarget.position === 'before'
+            const showAfter =
+              dropTarget?.slug === p.slug && dropTarget.position === 'after'
             return (
-              <div key={p.slug} className="mb-2">
+              <div key={p.slug} className="relative mb-2">
+                {showBefore ? (
+                  <div className="pointer-events-none absolute inset-x-0 -top-1 h-0.5 rounded bg-sky-500" />
+                ) : null}
                 <button
-                  className="flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-left text-xs font-semibold text-foreground hover:bg-accent cursor-pointer"
+                  className="flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-left text-xs font-semibold text-foreground hover:bg-accent cursor-pointer active:cursor-grabbing"
                   onClick={() => toggle(expandKey)}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData(DRAG_MIME, p.slug)
+                    e.dataTransfer.effectAllowed = 'move'
+                    setDropTarget(null)
+                  }}
+                  onDragOver={(e) => {
+                    if (!e.dataTransfer.types.includes(DRAG_MIME)) return
+                    e.preventDefault()
+                    e.dataTransfer.dropEffect = 'move'
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    const position: 'before' | 'after' =
+                      e.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+                    setDropTarget((prev) =>
+                      prev && prev.slug === p.slug && prev.position === position
+                        ? prev
+                        : { slug: p.slug, position },
+                    )
+                  }}
+                  onDragEnd={() => setDropTarget(null)}
+                  onDrop={(e) => {
+                    const from = e.dataTransfer.getData(DRAG_MIME)
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    const position: 'before' | 'after' =
+                      e.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+                    setDropTarget(null)
+                    if (!from || from === p.slug) return
+                    e.preventDefault()
+                    onReorderProject(from, p.slug, position)
+                  }}
                 >
                   <ChevronRight
                     size={12}
@@ -189,6 +236,9 @@ export function SessionsSection({
                       ))}
                     </div>
                   </>
+                ) : null}
+                {showAfter ? (
+                  <div className="pointer-events-none absolute inset-x-0 -bottom-1 h-0.5 rounded bg-sky-500" />
                 ) : null}
               </div>
             )
