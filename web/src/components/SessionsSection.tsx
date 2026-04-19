@@ -4,11 +4,13 @@ import {
   ArrowDownAZ,
   ChevronRight,
   FolderTree,
+  Info,
   List,
   Trash2,
   X,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { cn } from '@/lib/utils'
 import { useExpanded } from '@/hooks/useExpanded'
@@ -218,9 +220,17 @@ export function SessionsSection({
                 {showBefore ? (
                   <div className="pointer-events-none absolute inset-x-0 -top-1 h-0.5 rounded bg-sky-500" />
                 ) : null}
-                <button
+                <div
+                  role="button"
+                  tabIndex={0}
                   className="flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-left text-xs font-semibold text-foreground hover:bg-accent cursor-pointer active:cursor-grabbing"
                   onClick={() => toggle(expandKey)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      toggle(expandKey)
+                    }
+                  }}
                   draggable
                   onDragStart={(e) => {
                     e.dataTransfer.setData(DRAG_MIME, p.slug)
@@ -263,12 +273,10 @@ export function SessionsSection({
                   <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                     {sessions.length}
                   </span>
-                </button>
+                  <PathPopover path={p.cwd} />
+                </div>
                 {expanded ? (
                   <>
-                    <div className="break-all px-2 pb-1 pl-6 font-mono text-[10px] text-muted-foreground/70">
-                      {p.cwd}
-                    </div>
                     <div className="flex flex-col gap-px pl-3.5">
                       {sessions.map((s) => (
                         <SessionRow
@@ -432,5 +440,93 @@ function SessionRow({
         </Tooltip>
       </div>
     </div>
+  )
+}
+
+function PathPopover({ path }: { path: string }) {
+  const [open, setOpen] = useState(false)
+  const anchorRef = useRef<HTMLButtonElement | null>(null)
+  const popoverRef = useRef<HTMLDivElement | null>(null)
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null)
+
+  useLayoutEffect(() => {
+    if (!open || !anchorRef.current || !popoverRef.current) return
+    const rect = anchorRef.current.getBoundingClientRect()
+    const pw = popoverRef.current.offsetWidth
+    const ph = popoverRef.current.offsetHeight
+    let top = rect.bottom + 4
+    let left = rect.right - pw
+    left = Math.max(6, Math.min(left, window.innerWidth - pw - 6))
+    top = Math.max(6, Math.min(top, window.innerHeight - ph - 6))
+    setCoords({ top, left })
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const handleClick = (e: MouseEvent) => {
+      if (
+        popoverRef.current?.contains(e.target as Node) ||
+        anchorRef.current?.contains(e.target as Node)
+      )
+        return
+      setOpen(false)
+    }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [open])
+
+  return (
+    <>
+      <button
+        ref={anchorRef}
+        type="button"
+        className={cn(
+          'inline-flex rounded p-0.5 cursor-pointer',
+          open ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+        )}
+        onClick={(e) => {
+          e.stopPropagation()
+          setOpen((v) => !v)
+        }}
+        aria-label="Mostrar caminho do projeto"
+        aria-expanded={open}
+      >
+        <Info size={12} />
+      </button>
+      {open && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              ref={popoverRef}
+              role="dialog"
+              className="fixed z-50 flex max-w-[min(480px,90vw)] items-start gap-2 rounded border border-border bg-popover px-2 py-1.5 text-[10px] text-popover-foreground shadow-md"
+              style={
+                coords
+                  ? { top: coords.top, left: coords.left }
+                  : { top: -9999, left: -9999, visibility: 'hidden' }
+              }
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <span className="break-all font-mono">{path}</span>
+              <button
+                type="button"
+                className="mt-0.5 shrink-0 text-muted-foreground hover:text-foreground cursor-pointer"
+                onClick={() => setOpen(false)}
+                aria-label="Fechar"
+              >
+                <X size={12} />
+              </button>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
   )
 }
