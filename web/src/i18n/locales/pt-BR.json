@@ -597,5 +597,46 @@
   },
   "vscode": {
     "openError": "Não foi possível abrir no VS Code: {{message}}"
+  },
+  "help": {
+    "open": "Abrir guia de uso",
+    "title": "Guia de uso",
+    "subtitle": "Como navegar e tirar o máximo do Claude Code Studio",
+    "tocLabel": "Sumário",
+    "close": "Fechar guia",
+    "sections": {
+      "overview": {
+        "title": "Visão geral",
+        "body": "O Claude Code Studio é um painel local (roda em 127.0.0.1, sem autenticação) que envolve o CLI claude-code. Pense nele como mission-control para várias sessões do Claude rodando em paralelo, com worktrees git first-class e painéis vivos do que o modelo está fazendo.\n\nO que você ganha em relação ao CLI puro:\n• Múltiplas sessões abertas com indicador de estado (aguardando, ativa, standby, fechada).\n• Workflow de worktrees integrado ao ciclo de vida da sessão.\n• Painéis Plan / Tasks / Diff lado a lado com o terminal — você vê o raciocínio e as mudanças sem sair da view.\n• Custo da sessão e quota (5h/7d) sempre visíveis no rodapé.\n• Editores em UI para CLAUDE.md, agentes, skills e sandbox."
+      },
+      "sessions": {
+        "title": "Sessões",
+        "body": "A sidebar à esquerda divide as sessões em três blocos:\n• **Abertas**: rodando agora.\n• **Histórico**: já existiram, podem ser retomadas.\n• **Arquivadas**: tiradas do histórico padrão (continuam no disco).\n\nCada linha mostra um ícone de estado:\n• Sino piscando: aguardando ação do usuário.\n• Círculo verde: modelo processando.\n• Círculo tracejado laranja: standby (aberta e ociosa).\n• Círculo cinza: fechada.\n\nClicar em uma sessão do histórico chama `claude --resume <id>` no cwd correspondente. \"Nova sessão\" abre um modal onde você escolhe modelo, effort, permission mode, diretório alvo e se quer isolar em um worktree novo. Use a busca no topo da sidebar para filtrar por texto da sessão ou parte do ID."
+      },
+      "panels": {
+        "title": "Painéis laterais",
+        "body": "O botão de painéis no toolbar abre um menu com 5 painéis que aparecem à direita do terminal:\n• **Diff**: mudanças não commitadas no working tree atual.\n• **Plan**: o plano que o Claude está montando quando /plan está ativo.\n• **Tasks**: lista de TODOs que o Claude está rastreando.\n• **Terminal**: shell extra (não Claude) com o mesmo cwd, útil para rodar comandos em paralelo.\n• **Worktrees**: gestão completa dos worktrees do projeto.\n\nVocê pode abrir vários painéis ao mesmo tempo. Eles dividem o espaço em colunas com até dois painéis por coluna; arraste os divisores para ajustar tamanhos. O layout fica salvo entre sessões."
+      },
+      "worktrees": {
+        "title": "Worktrees",
+        "body": "Worktree git é um working tree separado (outro diretório) que compartilha a mesma .git/. Permite trabalhar em branches paralelas sem mexer no working tree principal — ideal para rodar mais de uma sessão Claude no mesmo repositório sem conflito de arquivos.\n\nFluxo típico:\n1. No modal de Nova sessão, marque \"Isolar em worktree novo\". O Studio cria `.claude/worktrees/<nome>` a partir de `origin/HEAD` e abre a sessão lá dentro.\n2. Trabalhe normalmente. O painel Diff mostra suas mudanças.\n3. Quando terminar, escolha o que fazer ao fechar a sessão: **manter** (worktree fica), **commitar & manter** (faz commit e fecha), **mergear** (fast-forward na base + fecha) ou **descartar** (apaga tudo).\n\nO painel Worktrees lista todos os worktrees do projeto, com ações para criar, abrir nova sessão dentro, mergear ou remover."
+      },
+      "memory": {
+        "title": "Memória (CLAUDE.md)",
+        "body": "O Claude Code carrega instruções de arquivos `CLAUDE.md` em três níveis:\n• **Global** (`~/.claude/CLAUDE.md`): vale para todas as sessões deste usuário.\n• **Ancestrais**: qualquer CLAUDE.md em diretórios pais até $HOME.\n• **Projeto** (cwd): `CLAUDE.md` (commitado, regra do time) e `CLAUDE.local.md` (gitignored, pessoal).\n\nA aba Memória das Settings mostra exatamente quais arquivos a CLI carrega para o cwd selecionado e permite editar cada um direto pela UI. Lembre de adicionar `CLAUDE.local.md` ao seu `.gitignore` quando criar o primeiro."
+      },
+      "agentsSkills": {
+        "title": "Agentes e Skills",
+        "body": "**Agentes** são subagentes que o Claude principal pode invocar via Task tool. Cada agente vira um `.md` com frontmatter (`name`, `description`, `model`, `tools`) + corpo (system prompt). Use quando uma tarefa específica se beneficiar de contexto isolado ou modelo diferente.\n\n**Skills** são instruções carregadas no contexto sob demanda. Cada skill é uma pasta com `SKILL.md` dentro, opcionalmente com arquivos de apoio. Diferente do CLAUDE.md, só carrega quando o trigger casa.\n\nAmbos têm escopo User (em `~/.claude`) ou Projeto (em `.claude/`). Crie e edite pelas abas Agentes e Skills do Settings — edits são auto-salvos."
+      },
+      "sandbox": {
+        "title": "Sandbox",
+        "body": "Aba Sandbox configura o isolamento de execução do CLI: regras de rede, sistema de arquivos, ripgrep e seccomp (Linux).\n\nQuatro escopos, na ordem em que a CLI aplica (mais forte primeiro): Managed > Local > Project > User. Cada escopo grava em um arquivo diferente:\n• **User** (`~/.claude/settings.json`)\n• **User local** (`~/.claude/.local`) — pessoal, fora do git\n• **Projeto** (`.claude/settings.json`) — commitado, regra do time\n• **Projeto local** (`.claude/settings.local.json`) — pessoal, fora do git\n\nMudanças valem só para novos processos do `claude` — sessões já abertas mantêm o sandbox antigo."
+      },
+      "settings": {
+        "title": "Configurações e idioma",
+        "body": "As configurações são auto-salvas: o indicador no topo da página de Settings mostra \"Salvando…\" / \"Salvo às HH:mm\" / mensagem de erro.\n\nAbas:\n• **Geral**: idioma da interface (pt-BR, en-US, es-ES). A escolha fica nas suas preferências de usuário (não no localStorage).\n• **Sessões**: timeout de standby (quanto tempo uma sessão pode ficar inativa antes de ser finalizada).\n• **Sandbox**, **Memória**, **Agentes**, **Skills**: ver as seções dedicadas.\n• **Sidebar**: inspecionar e resetar preferências armazenadas (ordem de projetos, agrupamento, grupos expandidos)."
+      }
+    }
   }
 }

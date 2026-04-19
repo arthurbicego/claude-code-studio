@@ -3,6 +3,7 @@ import {
   Circle,
   CircleDashed,
   CircleDot,
+  HelpCircle,
   Plus,
   RefreshCw,
   Search,
@@ -12,6 +13,7 @@ import {
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
+import { HelpModal } from '@/components/HelpModal'
 import { SessionsSection } from '@/components/SessionsSection'
 import { Button } from '@/components/ui/Button'
 import { Tooltip } from '@/components/ui/Tooltip'
@@ -97,6 +99,7 @@ export function Sidebar({
   const formatTime = useFormatTime()
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
+  const [helpOpen, setHelpOpen] = useState(false)
   const trimmedQuery = searchQuery.trim()
   const openSessionKeys = useMemo(() => new Set(openSessions.keys()), [openSessions])
   const hasOpen = openSessions.size > 0
@@ -131,6 +134,16 @@ export function Sidebar({
           <Tooltip content={reloadTooltip}>
             <Button size="xs" variant="ghost" onClick={onRefresh} disabled={loading}>
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            </Button>
+          </Tooltip>
+          <Tooltip content={t('help.open')}>
+            <Button
+              size="xs"
+              variant="ghost"
+              onClick={() => setHelpOpen(true)}
+              aria-label={t('help.open')}
+            >
+              <HelpCircle size={14} />
             </Button>
           </Tooltip>
           <Tooltip content={t('sidebar.settings')}>
@@ -256,6 +269,7 @@ export function Sidebar({
           </>
         ) : null}
       </div>
+      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
     </aside>
   )
 }

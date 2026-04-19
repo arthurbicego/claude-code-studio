@@ -597,5 +597,46 @@
   },
   "vscode": {
     "openError": "Could not open in VS Code: {{message}}"
+  },
+  "help": {
+    "open": "Open user guide",
+    "title": "User guide",
+    "subtitle": "How to navigate and get the most out of Claude Code Studio",
+    "tocLabel": "Contents",
+    "close": "Close guide",
+    "sections": {
+      "overview": {
+        "title": "Overview",
+        "body": "Claude Code Studio is a local dashboard (it binds to 127.0.0.1, no auth) that wraps the claude-code CLI. Think of it as mission-control for several Claude sessions running in parallel, with first-class git worktrees and live panels showing what the model is doing.\n\nWhat you get over the bare CLI:\n• Multiple concurrent sessions with state indicators (waiting, active, standby, closed).\n• Worktree workflow integrated into the session lifecycle.\n• Plan / Tasks / Diff panels next to the terminal — see reasoning and changes without leaving the view.\n• Session cost and quota (5h/7d) always visible in the footer.\n• In-app editors for CLAUDE.md, agents, skills, and sandbox."
+      },
+      "sessions": {
+        "title": "Sessions",
+        "body": "The left sidebar splits sessions into three groups:\n• **Open**: running right now.\n• **History**: existed before, can be resumed.\n• **Archived**: removed from the default history (still on disk).\n\nEach row shows a state icon:\n• Pulsing bell: waiting for user action.\n• Green circle: model processing.\n• Dashed orange circle: standby (open and idle).\n• Gray circle: closed.\n\nClicking a history row runs `claude --resume <id>` in the matching cwd. \"New session\" opens a modal where you pick model, effort, permission mode, target directory, and whether to isolate in a fresh worktree. Use the search input at the top of the sidebar to filter by session text or part of the ID."
+      },
+      "panels": {
+        "title": "Side panels",
+        "body": "The panels button in the toolbar opens a menu with 5 panels that appear to the right of the terminal:\n• **Diff**: uncommitted changes in the current working tree.\n• **Plan**: the plan Claude is building when /plan is active.\n• **Tasks**: TODOs Claude is tracking.\n• **Terminal**: extra (non-Claude) shell sharing the same cwd, handy for parallel commands.\n• **Worktrees**: full management of the project's worktrees.\n\nYou can open multiple panels at once. They split into columns with up to two panels per column; drag the dividers to resize. The layout is persisted across sessions."
+      },
+      "worktrees": {
+        "title": "Worktrees",
+        "body": "A git worktree is a separate working tree (another directory) that shares the same .git/. It lets you work on parallel branches without disturbing the main working tree — ideal for running more than one Claude session in the same repo without file conflicts.\n\nTypical flow:\n1. In the New session modal, check \"Isolate in new worktree\". The Studio creates `.claude/worktrees/<name>` from `origin/HEAD` and starts the session there.\n2. Work as usual. The Diff panel shows your changes.\n3. When done, choose what to do on close: **keep** (worktree stays), **commit & keep** (commits and closes), **merge** (fast-forward into base + close), or **discard** (wipes everything).\n\nThe Worktrees panel lists every worktree of the project, with actions to create, open a new session inside, merge, or remove."
+      },
+      "memory": {
+        "title": "Memory (CLAUDE.md)",
+        "body": "Claude Code loads instructions from `CLAUDE.md` files at three levels:\n• **Global** (`~/.claude/CLAUDE.md`): applies to every session of this user.\n• **Ancestors**: any CLAUDE.md in parent directories up to $HOME.\n• **Project** (cwd): `CLAUDE.md` (committed, team rules) and `CLAUDE.local.md` (gitignored, personal).\n\nThe Memory tab in Settings shows exactly which files the CLI loads for the selected cwd and lets you edit each one in the UI. Remember to add `CLAUDE.local.md` to your `.gitignore` when you create the first one."
+      },
+      "agentsSkills": {
+        "title": "Agents and Skills",
+        "body": "**Agents** are subagents the main Claude can invoke via the Task tool. Each agent becomes an `.md` file with frontmatter (`name`, `description`, `model`, `tools`) plus a body (system prompt). Use them when a specific task benefits from isolated context or a different model.\n\n**Skills** are instructions loaded into context on demand. Each skill is a folder with `SKILL.md` inside, optionally with supporting files. Unlike CLAUDE.md, they only load when the trigger matches.\n\nBoth have User scope (in `~/.claude`) or Project scope (in `.claude/`). Create and edit them in the Agents and Skills tabs of Settings — edits are auto-saved."
+      },
+      "sandbox": {
+        "title": "Sandbox",
+        "body": "The Sandbox tab configures the CLI execution isolation: network rules, filesystem, ripgrep, and seccomp (Linux).\n\nFour scopes, in the order the CLI applies (strongest first): Managed > Local > Project > User. Each scope writes to a different file:\n• **User** (`~/.claude/settings.json`)\n• **User local** (`~/.claude/.local`) — personal, not in git\n• **Project** (`.claude/settings.json`) — committed, team rules\n• **Project local** (`.claude/settings.local.json`) — personal, not in git\n\nChanges only apply to new `claude` processes — already-open sessions keep the previous sandbox."
+      },
+      "settings": {
+        "title": "Settings and language",
+        "body": "Settings are auto-saved: the indicator at the top of the Settings page shows \"Saving…\" / \"Saved at HH:mm\" / an error message.\n\nTabs:\n• **General**: interface language (pt-BR, en-US, es-ES). Your choice lives in your user preferences (not localStorage).\n• **Sessions**: standby timeout (how long a session can stay idle before being ended).\n• **Sandbox**, **Memory**, **Agents**, **Skills**: see the dedicated sections.\n• **Sidebar**: inspect and reset stored preferences (project order, grouping, expanded groups)."
+      }
+    }
   }
 }
