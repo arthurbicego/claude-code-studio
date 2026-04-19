@@ -909,7 +909,7 @@ const SIDEBAR_SECTION_LABELS: Record<string, string> = {
 const SIDEBAR_SECTION_ORDER = ['open', 'history', 'archived'] as const
 
 function SidebarPrefsTab() {
-  const { prefs, loaded, setSection, removeSection, setExpanded, setProjectOrder } = usePrefs()
+  const { prefs, loaded, removeSection, setExpanded, setProjectOrder } = usePrefs()
 
   if (!loaded) {
     return (
