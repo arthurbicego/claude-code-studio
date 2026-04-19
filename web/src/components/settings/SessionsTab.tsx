@@ -1,11 +1,12 @@
+import { useTranslation } from 'react-i18next'
 import type { AppConfig, AppConfigBounds } from '@/types'
 import { Field, Section } from './atoms'
 
 export type StandbyUnit = 'seconds' | 'minutes'
 
-const STANDBY_UNIT_OPTIONS: { id: StandbyUnit; label: string }[] = [
-  { id: 'seconds', label: 'Segundos' },
-  { id: 'minutes', label: 'Minutos' },
+const STANDBY_UNIT_OPTIONS: { id: StandbyUnit; labelKey: string }[] = [
+  { id: 'seconds', labelKey: 'settings.sessions.unitOption.Seconds' },
+  { id: 'minutes', labelKey: 'settings.sessions.unitOption.Minutes' },
 ]
 
 export function SessionsTab({
@@ -23,8 +24,10 @@ export function SessionsTab({
   onUnitChange: (next: StandbyUnit) => void
   onValueChange: (v: string) => void
 }) {
+  const { t } = useTranslation()
   const factor = unit === 'minutes' ? 60000 : 1000
-  const unitLabel = unit === 'minutes' ? 'minutos' : 'segundos'
+  const unitLabel =
+    unit === 'minutes' ? t('settings.sessions.unit.minutes') : t('settings.sessions.unit.seconds')
   const minMs = bounds?.standbyTimeoutMs.min ?? 60000
   const maxMs = bounds?.standbyTimeoutMs.max ?? 24 * 60 * 60 * 1000
   const defaultMs = defaults?.standbyTimeoutMs ?? 10 * 60 * 1000
@@ -33,10 +36,10 @@ export function SessionsTab({
   const def = Math.round(defaultMs / factor)
 
   return (
-    <Section title="Sessões">
+    <Section title={t('settings.sessions.title')}>
       <Field
-        label={`Timeout de standby (${unitLabel})`}
-        hint={`Sessões em standby são finalizadas após este tempo. Entre ${min} e ${max} ${unitLabel}. Padrão: ${def}.`}
+        label={t('settings.sessions.standbyLabel', { unit: unitLabel })}
+        hint={t('settings.sessions.standbyHelp', { min, max, unit: unitLabel, def })}
       >
         <div className="flex items-center gap-2">
           <input
@@ -61,7 +64,7 @@ export function SessionsTab({
                       : 'bg-background text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  {opt.label}
+                  {t(opt.labelKey)}
                 </button>
               )
             })}

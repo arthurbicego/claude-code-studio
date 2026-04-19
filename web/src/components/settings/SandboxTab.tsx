@@ -1,11 +1,13 @@
+import { useTranslation } from 'react-i18next'
+import i18n from '@/i18n'
 import type { Project, SandboxPlatform, SandboxScope, SandboxSettings } from '@/types'
 import { CheckboxField, Field, Section, ToggleField } from './atoms'
 import { JsonEditor } from './JsonEditor'
 import { StringListEditor } from './StringListEditor'
 
-const PLATFORM_OPTIONS: { id: SandboxPlatform; label: string }[] = [
-  { id: 'macos', label: 'macOS' },
-  { id: 'linux', label: 'Linux' },
+const PLATFORM_OPTIONS: { id: SandboxPlatform; labelKey: string }[] = [
+  { id: 'macos', labelKey: 'settings.sandbox.platforms.macos' },
+  { id: 'linux', labelKey: 'settings.sandbox.platforms.linux' },
 ]
 
 export const JSON_FIELDS = ['network', 'filesystem', 'ripgrep', 'seccomp'] as const
@@ -18,49 +20,47 @@ export type JsonFieldState = {
 
 export const JSON_FIELD_META: Record<
   JsonFieldKey,
-  { title: string; description: string; linuxOnly?: boolean }
+  { titleKey: string; descriptionKey: string; linuxOnly?: boolean }
 > = {
   network: {
-    title: 'Rede',
-    description:
-      'Regras de allow/deny para hosts e portas. Estrutura aceita pelo runtime do sandbox.',
+    titleKey: 'settings.sandbox.sections.network.title',
+    descriptionKey: 'settings.sandbox.sections.network.help',
   },
   filesystem: {
-    title: 'Sistema de arquivos',
-    description:
-      'Permissões de leitura/escrita em diretórios. Estrutura aceita pelo runtime do sandbox.',
+    titleKey: 'settings.sandbox.sections.filesystem.title',
+    descriptionKey: 'settings.sandbox.sections.filesystem.help',
   },
   ripgrep: {
-    title: 'Ripgrep',
-    description: 'Tweaks específicos para chamadas do ripgrep dentro do sandbox.',
+    titleKey: 'settings.sandbox.sections.ripgrep.title',
+    descriptionKey: 'settings.sandbox.sections.ripgrep.help',
   },
   seccomp: {
-    title: 'Seccomp',
-    description: 'Configuração específica de seccomp (apenas Linux).',
+    titleKey: 'settings.sandbox.sections.seccomp.title',
+    descriptionKey: 'settings.sandbox.sections.seccomp.help',
     linuxOnly: true,
   },
 }
 
-const SCOPE_OPTIONS: { id: SandboxScope; label: string; hint: string }[] = [
+const SCOPE_OPTIONS: { id: SandboxScope; labelKey: string; hintKey: string }[] = [
   {
     id: 'user',
-    label: 'User',
-    hint: '~/.claude/settings.json — vale para todos os projetos deste usuário.',
+    labelKey: 'settings.sandbox.scopes.user',
+    hintKey: 'settings.sandbox.scopeHints.user',
   },
   {
     id: 'user-local',
-    label: 'User local',
-    hint: '~/.claude/settings.local.json — só este usuário, não commitado.',
+    labelKey: 'settings.sandbox.scopes.userLocal',
+    hintKey: 'settings.sandbox.scopeHints.userLocal',
   },
   {
     id: 'project',
-    label: 'Projeto',
-    hint: '<cwd>/.claude/settings.json — compartilhado com o time (commitável).',
+    labelKey: 'settings.sandbox.scopes.project',
+    hintKey: 'settings.sandbox.scopeHints.project',
   },
   {
     id: 'project-local',
-    label: 'Projeto local',
-    hint: '<cwd>/.claude/settings.local.json — só este projeto, gitignored.',
+    labelKey: 'settings.sandbox.scopes.projectLocal',
+    hintKey: 'settings.sandbox.scopeHints.projectLocal',
   },
 ]
 
@@ -101,11 +101,14 @@ export function parseJsonField(text: string): {
     const parsed = JSON.parse(trimmed)
     if (parsed === null) return { value: null, error: null }
     if (typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return { value: null, error: 'Deve ser um objeto JSON.' }
+      return { value: null, error: i18n.t('settings.sandbox.mustBeObject') }
     }
     return { value: parsed as Record<string, unknown>, error: null }
   } catch (err) {
-    return { value: null, error: err instanceof Error ? err.message : 'JSON inválido.' }
+    return {
+      value: null,
+      error: err instanceof Error ? err.message : i18n.t('settings.sandbox.invalidJson'),
+    }
   }
 }
 
@@ -126,13 +129,11 @@ function SandboxScopeSection({
   projectsLoading: boolean
   projectsError: string | null
 }) {
+  const { t } = useTranslation()
   const active = SCOPE_OPTIONS.find((o) => o.id === scope)
   const needsProject = scopeNeedsProject(scope)
   return (
-    <Section
-      title="Escopo"
-      description="Onde as configurações serão salvas. A CLI aplica Managed > Local > Project > User, mesclando arrays entre escopos."
-    >
+    <Section title={t('settings.sandbox.scope')} description={t('settings.sandbox.scopeHelp')}>
       <div className="flex rounded border border-border overflow-hidden w-fit">
         {SCOPE_OPTIONS.map((opt) => {
           const isActive = opt.id === scope
@@ -147,22 +148,28 @@ function SandboxScopeSection({
                   : 'bg-background text-muted-foreground hover:text-foreground'
               }`}
             >
-              {opt.label}
+              {t(opt.labelKey)}
             </button>
           )
         })}
       </div>
 
-      {active ? <p className="text-[10px] text-muted-foreground">{active.hint}</p> : null}
+      {active ? <p className="text-[10px] text-muted-foreground">{t(active.hintKey)}</p> : null}
 
       {needsProject ? (
-        <Field label="Projeto">
+        <Field label={t('settings.sandbox.project')}>
           {projectsLoading ? (
-            <span className="text-xs text-muted-foreground">Carregando projetos…</span>
+            <span className="text-xs text-muted-foreground">
+              {t('settings.sandbox.loadingProjects')}
+            </span>
           ) : projectsError ? (
-            <span className="text-xs text-red-400">Erro: {projectsError}</span>
+            <span className="text-xs text-red-400">
+              {t('common.errorPrefix', { message: projectsError })}
+            </span>
           ) : projects.length === 0 ? (
-            <span className="text-xs text-muted-foreground">Nenhum projeto encontrado.</span>
+            <span className="text-xs text-muted-foreground">
+              {t('settings.sandbox.noProjects')}
+            </span>
           ) : (
             <select
               value={projectCwd ?? ''}
@@ -213,6 +220,7 @@ export function SandboxTab({
   jsonState: Record<JsonFieldKey, JsonFieldState>
   setJsonText: (key: JsonFieldKey, text: string) => void
 }) {
+  const { t } = useTranslation()
   const sandboxDisabled = !sandbox.enabled
   const linuxEnabled = sandbox.enabledPlatforms.includes('linux')
 
@@ -229,64 +237,66 @@ export function SandboxTab({
       />
 
       {scopeNeedsProject(scope) && !projectCwd ? (
-        <Section title="Geral">
+        <Section title={t('settings.sandbox.general')}>
           <p className="text-xs text-muted-foreground">
             {projectsLoading
-              ? 'Carregando projetos…'
+              ? t('settings.sandbox.loadingProjects')
               : projects.length === 0
-                ? 'Nenhum projeto encontrado em ~/.claude/projects. Abra um claude neste diretório primeiro.'
-                : 'Selecione um projeto acima para editar as configurações.'}
+                ? t('settings.sandbox.noProjectsExplain')
+                : t('settings.sandbox.selectProject')}
           </p>
         </Section>
       ) : sandboxLoading ? (
-        <Section title="Geral">
-          <p className="text-xs text-muted-foreground">Carregando configurações…</p>
+        <Section title={t('settings.sandbox.general')}>
+          <p className="text-xs text-muted-foreground">{t('settings.sandbox.loadingSettings')}</p>
         </Section>
       ) : sandboxError ? (
-        <Section title="Geral">
-          <p className="text-xs text-red-400">Erro: {sandboxError}</p>
+        <Section title={t('settings.sandbox.general')}>
+          <p className="text-xs text-red-400">
+            {t('common.errorPrefix', { message: sandboxError })}
+          </p>
         </Section>
       ) : (
         <>
           <Section
-            title="Geral"
-            description="Vale para novos processos do claude — sessões já abertas mantêm o estado anterior."
+            title={t('settings.sandbox.general')}
+            description={t('settings.sandbox.applyToNew')}
           >
             <ToggleField
-              label="Habilitar sandbox"
+              label={t('settings.sandbox.enable')}
               checked={sandbox.enabled}
               onChange={(v) => setSandboxField('enabled', v)}
             />
           </Section>
 
-          <Section title="Comportamento">
+          <Section title={t('settings.sandbox.behavior')}>
             <ToggleField
-              label="Falhar se runtime de sandbox indisponível"
-              hint="Sem isso, o claude roda fora do sandbox quando o runtime não está disponível."
+              label={t('settings.sandbox.failClosed')}
+              hint={t('settings.sandbox.failClosedHint')}
               checked={sandbox.failIfUnavailable}
               onChange={(v) => setSandboxField('failIfUnavailable', v)}
               disabled={sandboxDisabled}
             />
             <ToggleField
-              label="Auto-permitir Bash quando em sandbox"
+              label={t('settings.sandbox.autoAllowBash')}
               checked={sandbox.autoAllowBashIfSandboxed}
               onChange={(v) => setSandboxField('autoAllowBashIfSandboxed', v)}
               disabled={sandboxDisabled}
             />
             <ToggleField
-              label="Apenas logar violações (não bloqueia)"
+              label={t('settings.sandbox.logOnly')}
               checked={sandbox.ignoreViolations}
               onChange={(v) => setSandboxField('ignoreViolations', v)}
               disabled={sandboxDisabled}
             />
             <ToggleField
-              label="Permitir sandbox aninhado mais fraco"
+              label={t('settings.sandbox.allowNested')}
               checked={sandbox.enableWeakerNestedSandbox}
               onChange={(v) => setSandboxField('enableWeakerNestedSandbox', v)}
               disabled={sandboxDisabled}
             />
             <ToggleField
-              label="Relaxar isolamento de rede"
+              label={t('settings.sandbox.relaxNetwork')}
               checked={sandbox.enableWeakerNetworkIsolation}
               onChange={(v) => setSandboxField('enableWeakerNetworkIsolation', v)}
               disabled={sandboxDisabled}
@@ -294,14 +304,14 @@ export function SandboxTab({
           </Section>
 
           <Section
-            title="Plataformas"
-            description="Plataformas onde o sandbox é ativado. Se vazio, o runtime decide."
+            title={t('settings.sandbox.platforms_label')}
+            description={t('settings.sandbox.platformsHelp')}
           >
             <div className="flex gap-4">
               {PLATFORM_OPTIONS.map((p) => (
                 <CheckboxField
                   key={p.id}
-                  label={p.label}
+                  label={t(p.labelKey)}
                   checked={sandbox.enabledPlatforms.includes(p.id)}
                   onChange={(v) => togglePlatform(p.id, v)}
                   disabled={sandboxDisabled}
@@ -311,25 +321,25 @@ export function SandboxTab({
           </Section>
 
           <Section
-            title="Comandos permitidos fora do sandbox"
-            description="Comandos listados rodam fora do sandbox (sujeitos às permissões normais)."
+            title={t('settings.sandbox.allowOutside')}
+            description={t('settings.sandbox.allowOutsideHelp')}
           >
             <StringListEditor
               values={sandbox.allowUnsandboxedCommands}
               onChange={(v) => setSandboxField('allowUnsandboxedCommands', v)}
-              placeholder="ex.: npm install"
+              placeholder={t('settings.sandbox.allowOutsidePlaceholder')}
               disabled={sandboxDisabled}
             />
           </Section>
 
           <Section
-            title="Comandos que bypassam o sandbox"
-            description="Comandos que não devem ser executados via sandbox (excluídos por completo)."
+            title={t('settings.sandbox.bypass')}
+            description={t('settings.sandbox.bypassHelp')}
           >
             <StringListEditor
               values={sandbox.excludedCommands}
               onChange={(v) => setSandboxField('excludedCommands', v)}
-              placeholder="ex.: docker"
+              placeholder={t('settings.sandbox.bypassPlaceholder')}
               disabled={sandboxDisabled}
             />
           </Section>
@@ -337,8 +347,8 @@ export function SandboxTab({
           {JSON_FIELDS.filter((k) => !JSON_FIELD_META[k].linuxOnly || linuxEnabled).map((k) => (
             <Section
               key={k}
-              title={JSON_FIELD_META[k].title}
-              description={JSON_FIELD_META[k].description}
+              title={t(JSON_FIELD_META[k].titleKey)}
+              description={t(JSON_FIELD_META[k].descriptionKey)}
             >
               <JsonEditor
                 text={jsonState[k].text}

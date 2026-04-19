@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { useSessionList } from '@/hooks/useSessionList'
 import {
@@ -21,6 +22,7 @@ type Selection =
 const NAME_RE = /^[a-z0-9][a-z0-9-]{0,63}$/
 
 export function SkillsTab() {
+  const { t } = useTranslation()
   const sessions = useSessionList()
   const projects = useMemo(
     () => [...sessions.projects].sort((a, b) => a.cwd.localeCompare(b.cwd)),
@@ -91,10 +93,7 @@ export function SkillsTab() {
 
   return (
     <>
-      <Section
-        title="Skills"
-        description="Instruções carregadas no contexto sob demanda. Cada skill é uma pasta com SKILL.md dentro."
-      >
+      <Section title={t('settings.skills.title')} description={t('settings.skills.help')}>
         <ScopePicker
           scope={scope}
           onScopeChange={setScope}
@@ -106,7 +105,7 @@ export function SkillsTab() {
         />
 
         {scope === 'project' && projects.length === 0 && !sessions.loading ? (
-          <p className="text-xs text-muted-foreground">Nenhum projeto encontrado.</p>
+          <p className="text-xs text-muted-foreground">{t('settings.skills.noProjects')}</p>
         ) : projectAvailable ? (
           <SkillList
             items={items}
@@ -123,14 +122,18 @@ export function SkillsTab() {
         <Section
           title={
             selection.mode === 'new'
-              ? 'Nova skill'
-              : `Editar: ${selection.mode === 'view' ? selection.name : ''}`
+              ? t('settings.skills.newSkill')
+              : t('settings.skills.editSkill', {
+                  name: selection.mode === 'view' ? selection.name : '',
+                })
           }
         >
           {selection.mode === 'view' && detailLoading ? (
-            <p className="text-xs text-muted-foreground">Carregando…</p>
+            <p className="text-xs text-muted-foreground">{t('settings.skills.loading')}</p>
           ) : selection.mode === 'view' && detailError ? (
-            <p className="text-xs text-red-400">Erro: {detailError}</p>
+            <p className="text-xs text-red-400">
+              {t('settings.skills.detailError', { error: detailError })}
+            </p>
           ) : selection.mode === 'view' && detail ? (
             <SkillForm
               key={detail.path}
@@ -174,9 +177,10 @@ function ScopePicker({
   projectsLoading: boolean
   projectsError: string | null
 }) {
+  const { t } = useTranslation()
   return (
     <div className="flex flex-wrap items-end gap-3">
-      <Field label="Escopo">
+      <Field label={t('settings.skills.scope')}>
         <div className="flex rounded border border-border overflow-hidden">
           {(['user', 'project'] as SkillScope[]).map((s) => (
             <button
@@ -189,18 +193,22 @@ function ScopePicker({
                   : 'bg-background text-muted-foreground hover:text-foreground'
               }`}
             >
-              {s === 'user' ? 'User (~/.claude)' : 'Projeto'}
+              {s === 'user' ? t('settings.skills.scopeUser') : t('settings.skills.scopeProject')}
             </button>
           ))}
         </div>
       </Field>
 
       {scope === 'project' ? (
-        <Field label="Projeto">
+        <Field label={t('settings.skills.project')}>
           {projectsLoading ? (
-            <span className="text-xs text-muted-foreground">Carregando projetos…</span>
+            <span className="text-xs text-muted-foreground">
+              {t('settings.skills.loadingProjects')}
+            </span>
           ) : projectsError ? (
-            <span className="text-xs text-red-400">Erro: {projectsError}</span>
+            <span className="text-xs text-red-400">
+              {t('settings.skills.projectsError', { error: projectsError })}
+            </span>
           ) : (
             <select
               value={projectCwd ?? ''}
@@ -235,22 +243,23 @@ function SkillList({
   onSelect: (name: string) => void
   onNew: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-          {items.length} skill{items.length === 1 ? '' : 's'}
+          {t('settings.skills.count', { count: items.length })}
         </span>
         <Button type="button" variant="primary" size="xs" onClick={onNew}>
-          <Plus size={12} /> Nova skill
+          <Plus size={12} /> {t('settings.skills.newSkill')}
         </Button>
       </div>
       {loading ? (
-        <p className="text-xs text-muted-foreground">Carregando…</p>
+        <p className="text-xs text-muted-foreground">{t('settings.skills.loadingList')}</p>
       ) : error ? (
-        <p className="text-xs text-red-400">Erro: {error}</p>
+        <p className="text-xs text-red-400">{t('settings.skills.listError', { error })}</p>
       ) : items.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Nenhuma skill neste escopo.</p>
+        <p className="text-xs text-muted-foreground">{t('settings.skills.emptyList')}</p>
       ) : (
         <ul className="flex flex-col gap-1">
           {items.map((item) => {
@@ -273,7 +282,7 @@ function SkillList({
                     </span>
                   ) : (
                     <span className="text-[11px] italic text-muted-foreground">
-                      sem description
+                      {t('settings.skills.noDescription')}
                     </span>
                   )}
                 </button>
@@ -312,6 +321,7 @@ function SkillForm({
   onDeleted?: () => void | Promise<void>
   onCancel: () => void
 }) {
+  const { t } = useTranslation()
   const [state, setState] = useState<SkillFormState>(() => buildInitialState(initial))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -362,12 +372,12 @@ function SkillForm({
         <p className="font-mono text-[10px] text-muted-foreground">{initial.path}</p>
       ) : null}
 
-      <Field label="Nome" required hint="a-z, 0-9 e hífens. Vai virar o nome da pasta.">
+      <Field label={t('settings.skills.name')} required hint={t('settings.skills.nameHelp')}>
         <input
           type="text"
           value={state.name}
           onChange={(e) => setState((s) => ({ ...s, name: e.target.value.trim() }))}
-          placeholder="ex.: code-quality-check"
+          placeholder={t('settings.skills.namePlaceholder')}
           className={`w-full rounded border bg-background px-2 py-1.5 font-mono text-xs text-foreground focus:outline-none ${
             state.name && nameInvalid
               ? 'border-red-500/60 focus:border-red-500'
@@ -377,15 +387,15 @@ function SkillForm({
       </Field>
 
       <Field
-        label="Description"
+        label={t('settings.skills.description')}
         required
-        hint="Como o Claude decide se carrega esta skill. Foque no gatilho ('use quando…')."
+        hint={t('settings.skills.descriptionHelp')}
       >
         <textarea
           value={state.description}
           onChange={(e) => setState((s) => ({ ...s, description: e.target.value }))}
           rows={3}
-          placeholder="Use esta skill quando…"
+          placeholder={t('settings.skills.descriptionPlaceholder')}
           className={`w-full rounded border bg-background px-2 py-1.5 text-xs text-foreground focus:outline-none ${
             state.description && descriptionInvalid
               ? 'border-red-500/60 focus:border-red-500'
@@ -394,17 +404,13 @@ function SkillForm({
         />
       </Field>
 
-      <Field
-        label="Conteúdo (SKILL.md)"
-        required
-        hint="Markdown. Pode referenciar outros arquivos da pasta."
-      >
+      <Field label={t('settings.skills.content')} required hint={t('settings.skills.contentHelp')}>
         <textarea
           value={state.body}
           onChange={(e) => setState((s) => ({ ...s, body: e.target.value }))}
           spellCheck={false}
           rows={14}
-          placeholder="## Quando usar&#10;...&#10;&#10;## Como usar&#10;..."
+          placeholder={t('settings.skills.contentPlaceholder')}
           className={`w-full rounded border bg-background px-2 py-1.5 font-mono text-xs text-foreground focus:outline-none ${
             state.body && bodyInvalid
               ? 'border-red-500/60 focus:border-red-500'
@@ -416,7 +422,7 @@ function SkillForm({
       {initial && initial.extras.length > 0 ? (
         <div className="rounded border border-border bg-background/40 p-3">
           <p className="mb-2 text-[10px] uppercase tracking-wide text-muted-foreground">
-            Outros arquivos da pasta (read-only)
+            {t('settings.skills.extras')}
           </p>
           <ul className="flex flex-col gap-1">
             {initial.extras.map((extra) => (
@@ -430,19 +436,23 @@ function SkillForm({
             ))}
           </ul>
           <p className="mt-2 text-[10px] text-muted-foreground">
-            Edite estes arquivos diretamente em <span className="font-mono">{initial.dir}</span>.
+            {t('settings.skills.extrasHelp', { dir: initial.dir })}
           </p>
         </div>
       ) : null}
 
-      {error ? <p className="text-xs text-red-400">Erro: {error}</p> : null}
+      {error ? (
+        <p className="text-xs text-red-400">{t('settings.skills.saveError', { error })}</p>
+      ) : null}
 
       <div className="flex items-center justify-between gap-3">
         <div>
           {!isCreating ? (
             confirmDelete ? (
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-amber-400">Apagar a pasta inteira da skill?</span>
+                <span className="text-[11px] text-amber-400">
+                  {t('settings.skills.deletePrompt')}
+                </span>
                 <Button
                   type="button"
                   variant="warn"
@@ -450,7 +460,7 @@ function SkillForm({
                   onClick={handleDelete}
                   disabled={saving}
                 >
-                  Confirmar
+                  {t('common.confirm')}
                 </Button>
                 <Button
                   type="button"
@@ -459,7 +469,7 @@ function SkillForm({
                   onClick={() => setConfirmDelete(false)}
                   disabled={saving}
                 >
-                  Cancelar
+                  {t('settings.skills.cancel')}
                 </Button>
               </div>
             ) : (
@@ -470,14 +480,14 @@ function SkillForm({
                 onClick={() => setConfirmDelete(true)}
                 disabled={saving}
               >
-                <Trash2 size={12} /> Apagar
+                <Trash2 size={12} /> {t('settings.skills.delete')}
               </Button>
             )
           ) : null}
         </div>
         <div className="flex gap-2">
           <Button type="button" variant="ghost" size="xs" onClick={onCancel} disabled={saving}>
-            Cancelar
+            {t('settings.skills.cancel')}
           </Button>
           <Button
             type="button"
@@ -486,7 +496,11 @@ function SkillForm({
             onClick={handleSave}
             disabled={!canSave}
           >
-            {saving ? 'Salvando…' : isCreating ? 'Criar skill' : 'Salvar'}
+            {saving
+              ? t('settings.skills.saving')
+              : isCreating
+                ? t('settings.skills.create')
+                : t('settings.skills.save')}
           </Button>
         </div>
       </div>

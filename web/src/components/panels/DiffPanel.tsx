@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useSessionDiff } from '@/hooks/useSessionDiff'
 import { cn } from '@/lib/utils'
 import { PanelContainer } from './PanelContainer'
@@ -61,6 +62,7 @@ const KIND_COLOR: Record<Hunk['kind'], string> = {
 }
 
 export function DiffPanel({ sessionId, onClose }: Props) {
+  const { t } = useTranslation()
   const data = useSessionDiff(sessionId)
 
   const { hunks, title } = useMemo(() => {
@@ -71,9 +73,11 @@ export function DiffPanel({ sessionId, onClose }: Props) {
     }
     return {
       hunks: parsed,
-      title: data?.branch ? `Uncommitted · ${data.branch}` : 'Uncommitted',
+      title: data?.branch
+        ? t('panels.diff.uncommittedWithBranch', { branch: data.branch })
+        : t('panels.diff.uncommitted'),
     }
-  }, [data])
+  }, [data, t])
 
   const hasAny = hunks.length > 0
 
@@ -81,7 +85,7 @@ export function DiffPanel({ sessionId, onClose }: Props) {
     <PanelContainer title={title} onClose={onClose}>
       {!hasAny ? (
         <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-          No changes to show.
+          {t('panels.diff.empty')}
         </div>
       ) : (
         <div className="h-full overflow-auto font-mono text-[11px]">

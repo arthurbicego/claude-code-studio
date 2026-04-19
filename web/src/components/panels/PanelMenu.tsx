@@ -1,13 +1,6 @@
-import {
-  FileDiff,
-  GitBranch,
-  ListChecks,
-  ListTodo,
-  PanelRight,
-  TerminalSquare,
-} from 'lucide-react'
+import { FileDiff, GitBranch, ListChecks, ListTodo, PanelRight, TerminalSquare } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { DropdownMenu } from '@/components/ui/DropdownMenu'
-import { PANEL_LABELS } from '@/lib/panels'
 import type { PanelKind } from '@/types'
 
 type Props = {
@@ -30,16 +23,17 @@ const TRIGGER_CLASS =
   'flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground'
 
 export function PanelMenu({ openKinds, onToggle, disabled }: Props) {
+  const { t } = useTranslation()
   return (
     <DropdownMenu
-      ariaLabel="Abrir menu de painéis"
-      tooltip="Painéis"
+      ariaLabel={t('panels.menu.open')}
+      tooltip={t('panels.menu.tooltip')}
       triggerIcon={PanelRight}
       triggerIconSize={14}
       triggerClassName={TRIGGER_CLASS}
       disabled={disabled}
       items={ORDER.map((kind) => ({
-        label: PANEL_LABELS[kind],
+        label: t(`panels.labels.${kind}`),
         icon: ICONS[kind],
         checked: openKinds.has(kind),
         onSelect: () => onToggle(kind),

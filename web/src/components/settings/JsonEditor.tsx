@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 export function JsonEditor({
   text,
   error,
@@ -9,6 +11,7 @@ export function JsonEditor({
   onChange: (text: string) => void
   disabled?: boolean
 }) {
+  const { t } = useTranslation()
   return (
     <div className="flex flex-col gap-1">
       <textarea
@@ -23,11 +26,9 @@ export function JsonEditor({
         }`}
       />
       {error ? (
-        <span className="text-[10px] text-red-400">JSON inválido: {error}</span>
+        <span className="text-[10px] text-red-400">{t('jsonEditor.invalid', { error })}</span>
       ) : (
-        <span className="text-[10px] text-muted-foreground">
-          Vazio = remove a chave do settings.local.json.
-        </span>
+        <span className="text-[10px] text-muted-foreground">{t('jsonEditor.emptyHint')}</span>
       )}
     </div>
   )

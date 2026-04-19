@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { type ExpandResult, expandMemoryImports, type MemoryFile } from '@/hooks/useMemory'
 
@@ -11,32 +12,42 @@ function ExpandedPreview({
   loading: boolean
   error: string | null
 }) {
+  const { t } = useTranslation()
   if (error) {
-    return <p className="text-[10px] text-red-400">Erro ao expandir: {error}</p>
+    return (
+      <p className="text-[10px] text-red-400">
+        {t('settings.memory.editor.expandError', { error })}
+      </p>
+    )
   }
   if (!result && loading) {
-    return <p className="text-[10px] text-muted-foreground">Expandindo imports…</p>
+    return (
+      <p className="text-[10px] text-muted-foreground">{t('settings.memory.editor.expanding')}</p>
+    )
   }
   if (!result) {
-    return <p className="text-[10px] text-muted-foreground">Preparando preview…</p>
+    return (
+      <p className="text-[10px] text-muted-foreground">{t('settings.memory.editor.preparing')}</p>
+    )
   }
   const issues = result.imports.filter((i) => i.error)
   return (
     <div className="flex flex-col gap-2">
       <pre className="max-h-80 w-full overflow-auto rounded border border-border bg-black/30 px-2 py-1.5 font-mono text-[11px] leading-snug text-foreground whitespace-pre-wrap">
-        {result.expanded || <span className="text-muted-foreground">(vazio)</span>}
+        {result.expanded || (
+          <span className="text-muted-foreground">{t('settings.memory.editor.empty')}</span>
+        )}
       </pre>
       {result.truncated ? (
-        <p className="text-[10px] text-amber-400">
-          Limite de profundidade atingido — alguns imports não foram expandidos.
-        </p>
+        <p className="text-[10px] text-amber-400">{t('settings.memory.editor.depthExceeded')}</p>
       ) : null}
       {result.imports.length > 0 ? (
         <details className="text-[10px] text-muted-foreground">
           <summary className="cursor-pointer hover:text-foreground">
-            {result.imports.length} import{result.imports.length === 1 ? '' : 's'} resolvido
-            {result.imports.length === 1 ? '' : 's'}
-            {issues.length > 0 ? ` (${issues.length} com problema)` : ''}
+            {t('settings.memory.editor.importsResolved', { count: result.imports.length })}
+            {issues.length > 0
+              ? t('settings.memory.editor.importsIssues', { count: issues.length })
+              : ''}
           </summary>
           <ul className="mt-1 flex flex-col gap-0.5 font-mono">
             {result.imports.map((imp, i) => (
@@ -46,7 +57,7 @@ function ExpandedPreview({
                     imp.error ? 'bg-red-500/20 text-red-300' : 'bg-emerald-500/20 text-emerald-300'
                   }`}
                 >
-                  {imp.error || 'ok'}
+                  {imp.error || t('settings.memory.editor.ok')}
                 </span>
                 <span className="truncate" title={imp.resolved ?? imp.raw}>
                   @{imp.raw}
@@ -77,6 +88,7 @@ export function MemoryEditor({
   placeholder?: string
   hint?: string
 }) {
+  const { t } = useTranslation()
   const [text, setText] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -141,15 +153,17 @@ export function MemoryEditor({
   }
 
   if (loading && !data) {
-    return <p className="text-xs text-muted-foreground">Carregando…</p>
+    return <p className="text-xs text-muted-foreground">{t('settings.memory.editor.loading')}</p>
   }
   if (loadError) {
     return (
       <div className="flex flex-col gap-2">
-        <p className="text-xs text-red-400">Erro: {loadError}</p>
+        <p className="text-xs text-red-400">
+          {t('settings.memory.editor.loadError', { error: loadError })}
+        </p>
         <div>
           <Button type="button" variant="ghost" size="xs" onClick={onReload}>
-            Tentar novamente
+            {t('settings.memory.editor.tryAgain')}
           </Button>
         </div>
       </div>
@@ -169,9 +183,13 @@ export function MemoryEditor({
           disabled={!basePath}
           className="cursor-pointer rounded border border-border bg-background px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {showExpanded ? 'Editar' : 'Preview com imports expandidos'}
+          {showExpanded ? t('settings.memory.editor.edit') : t('settings.memory.editor.preview')}
         </button>
-        {hasImports ? <span className="text-[10px] text-sky-400">contém imports @</span> : null}
+        {hasImports ? (
+          <span className="text-[10px] text-sky-400">
+            {t('settings.memory.editor.containsImports')}
+          </span>
+        ) : null}
       </div>
       {showExpanded ? (
         <ExpandedPreview result={expand} loading={expanding} error={expandError} />
@@ -188,15 +206,15 @@ export function MemoryEditor({
       <div className="flex items-center justify-between gap-3">
         <span className="text-[10px] text-muted-foreground">
           {error ? (
-            <span className="text-red-400">Erro: {error}</span>
+            <span className="text-red-400">{t('settings.memory.editor.error', { error })}</span>
           ) : dirty ? (
-            'Mudanças não salvas.'
+            t('settings.memory.editor.unsaved')
           ) : savedAt ? (
-            'Salvo.'
+            t('settings.memory.editor.saved')
           ) : data?.exists ? (
             ''
           ) : (
-            'Arquivo ainda não existe — será criado ao salvar.'
+            t('settings.memory.editor.willCreate')
           )}
         </span>
         <div className="flex gap-2">
@@ -207,7 +225,7 @@ export function MemoryEditor({
             onClick={handleRevert}
             disabled={!dirty || saving}
           >
-            Reverter
+            {t('settings.memory.editor.revert')}
           </Button>
           <Button
             type="button"
@@ -216,11 +234,11 @@ export function MemoryEditor({
             onClick={handleSave}
             disabled={!dirty || saving}
           >
-            {saving ? 'Salvando…' : 'Salvar memória'}
+            {saving ? t('settings.memory.editor.saving') : t('settings.memory.editor.save')}
           </Button>
         </div>
       </div>
-      <p className="text-[10px] text-muted-foreground">Salvar com texto vazio remove o arquivo.</p>
+      <p className="text-[10px] text-muted-foreground">{t('settings.memory.editor.emptyHint')}</p>
     </div>
   )
 }

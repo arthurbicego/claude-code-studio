@@ -1,3 +1,4 @@
+import i18n from '@/i18n'
 import { toast } from '@/lib/toast'
 
 export async function openInVSCode(path: string): Promise<void> {
@@ -10,10 +11,10 @@ export async function openInVSCode(path: string): Promise<void> {
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as { error?: string }
       const msg = body.error || `HTTP ${res.status}`
-      toast.error(`Não foi possível abrir no VS Code: ${msg}`)
+      toast.error(i18n.t('vscode.openError', { message: msg }))
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    toast.error(`Não foi possível abrir no VS Code: ${msg}`)
+    toast.error(i18n.t('vscode.openError', { message: msg }))
   }
 }

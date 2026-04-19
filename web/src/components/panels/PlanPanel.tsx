@@ -1,4 +1,5 @@
 import { ListChecks } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useSessionPlan } from '@/hooks/useSessionPlan'
 import { PanelContainer } from './PanelContainer'
 
@@ -8,19 +9,18 @@ type Props = {
 }
 
 export function PlanPanel({ sessionId, onClose }: Props) {
+  const { t } = useTranslation()
   const data = useSessionPlan(sessionId)
   const plan = data?.plan
 
   return (
-    <PanelContainer title="Plan" onClose={onClose}>
+    <PanelContainer title={t('panels.plan.title')} onClose={onClose}>
       {!plan ? (
         <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-sm text-muted-foreground">
           <ListChecks size={28} className="text-muted-foreground/60" />
           <div>
-            <div className="font-medium text-foreground/80">No plan yet.</div>
-            <div className="mt-1 text-xs">
-              Claude writes the plan here as it explores. Keep chatting.
-            </div>
+            <div className="font-medium text-foreground/80">{t('panels.plan.empty')}</div>
+            <div className="mt-1 text-xs">{t('panels.plan.help')}</div>
           </div>
         </div>
       ) : (

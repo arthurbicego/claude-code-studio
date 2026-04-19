@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/Modal'
 import { Button } from '@/components/ui/Button'
 
@@ -16,12 +17,15 @@ export function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = 'Confirmar',
-  cancelLabel = 'Cancelar',
+  confirmLabel,
+  cancelLabel,
   destructive = false,
   onConfirm,
   onClose,
 }: Props) {
+  const { t } = useTranslation()
+  const confirm = confirmLabel ?? t('common.confirm')
+  const cancel = cancelLabel ?? t('common.cancel')
   return (
     <Modal
       open={open}
@@ -30,7 +34,7 @@ export function ConfirmDialog({
       footer={
         <>
           <Button size="sm" variant="ghost" onClick={onClose}>
-            {cancelLabel}
+            {cancel}
           </Button>
           <Button
             size="sm"
@@ -40,7 +44,7 @@ export function ConfirmDialog({
               onClose()
             }}
           >
-            {confirmLabel}
+            {confirm}
           </Button>
         </>
       }

@@ -1,6 +1,7 @@
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal as Xterm } from '@xterm/xterm'
 import { useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { PanelContainer } from './PanelContainer'
 
 type Props = {
@@ -9,6 +10,7 @@ type Props = {
 }
 
 export function ShellPanel({ cwd, onClose }: Props) {
+  const { t } = useTranslation()
   const hostRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -49,8 +51,10 @@ export function ShellPanel({ cwd, onClose }: Props) {
           | { type: 'exit'; exitCode: number }
           | { type: 'error'; message: string }
         if (msg.type === 'data') term.write(msg.data)
-        else if (msg.type === 'error') term.write(`\r\n[erro] ${msg.message}\r\n`)
-        else if (msg.type === 'exit') term.write(`\r\n[shell saiu com ${msg.exitCode}]\r\n`)
+        else if (msg.type === 'error')
+          term.write(`\r\n${t('panels.shell.errorPrefix', { message: msg.message })}\r\n`)
+        else if (msg.type === 'exit')
+          term.write(`\r\n${t('panels.shell.exited', { code: msg.exitCode })}\r\n`)
       } catch {
         /* noop */
       }
@@ -86,10 +90,11 @@ export function ShellPanel({ cwd, onClose }: Props) {
         /* noop */
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cwd])
 
   return (
-    <PanelContainer title="Terminal" onClose={onClose}>
+    <PanelContainer title={t('panels.shell.title')} onClose={onClose}>
       <div className="h-full w-full bg-background p-2">
         <div ref={hostRef} className="h-full w-full" />
       </div>

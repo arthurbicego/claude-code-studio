@@ -1,6 +1,7 @@
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal as Xterm } from '@xterm/xterm'
 import { useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import type { SessionLaunch } from '@/types'
 
@@ -47,6 +48,7 @@ export function TerminalView({
   inputSignal,
   isActive,
 }: Props) {
+  const { t } = useTranslation()
   const hostRef = useRef<HTMLDivElement | null>(null)
   const termRef = useRef<Xterm | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
@@ -86,7 +88,11 @@ export function TerminalView({
     }
 
     ws.onopen = () => {
-      onStatus?.(launch.resume ? (launch.label ?? launch.resume) : `Nova sessão em ${launch.cwd}`)
+      onStatus?.(
+        launch.resume
+          ? (launch.label ?? launch.resume)
+          : t('terminal.newSessionAt', { cwd: launch.cwd }),
+      )
       safeSend({ type: 'resize', cols: term.cols, rows: term.rows })
       safeSend({ type: 'focus', active: isActiveRef.current })
     }
@@ -99,16 +105,16 @@ export function TerminalView({
         if (msg.type === 'data') term.write(msg.data)
         else if (msg.type === 'exit') {
           onExit?.(msg.exitCode)
-          onStatus?.(`Processo encerrou (exit ${msg.exitCode})`)
+          onStatus?.(t('terminal.processExited', { code: msg.exitCode }))
         } else if (msg.type === 'error') {
-          onStatus?.(`Erro: ${msg.message}`)
+          onStatus?.(t('terminal.error', { message: msg.message }))
         }
       } catch {
         /* noop */
       }
     }
-    ws.onclose = () => onStatus?.('Conexão encerrada.')
-    ws.onerror = () => onStatus?.('Erro de WebSocket.')
+    ws.onclose = () => onStatus?.(t('terminal.connectionClosed'))
+    ws.onerror = () => onStatus?.(t('terminal.wsError'))
 
     const dataDisposer = term.onData((d) => safeSend({ type: 'input', data: d }))
     const resizeDisposer = term.onResize(({ cols, rows }) =>

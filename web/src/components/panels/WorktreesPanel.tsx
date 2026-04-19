@@ -1,5 +1,7 @@
+import type { TFunction } from 'i18next'
 import { FileDiff, GitBranch, GitMerge, Play, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { DropdownMenu, type DropdownMenuItem } from '@/components/ui/DropdownMenu'
 import { Tooltip } from '@/components/ui/Tooltip'
@@ -22,16 +24,16 @@ function formatRelative(fullPath: string, cwd: string): string {
   return fullPath
 }
 
-function formatAge(mtime: number | null): string | null {
+function formatAge(mtime: number | null, t: TFunction): string | null {
   if (!mtime) return null
   const secs = Math.max(0, Math.floor((Date.now() - mtime) / 1000))
-  if (secs < 60) return `${secs}s`
+  if (secs < 60) return t('panels.worktrees.ageSeconds', { n: secs })
   const mins = Math.floor(secs / 60)
-  if (mins < 60) return `${mins}min`
+  if (mins < 60) return t('panels.worktrees.ageMinutes', { n: mins })
   const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h`
+  if (hrs < 24) return t('panels.worktrees.ageHours', { n: hrs })
   const days = Math.floor(hrs / 24)
-  return `${days}d`
+  return t('panels.worktrees.ageDays', { n: days })
 }
 
 export function WorktreesPanel({
@@ -41,6 +43,7 @@ export function WorktreesPanel({
   onOpenCreate,
   onOpenDiff,
 }: Props) {
+  const { t } = useTranslation()
   const { data, loading, error, refresh } = useWorktrees(cwd)
   const [pendingRemove, setPendingRemove] = useState<Worktree | null>(null)
   const [pendingMerge, setPendingMerge] = useState<Worktree | null>(null)
@@ -51,30 +54,30 @@ export function WorktreesPanel({
   const nonMain = useMemo(() => worktrees.filter((w) => !w.isMain), [worktrees])
 
   const title = useMemo(() => {
-    if (!cwd) return 'Worktrees'
+    if (!cwd) return t('panels.worktrees.title')
     const last = cwd.split('/').filter(Boolean).pop() || cwd
-    return `Worktrees — ${last}`
-  }, [cwd])
+    return t('panels.worktrees.titleWithLast', { last })
+  }, [cwd, t])
 
   const headerExtra = (
     <>
-      <Tooltip content="Recarregar">
+      <Tooltip content={t('panels.worktrees.reload')}>
         <button
           type="button"
           onClick={() => refresh()}
           className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-          aria-label="Recarregar worktrees"
+          aria-label={t('panels.worktrees.reloadAria')}
         >
           <RefreshCw size={12} className={cn(loading && 'animate-spin')} />
         </button>
       </Tooltip>
-      <Tooltip content="Criar novo worktree (abre Nova sessão)">
+      <Tooltip content={t('panels.worktrees.createTooltip')}>
         <button
           type="button"
           onClick={() => cwd && onOpenCreate(cwd)}
           disabled={!cwd}
           className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
-          aria-label="Criar novo worktree"
+          aria-label={t('panels.worktrees.createAria')}
         >
           <Plus size={14} />
         </button>
@@ -92,7 +95,7 @@ export function WorktreesPanel({
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error || `HTTP ${res.status}`)
       }
-      setActionNotice(`Worktree removido: ${wt.branch ?? wt.path}`)
+      setActionNotice(t('panels.worktrees.removed', { name: wt.branch ?? wt.path }))
       refresh()
     } catch (err) {
       setActionError(err instanceof Error ? err.message : String(err))
@@ -110,7 +113,7 @@ export function WorktreesPanel({
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`)
-      setActionNotice(`Mergeado ${body.branch} em ${body.base}`)
+      setActionNotice(t('panels.worktrees.merged', { branch: body.branch, base: body.base }))
       refresh()
     } catch (err) {
       setActionError(err instanceof Error ? err.message : String(err))
@@ -119,38 +122,43 @@ export function WorktreesPanel({
 
   const renderRow = (wt: Worktree) => {
     const rel = cwd ? formatRelative(wt.path, cwd) : wt.path
-    const age = formatAge(wt.mtime)
+    const age = formatAge(wt.mtime, t)
     const removeDisabled = wt.isMain || wt.liveSessionCount > 0 || !wt.clean
     const removeReason = wt.isMain
-      ? 'Worktree principal não pode ser removido'
+      ? t('panels.worktrees.mainCannotRemove')
       : wt.liveSessionCount > 0
-        ? 'Há sessão ativa — feche antes de remover'
+        ? t('panels.worktrees.activeBlocking')
         : !wt.clean
-          ? `${wt.modifiedCount} arquivo(s) modificado(s) — commite ou descarte antes`
-          : 'Remover worktree'
+          ? t('panels.worktrees.modifiedBeforeRemove', { count: wt.modifiedCount })
+          : t('panels.worktrees.remove')
     const mergeDisabled = wt.isMain || wt.ahead === 0 || !wt.clean
+    const baseLabel = data?.base ?? t('panels.worktrees.mergeBaseFallback')
     const mergeReason = wt.isMain
-      ? 'Worktree principal'
+      ? t('panels.worktrees.main')
       : wt.ahead === 0
-        ? 'Nenhum commit à frente da base'
+        ? t('panels.worktrees.noCommitsAhead')
         : !wt.clean
-          ? 'Commite antes de mergear'
-          : `Mergear em ${data?.base ?? 'base'} (fast-forward)`
+          ? t('panels.worktrees.commitBeforeMerge')
+          : t('panels.worktrees.ffMerge', { base: baseLabel })
 
     const items: DropdownMenuItem[] = []
     if (onOpenDiff && !wt.isMain) {
-      items.push({ label: 'Ver diff', icon: FileDiff, onSelect: () => onOpenDiff(wt) })
+      items.push({
+        label: t('panels.worktrees.viewDiff'),
+        icon: FileDiff,
+        onSelect: () => onOpenDiff(wt),
+      })
     }
     if (!mergeDisabled) {
       items.push({
-        label: `Mergear em ${data?.base ?? 'base'}`,
+        label: t('panels.worktrees.merge', { base: baseLabel }),
         icon: GitMerge,
         onSelect: () => setPendingMerge(wt),
       })
     }
     if (!removeDisabled) {
       items.push({
-        label: 'Remover worktree',
+        label: t('panels.worktrees.removeWorktree'),
         icon: Trash2,
         destructive: true,
         onSelect: () => setPendingRemove(wt),
@@ -167,15 +175,17 @@ export function WorktreesPanel({
           <div className="flex min-w-0 flex-1 flex-col">
             <div className="flex items-center gap-2">
               <span className="truncate font-mono font-medium text-foreground">
-                {wt.branch ?? (wt.detached ? '(detached)' : '?')}
+                {wt.branch ?? (wt.detached ? t('panels.worktrees.detached') : '?')}
               </span>
               {wt.isMain ? (
                 <span className="rounded bg-sky-500/20 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-sky-300">
-                  principal
+                  {t('panels.worktrees.mainLabel')}
                 </span>
               ) : null}
               {wt.liveSessionCount > 0 ? (
-                <Tooltip content={`${wt.liveSessionCount} sessão(ões) ativa(s)`}>
+                <Tooltip
+                  content={t('panels.worktrees.activeCount', { count: wt.liveSessionCount })}
+                >
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[10px] text-emerald-300">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                     {wt.liveSessionCount}
@@ -186,7 +196,9 @@ export function WorktreesPanel({
             <span className="truncate font-mono text-[10px] text-muted-foreground">{rel}</span>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
               <span className={wt.clean ? 'text-emerald-400' : 'text-amber-400'}>
-                {wt.clean ? 'limpo' : `${wt.modifiedCount} modificado(s)`}
+                {wt.clean
+                  ? t('panels.worktrees.clean')
+                  : t('panels.worktrees.modifiedCount', { count: wt.modifiedCount })}
               </span>
               {!wt.isMain && (wt.ahead > 0 || wt.behind > 0) ? (
                 <span>
@@ -201,33 +213,39 @@ export function WorktreesPanel({
                   <span className="text-rose-400">-{wt.linesRemoved}</span>
                 </span>
               ) : null}
-              {age ? <span>criado há {age}</span> : null}
+              {age ? <span>{t('panels.worktrees.createdAgo', { age })}</span> : null}
             </div>
           </div>
           <div className="flex items-start gap-1">
             <Tooltip
-              content={`Abrir nova sessão em ${wt.isMain ? 'main' : (wt.branch ?? wt.path)}`}
+              content={t('panels.worktrees.openSessionAt', {
+                path: wt.isMain ? 'main' : (wt.branch ?? wt.path),
+              })}
             >
               <button
                 type="button"
                 onClick={() => onLaunchInWorktree(wt.path)}
                 className="flex h-6 items-center gap-1 rounded border border-border px-1.5 text-[11px] text-muted-foreground hover:bg-accent hover:text-accent-foreground cursor-pointer"
-                aria-label="Nova sessão neste worktree"
+                aria-label={t('panels.worktrees.newSessionAria')}
               >
                 <Play size={11} />
-                <span>Nova</span>
+                <span>{t('panels.worktrees.newSession')}</span>
               </button>
             </Tooltip>
             {items.length > 0 ? (
-              <DropdownMenu items={items} ariaLabel="Ações do worktree" tooltip="Mais ações" />
+              <DropdownMenu
+                items={items}
+                ariaLabel={t('panels.worktrees.actionsAria')}
+                tooltip={t('panels.worktrees.actionsTooltip')}
+              />
             ) : (
               <Tooltip
                 content={
                   wt.isMain
-                    ? 'Nenhuma ação para worktree principal'
+                    ? t('panels.worktrees.noActionsMain')
                     : removeDisabled && mergeDisabled
                       ? `${removeReason} · ${mergeReason}`
-                      : 'Sem ações disponíveis'
+                      : t('panels.worktrees.noActions')
                 }
               >
                 <span className="flex h-6 w-6 items-center justify-center text-muted-foreground/40">
@@ -275,32 +293,29 @@ export function WorktreesPanel({
         ) : null}
         {!cwd ? (
           <div className="flex flex-1 items-center justify-center p-4 text-xs text-muted-foreground">
-            Abra uma sessão para ver os worktrees do projeto.
+            {t('panels.worktrees.openSessionFirst')}
           </div>
         ) : !data && loading ? (
           <div className="flex flex-1 items-center justify-center p-4 text-xs text-muted-foreground">
-            Carregando worktrees…
+            {t('panels.worktrees.loading')}
           </div>
         ) : worktrees.length === 0 ? (
           <div className="flex flex-1 items-center justify-center p-4 text-xs text-muted-foreground">
-            Nenhum worktree encontrado. É um repositório git?
+            {t('panels.worktrees.notARepo')}
           </div>
         ) : nonMain.length === 0 ? (
           <div className="flex flex-col gap-3 p-4">
             {worktrees.map(renderRow)}
             <div className="rounded border border-dashed border-border p-4 text-[11px] text-muted-foreground">
-              <p className="mb-2 font-medium text-foreground">Nenhum worktree adicional</p>
-              <p>
-                Worktrees permitem trabalhar em branches paralelas sem atrapalhar o working tree
-                principal. Ideal para rodar várias sessões Claude sem conflitos de arquivos.
-              </p>
+              <p className="mb-2 font-medium text-foreground">{t('panels.worktrees.emptyTitle')}</p>
+              <p>{t('panels.worktrees.emptyHelp')}</p>
               <button
                 type="button"
                 onClick={() => onOpenCreate(cwd)}
                 className="mt-3 inline-flex items-center gap-1 rounded bg-sky-700 px-2.5 py-1 text-xs text-white hover:bg-sky-600 cursor-pointer"
               >
                 <Plus size={12} />
-                Criar primeiro worktree
+                {t('panels.worktrees.createFirst')}
               </button>
             </div>
           </div>
@@ -309,20 +324,23 @@ export function WorktreesPanel({
         )}
         {data?.base ? (
           <div className="border-t border-border/60 bg-muted/20 px-3 py-1.5 text-[10px] text-muted-foreground">
-            base: <span className="font-mono text-foreground/80">{data.base}</span>
+            {t('panels.worktrees.baseLabel')}{' '}
+            <span className="font-mono text-foreground/80">{data.base}</span>
           </div>
         ) : null}
       </div>
 
       <ConfirmDialog
         open={!!pendingRemove}
-        title="Remover worktree"
+        title={t('panels.worktrees.removeConfirmTitle')}
         description={
           pendingRemove
-            ? `Remover worktree ${pendingRemove.branch ?? pendingRemove.path}? O diretório e a branch local serão removidos (apenas se estiverem limpos).`
+            ? t('panels.worktrees.removeConfirmBody', {
+                name: pendingRemove.branch ?? pendingRemove.path,
+              })
             : ''
         }
-        confirmLabel="Remover"
+        confirmLabel={t('panels.worktrees.removeConfirm')}
         destructive
         onConfirm={async () => {
           if (pendingRemove) await doRemove(pendingRemove)
@@ -332,13 +350,16 @@ export function WorktreesPanel({
 
       <ConfirmDialog
         open={!!pendingMerge}
-        title="Mergear worktree"
+        title={t('panels.worktrees.mergeConfirmTitle')}
         description={
           pendingMerge
-            ? `Mergear ${pendingMerge.branch} em ${data?.base ?? 'base'} (fast-forward). A base será atualizada no worktree principal.`
+            ? t('panels.worktrees.mergeConfirmBody', {
+                branch: pendingMerge.branch,
+                base: data?.base ?? t('panels.worktrees.mergeBaseFallback'),
+              })
             : ''
         }
-        confirmLabel="Mergear"
+        confirmLabel={t('panels.worktrees.mergeConfirm')}
         onConfirm={async () => {
           if (pendingMerge) await doMerge(pendingMerge)
         }}

@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { type Locale, SUPPORTED_LOCALES } from '@shared/types'
 import type { SessionSortBy } from '@/types'
 
 export type SectionPrefs = {
@@ -19,6 +20,7 @@ export type Prefs = {
   sections: Record<string, SectionPrefs>
   expanded: string[]
   projectOrder: string[]
+  locale: Locale | null
 }
 
 type Ctx = {
@@ -28,9 +30,10 @@ type Ctx = {
   removeSection: (name: string) => void
   setExpanded: (updater: (prev: string[]) => string[]) => void
   setProjectOrder: (updater: (prev: string[]) => string[]) => void
+  setLocale: (locale: Locale) => void
 }
 
-const EMPTY_PREFS: Prefs = { sections: {}, expanded: [], projectOrder: [] }
+const EMPTY_PREFS: Prefs = { sections: {}, expanded: [], projectOrder: [], locale: null }
 const PrefsContext = createContext<Ctx | null>(null)
 
 export function PrefsProvider({ children }: { children: ReactNode }) {
@@ -53,6 +56,11 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
               : {},
           expanded: Array.isArray(data.expanded) ? data.expanded : [],
           projectOrder: Array.isArray(data.projectOrder) ? data.projectOrder : [],
+          locale:
+            typeof data.locale === 'string' &&
+            (SUPPORTED_LOCALES as string[]).includes(data.locale)
+              ? (data.locale as Locale)
+              : null,
         }
         if (cancelled) return
         lastSavedRef.current = JSON.stringify(initial)
@@ -119,9 +127,13 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  const setLocale = useCallback((locale: Locale) => {
+    setPrefs((p) => (p.locale === locale ? p : { ...p, locale }))
+  }, [])
+
   const value = useMemo<Ctx>(
-    () => ({ prefs, loaded, setSection, removeSection, setExpanded, setProjectOrder }),
-    [prefs, loaded, setSection, removeSection, setExpanded, setProjectOrder],
+    () => ({ prefs, loaded, setSection, removeSection, setExpanded, setProjectOrder, setLocale }),
+    [prefs, loaded, setSection, removeSection, setExpanded, setProjectOrder, setLocale],
   )
 
   return <PrefsContext.Provider value={value}>{children}</PrefsContext.Provider>

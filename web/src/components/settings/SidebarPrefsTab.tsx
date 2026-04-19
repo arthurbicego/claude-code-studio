@@ -1,21 +1,23 @@
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { usePrefs } from '@/hooks/usePrefs'
 import { Section } from './atoms'
 
-const SIDEBAR_SECTION_LABELS: Record<string, string> = {
-  open: 'Abertas',
-  history: 'Histórico',
-  archived: 'Arquivadas',
+const SIDEBAR_SECTION_LABEL_KEYS: Record<string, string> = {
+  open: 'settings.sidebarPrefs.section.open',
+  history: 'settings.sidebarPrefs.section.history',
+  archived: 'settings.sidebarPrefs.section.archived',
 }
 const SIDEBAR_SECTION_ORDER = ['open', 'history', 'archived'] as const
 
 export function SidebarPrefsTab() {
+  const { t } = useTranslation()
   const { prefs, loaded, removeSection, setExpanded, setProjectOrder } = usePrefs()
 
   if (!loaded) {
     return (
-      <Section title="Preferências da sidebar">
-        <p className="text-xs text-muted-foreground">Carregando…</p>
+      <Section title={t('settings.sidebarPrefs.title')}>
+        <p className="text-xs text-muted-foreground">{t('settings.sidebarPrefs.loading')}</p>
       </Section>
     )
   }
@@ -29,8 +31,8 @@ export function SidebarPrefsTab() {
   return (
     <>
       <Section
-        title="Preferências por seção"
-        description="Valores lidos por cada seção da sidebar (agrupamento e ordenação). Editáveis direto pelos botões de cada seção; aqui você só inspeciona e reseta."
+        title={t('settings.sidebarPrefs.perSection')}
+        description={t('settings.sidebarPrefs.perSectionHelp')}
       >
         <div className="flex flex-col gap-2">
           {allKeys.map((key) => {
@@ -39,7 +41,8 @@ export function SidebarPrefsTab() {
               groupByProject: true,
               sortBy: 'lastResponse' as const,
             }
-            const label = SIDEBAR_SECTION_LABELS[key] ?? key
+            const labelKey = SIDEBAR_SECTION_LABEL_KEYS[key]
+            const label = labelKey ? t(labelKey) : key
             return (
               <div
                 key={key}
@@ -54,18 +57,27 @@ export function SidebarPrefsTab() {
                       variant="ghost"
                       onClick={() => removeSection(key)}
                     >
-                      Voltar ao padrão
+                      {t('settings.sidebarPrefs.reset')}
                     </Button>
                   ) : (
-                    <span className="text-[10px] text-muted-foreground">Padrão</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {t('settings.sidebarPrefs.default')}
+                    </span>
                   )}
                 </div>
                 <ul className="flex flex-col gap-0.5 font-mono text-[10px] text-muted-foreground">
                   <li>
                     sortBy:{' '}
-                    {effective.sortBy === 'lastResponse' ? 'Última resposta' : 'Data de criação'}
+                    {effective.sortBy === 'lastResponse'
+                      ? t('settings.sidebarPrefs.sortOptions.lastResponse')
+                      : t('settings.sidebarPrefs.sortOptions.createdAt')}
                   </li>
-                  <li>groupByProject: {effective.groupByProject ? 'sim' : 'não'}</li>
+                  <li>
+                    groupByProject:{' '}
+                    {effective.groupByProject
+                      ? t('settings.sidebarPrefs.yes')
+                      : t('settings.sidebarPrefs.no')}
+                  </li>
                 </ul>
               </div>
             )
@@ -74,11 +86,11 @@ export function SidebarPrefsTab() {
       </Section>
 
       <Section
-        title="Grupos expandidos"
-        description="Projetos cujos grupos ficam abertos/fechados entre sessões. Cada chave tem o formato <seção>:<slug>."
+        title={t('settings.sidebarPrefs.expandedGroups')}
+        description={t('settings.sidebarPrefs.expandedGroupsHelp')}
       >
         {prefs.expanded.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Nenhum item.</p>
+          <p className="text-xs text-muted-foreground">{t('settings.sidebarPrefs.noItems')}</p>
         ) : (
           <>
             <ul className="flex max-h-48 flex-col gap-0.5 overflow-auto rounded border border-border bg-black/20 px-2 py-1.5 font-mono text-[10px] text-muted-foreground">
@@ -88,7 +100,7 @@ export function SidebarPrefsTab() {
             </ul>
             <div>
               <Button type="button" size="xs" variant="ghost" onClick={() => setExpanded(() => [])}>
-                Limpar ({prefs.expanded.length})
+                {t('settings.sidebarPrefs.clearN', { count: prefs.expanded.length })}
               </Button>
             </div>
           </>
@@ -96,11 +108,11 @@ export function SidebarPrefsTab() {
       </Section>
 
       <Section
-        title="Ordem customizada de projetos"
-        description="Ordem definida por arrastar e soltar na sidebar. Sem entradas aqui, a ordem é automática (última atividade)."
+        title={t('settings.sidebarPrefs.customOrder')}
+        description={t('settings.sidebarPrefs.customOrderHelp')}
       >
         {prefs.projectOrder.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Nenhum — ordem automática.</p>
+          <p className="text-xs text-muted-foreground">{t('settings.sidebarPrefs.noOrder')}</p>
         ) : (
           <>
             <ol className="flex max-h-48 flex-col gap-0.5 overflow-auto rounded border border-border bg-black/20 px-2 py-1.5 font-mono text-[10px] text-muted-foreground">
@@ -117,7 +129,7 @@ export function SidebarPrefsTab() {
                 variant="ghost"
                 onClick={() => setProjectOrder(() => [])}
               >
-                Resetar ordem ({prefs.projectOrder.length})
+                {t('settings.sidebarPrefs.resetOrder', { count: prefs.projectOrder.length })}
               </Button>
             </div>
           </>

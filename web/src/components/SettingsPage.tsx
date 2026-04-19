@@ -1,7 +1,9 @@
 import { ArrowLeft } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 import { AgentsTab } from '@/components/settings/AgentsTab'
+import { GeralTab } from '@/components/settings/GeralTab'
 import { MemoryTab } from '@/components/settings/MemoryTab'
 import {
   emptySandbox,
@@ -26,9 +28,10 @@ import { useConfig } from '@/hooks/useConfig'
 import { useSessionList } from '@/hooks/useSessionList'
 import type { SandboxPlatform, SandboxScope, SandboxSettings } from '@/types'
 
-type TabId = 'sessions' | 'sandbox' | 'memory' | 'agents' | 'skills' | 'sidebar'
+type TabId = 'geral' | 'sessions' | 'sandbox' | 'memory' | 'agents' | 'skills' | 'sidebar'
 
 export function SettingsPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const goBack = useCallback(() => navigate('/'), [navigate])
   const { config, defaults, bounds, loading, error, update } = useConfig()
@@ -38,7 +41,7 @@ export function SettingsPage() {
     [sessions.projects],
   )
 
-  const [tab, setTab] = useState<TabId>('sessions')
+  const [tab, setTab] = useState<TabId>('geral')
   const [sandboxScope, setSandboxScope] = useState<SandboxScope>('user-local')
   const [sandboxProjectCwd, setSandboxProjectCwd] = useState<string | null>(null)
   const cs = useClaudeSettings(
@@ -101,7 +104,8 @@ export function SettingsPage() {
   }, [cs.settings])
 
   const standbyFactor = standbyUnit === 'minutes' ? 60000 : 1000
-  const standbyUnitLabel = standbyUnit === 'minutes' ? 'minutos' : 'segundos'
+  const standbyUnitLabel =
+    standbyUnit === 'minutes' ? t('settings.sessions.unit.minutes') : t('settings.sessions.unit.seconds')
   const minStandbyMs = bounds?.standbyTimeoutMs.min ?? 60000
   const maxStandbyMs = bounds?.standbyTimeoutMs.max ?? 24 * 60 * 60 * 1000
   const minStandby = Math.max(1, Math.ceil(minStandbyMs / standbyFactor))
@@ -150,7 +154,13 @@ export function SettingsPage() {
     const n = Number(standbyValue)
     const ms = Math.round(n * standbyFactor)
     if (!Number.isFinite(n) || ms < minStandbyMs || ms > maxStandbyMs) {
-      setSaveError(`Standby deve estar entre ${minStandby} e ${maxStandby} ${standbyUnitLabel}.`)
+      setSaveError(
+        t('settings.sessions.standbyError', {
+          min: minStandby,
+          max: maxStandby,
+          unit: standbyUnitLabel,
+        }),
+      )
       setTab('sessions')
       return
     }
@@ -162,7 +172,7 @@ export function SettingsPage() {
       const result = parseJsonField(jsonState[key].text)
       nextJsonState[key] = { text: jsonState[key].text, error: result.error }
       if (result.error) {
-        firstError = firstError ?? `${JSON_FIELD_META[key].title}: ${result.error}`
+        firstError = firstError ?? `${t(JSON_FIELD_META[key].titleKey)}: ${result.error}`
       } else {
         parsed[key] = result.value
       }
@@ -201,31 +211,34 @@ export function SettingsPage() {
   return (
     <div className="flex h-full flex-col bg-background">
       <header className="flex items-center gap-3 border-b border-border px-4 py-3">
-        <Tooltip content="Voltar">
-          <Button variant="ghost" size="icon" onClick={goBack} aria-label="Voltar">
+        <Tooltip content={t('common.back')}>
+          <Button variant="ghost" size="icon" onClick={goBack} aria-label={t('common.back')}>
             <ArrowLeft size={16} />
           </Button>
         </Tooltip>
-        <h1 className="text-sm font-semibold text-foreground">Configurações</h1>
+        <h1 className="text-sm font-semibold text-foreground">{t('settings.title')}</h1>
       </header>
       <div className="flex min-h-0 flex-1 flex-col">
         <Tabs
           tabs={[
-            { id: 'sessions', label: 'Sessões' },
-            { id: 'sandbox', label: 'Sandbox' },
-            { id: 'memory', label: 'Memória' },
-            { id: 'agents', label: 'Agentes' },
-            { id: 'skills', label: 'Skills' },
-            { id: 'sidebar', label: 'Sidebar' },
+            { id: 'geral', label: t('settings.tabs.geral') },
+            { id: 'sessions', label: t('settings.tabs.sessions') },
+            { id: 'sandbox', label: t('settings.tabs.sandbox') },
+            { id: 'memory', label: t('settings.tabs.memory') },
+            { id: 'agents', label: t('settings.tabs.agents') },
+            { id: 'skills', label: t('settings.tabs.skills') },
+            { id: 'sidebar', label: t('settings.tabs.sidebar') },
           ]}
           active={tab}
           onChange={setTab}
         />
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto divide-y divide-border">
           {loading ? (
-            <p className="p-4 text-xs text-muted-foreground">Carregando…</p>
+            <p className="p-4 text-xs text-muted-foreground">{t('common.loading')}</p>
           ) : error ? (
-            <p className="p-4 text-xs text-red-400">Erro: {error}</p>
+            <p className="p-4 text-xs text-red-400">{t('common.errorPrefix', { message: error })}</p>
+          ) : tab === 'geral' ? (
+            <GeralTab />
           ) : tab === 'sessions' ? (
             <SessionsTab
               unit={standbyUnit}
@@ -269,14 +282,14 @@ export function SettingsPage() {
       </div>
       <footer className="flex justify-end gap-2 border-t border-border bg-black/30 px-4 py-3">
         <Button variant="ghost" onClick={goBack}>
-          Cancelar
+          {t('common.cancel')}
         </Button>
         <Button
           variant="primary"
           onClick={save}
           disabled={saving || loading || !!error || jsonHasErrors || sandboxLoading}
         >
-          Salvar
+          {t('common.save')}
         </Button>
       </footer>
     </div>
