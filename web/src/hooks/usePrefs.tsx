@@ -25,6 +25,7 @@ type Ctx = {
   prefs: Prefs
   loaded: boolean
   setSection: (name: string, next: SectionPrefs) => void
+  removeSection: (name: string) => void
   setExpanded: (updater: (prev: string[]) => string[]) => void
   setProjectOrder: (updater: (prev: string[]) => string[]) => void
 }
@@ -95,6 +96,15 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
     setPrefs((p) => ({ ...p, sections: { ...p.sections, [name]: next } }))
   }, [])
 
+  const removeSection = useCallback((name: string) => {
+    setPrefs((p) => {
+      if (!(name in p.sections)) return p
+      const nextSections = { ...p.sections }
+      delete nextSections[name]
+      return { ...p, sections: nextSections }
+    })
+  }, [])
+
   const setExpanded = useCallback((updater: (prev: string[]) => string[]) => {
     setPrefs((p) => {
       const next = updater(p.expanded)
@@ -110,8 +120,8 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo<Ctx>(
-    () => ({ prefs, loaded, setSection, setExpanded, setProjectOrder }),
-    [prefs, loaded, setSection, setExpanded, setProjectOrder],
+    () => ({ prefs, loaded, setSection, removeSection, setExpanded, setProjectOrder }),
+    [prefs, loaded, setSection, removeSection, setExpanded, setProjectOrder],
   )
 
   return <PrefsContext.Provider value={value}>{children}</PrefsContext.Provider>
