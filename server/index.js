@@ -1063,12 +1063,14 @@ app.get('/api/browse', (req, res) => {
 const VALID_EFFORT = new Set(['low', 'medium', 'high', 'xhigh', 'max']);
 const VALID_PERMISSION_MODE = new Set(['default', 'acceptEdits', 'plan', 'auto', 'dontAsk', 'bypassPermissions']);
 const VALID_MODEL_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,64}$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function buildPtyArgs({ resume, model, effort, permissionMode }) {
+function buildPtyArgs({ resume, sessionId, model, effort, permissionMode }) {
   const args = [];
   if (resume) {
     args.push('--resume', resume);
   } else {
+    if (sessionId && UUID_RE.test(sessionId)) args.push('--session-id', sessionId);
     if (model && VALID_MODEL_RE.test(model)) args.push('--model', model);
     if (effort && VALID_EFFORT.has(effort)) args.push('--effort', effort);
     if (permissionMode && VALID_PERMISSION_MODE.has(permissionMode)) {
@@ -1302,7 +1304,7 @@ app.ws('/pty', (ws, req) => {
     return;
   }
 
-  const args = buildPtyArgs(req.query);
+  const args = buildPtyArgs({ ...req.query, sessionId: sessionKey });
   let entry;
   try {
     entry = getOrCreateLiveSession(sessionKey, { cwd: req.query.cwd, args });
