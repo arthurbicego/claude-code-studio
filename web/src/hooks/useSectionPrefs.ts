@@ -1,53 +1,25 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback } from 'react'
 import type { SessionSortBy } from '@/types'
-
-export type SectionPrefs = {
-  groupByProject: boolean
-  sortBy: SessionSortBy
-}
+import { usePrefs, type SectionPrefs } from '@/hooks/usePrefs'
 
 const DEFAULTS: SectionPrefs = { groupByProject: true, sortBy: 'lastResponse' }
 
-function storageKey(name: string) {
-  return `claude-code-studio.section.${name}`
-}
-
-function load(name: string): SectionPrefs {
-  try {
-    const raw = localStorage.getItem(storageKey(name))
-    if (!raw) return { ...DEFAULTS }
-    const parsed = JSON.parse(raw) as Partial<SectionPrefs>
-    return {
-      groupByProject:
-        typeof parsed.groupByProject === 'boolean' ? parsed.groupByProject : DEFAULTS.groupByProject,
-      sortBy:
-        parsed.sortBy === 'createdAt' || parsed.sortBy === 'lastResponse'
-          ? parsed.sortBy
-          : DEFAULTS.sortBy,
-    }
-  } catch {
-    return { ...DEFAULTS }
-  }
-}
+export type { SectionPrefs }
 
 export function useSectionPrefs(name: string) {
-  const [prefs, setPrefs] = useState<SectionPrefs>(() => load(name))
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(storageKey(name), JSON.stringify(prefs))
-    } catch {
-      /* noop */
-    }
-  }, [name, prefs])
+  const { prefs, setSection } = usePrefs()
+  const current = prefs.sections[name] ?? DEFAULTS
 
   const toggleGrouping = useCallback(() => {
-    setPrefs((p) => ({ ...p, groupByProject: !p.groupByProject }))
-  }, [])
+    setSection(name, { ...current, groupByProject: !current.groupByProject })
+  }, [name, current, setSection])
 
-  const setSortBy = useCallback((sortBy: SessionSortBy) => {
-    setPrefs((p) => ({ ...p, sortBy }))
-  }, [])
+  const setSortBy = useCallback(
+    (sortBy: SessionSortBy) => {
+      setSection(name, { ...current, sortBy })
+    },
+    [name, current, setSection],
+  )
 
-  return { prefs, toggleGrouping, setSortBy }
+  return { prefs: current, toggleGrouping, setSortBy }
 }

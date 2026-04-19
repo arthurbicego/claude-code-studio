@@ -1,29 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
-
-const KEY = 'claude-code-studio.project-order'
-
-function load(): string[] {
-  try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter((s): s is string => typeof s === 'string')
-  } catch {
-    return []
-  }
-}
+import { useCallback } from 'react'
+import { usePrefs } from '@/hooks/usePrefs'
 
 export function useProjectOrder() {
-  const [order, setOrder] = useState<string[]>(() => load())
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(order))
-    } catch {
-      /* noop */
-    }
-  }, [order])
+  const { prefs, setProjectOrder } = usePrefs()
+  const order = prefs.projectOrder
 
   const applyOrder = useCallback(
     <T extends { slug: string }>(items: T[]): T[] => {
@@ -51,7 +31,7 @@ export function useProjectOrder() {
   const moveSlug = useCallback(
     (from: string, to: string, position: 'before' | 'after' = 'before') => {
       if (!from || !to || from === to) return
-      setOrder((prev) => {
+      setProjectOrder((prev) => {
         const list = [...prev]
         if (!list.includes(from)) list.push(from)
         if (!list.includes(to)) list.push(to)
@@ -65,7 +45,7 @@ export function useProjectOrder() {
         return list
       })
     },
-    [],
+    [setProjectOrder],
   )
 
   return { applyOrder, moveSlug }
