@@ -1478,11 +1478,22 @@ function sanitizePrefs(raw) {
   return { sections, expanded, projectOrder };
 }
 
+const STATE_VERSION = 1;
+
+function migrateState(raw) {
+  // v0 (no `version` field) has the same shape as v1 — no transform needed.
+  // Add future steps here: if (raw.version === 1) raw = migrateV1toV2(raw); etc.
+  return raw;
+}
+
 function loadState() {
   try {
     const raw = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
-    const archived = Array.isArray(raw.archived) ? raw.archived.filter(x => typeof x === 'string') : [];
-    return { archived: new Set(archived), prefs: sanitizePrefs(raw.prefs) };
+    const migrated = migrateState(raw);
+    const archived = Array.isArray(migrated.archived)
+      ? migrated.archived.filter(x => typeof x === 'string')
+      : [];
+    return { archived: new Set(archived), prefs: sanitizePrefs(migrated.prefs) };
   } catch {
     return { archived: new Set(), prefs: defaultPrefs() };
   }
@@ -1491,10 +1502,14 @@ function loadState() {
 function saveState(state) {
   try {
     fs.mkdirSync(CONFIG_DIR, { recursive: true });
-    fs.writeFileSync(
-      STATE_FILE,
-      JSON.stringify({ archived: [...state.archived], prefs: state.prefs }, null, 2),
-    );
+    const payload = {
+      version: STATE_VERSION,
+      archived: [...state.archived],
+      prefs: state.prefs,
+    };
+    const tmp = `${STATE_FILE}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(payload, null, 2));
+    fs.renameSync(tmp, STATE_FILE);
   } catch (err) {
     console.warn(`[state] save failed: ${err.message}`);
   }
