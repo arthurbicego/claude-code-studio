@@ -120,24 +120,27 @@ export function Sidebar({
 
       <div className="flex-1 overflow-y-auto p-2">
         {hasOpen ? (
-          <SessionsSection
-            variant="open"
-            title="Abertas"
-            prefsKey="open"
-            projects={projects}
-            liveSessions={liveSessions}
-            activeSessionKey={activeSessionKey}
-            openSessionKeys={openSessionKeys}
-            openLaunches={openSessions}
-            onResumeSession={onResumeSession}
-            onArchive={onArchiveSession}
-            onUnarchive={onUnarchiveSession}
-            onDelete={onDeleteSession}
-            onCloseSession={onCloseSession}
-            renderState={renderState}
-            applyProjectOrder={applyOrder}
-            onReorderProject={moveSlug}
-          />
+          <>
+            <SessionsSection
+              variant="open"
+              title="Abertas"
+              prefsKey="open"
+              projects={projects}
+              liveSessions={liveSessions}
+              activeSessionKey={activeSessionKey}
+              openSessionKeys={openSessionKeys}
+              openLaunches={openSessions}
+              onResumeSession={onResumeSession}
+              onArchive={onArchiveSession}
+              onUnarchive={onUnarchiveSession}
+              onDelete={onDeleteSession}
+              onCloseSession={onCloseSession}
+              renderState={renderState}
+              applyProjectOrder={applyOrder}
+              onReorderProject={moveSlug}
+            />
+            <hr className="my-2 border-t border-border/60" />
+          </>
         ) : null}
 
         {projects.length === 0 && !loading ? (
@@ -164,22 +167,25 @@ export function Sidebar({
         />
 
         {hasArchived ? (
-          <SessionsSection
-            variant="archived"
-            title="Arquivadas"
-            prefsKey="archived"
-            defaultCollapsed
-            projects={projects}
-            liveSessions={liveSessions}
-            activeSessionKey={activeSessionKey}
-            onResumeSession={onResumeSession}
-            onArchive={onArchiveSession}
-            onUnarchive={onUnarchiveSession}
-            onDelete={onDeleteSession}
-            renderState={renderState}
-            applyProjectOrder={applyOrder}
-            onReorderProject={moveSlug}
-          />
+          <>
+            <hr className="my-2 border-t border-border/60" />
+            <SessionsSection
+              variant="archived"
+              title="Arquivadas"
+              prefsKey="archived"
+              defaultCollapsed
+              projects={projects}
+              liveSessions={liveSessions}
+              activeSessionKey={activeSessionKey}
+              onResumeSession={onResumeSession}
+              onArchive={onArchiveSession}
+              onUnarchive={onUnarchiveSession}
+              onDelete={onDeleteSession}
+              renderState={renderState}
+              applyProjectOrder={applyOrder}
+              onReorderProject={moveSlug}
+            />
+          </>
         ) : null}
       </div>
     </aside>
