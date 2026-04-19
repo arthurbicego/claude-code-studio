@@ -22,7 +22,7 @@ export function Toolbar({
     <div className="flex items-center gap-2 border-b border-border bg-card/40 px-4 py-2">
       <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{status}</span>
       {sessionId ? (
-        <InfoPopover ariaLabel="Mostrar informações da sessão">
+        <InfoPopover ariaLabel="Mostrar informações da sessão" tooltip="Informações da sessão">
           <CopyableField
             label="ID da sessão"
             value={sessionId}

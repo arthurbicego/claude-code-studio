@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { ArrowUp, Folder, Home } from 'lucide-react'
 import { Modal } from '@/components/Modal'
 import { Button } from '@/components/ui/Button'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { useBrowser } from '@/hooks/useBrowser'
 import type {
   Effort,
@@ -156,23 +157,27 @@ export function NewSessionModal({ open, defaults, projects, onClose, onLaunch }:
             Ou escolher outra pasta
           </h3>
           <div className="mb-2 flex items-center gap-2">
-            <Button
-              size="xs"
-              variant="ghost"
-              onClick={() => browser.data?.parent && browser.load(browser.data.parent)}
-              disabled={!browser.data?.parent}
-              title="Subir um nível"
-            >
-              <ArrowUp size={12} />
-            </Button>
-            <Button
-              size="xs"
-              variant="ghost"
-              onClick={() => browser.data && browser.load(browser.data.home)}
-              title="Ir para HOME"
-            >
-              <Home size={12} />
-            </Button>
+            <Tooltip content="Subir um nível">
+              <Button
+                size="xs"
+                variant="ghost"
+                onClick={() => browser.data?.parent && browser.load(browser.data.parent)}
+                disabled={!browser.data?.parent}
+                aria-label="Subir um nível"
+              >
+                <ArrowUp size={12} />
+              </Button>
+            </Tooltip>
+            <Tooltip content="Ir para HOME">
+              <Button
+                size="xs"
+                variant="ghost"
+                onClick={() => browser.data && browser.load(browser.data.home)}
+                aria-label="Ir para HOME"
+              >
+                <Home size={12} />
+              </Button>
+            </Tooltip>
             <code
               dir="rtl"
               className="flex-1 truncate rounded bg-background px-2 py-1 text-left text-[11px] text-muted-foreground"

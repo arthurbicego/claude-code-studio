@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Tooltip } from '@/components/ui/Tooltip'
 
 type Props = {
   open: boolean
@@ -37,13 +38,15 @@ export function Modal({ open, onClose, title, children, footer, className }: Pro
       >
         <header className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-          <button
-            className="text-muted-foreground hover:text-foreground cursor-pointer"
-            onClick={onClose}
-            aria-label="Fechar"
-          >
-            <X size={18} />
-          </button>
+          <Tooltip content="Fechar">
+            <button
+              className="text-muted-foreground hover:text-foreground cursor-pointer"
+              onClick={onClose}
+              aria-label="Fechar"
+            >
+              <X size={18} />
+            </button>
+          </Tooltip>
         </header>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
         {footer ? (
