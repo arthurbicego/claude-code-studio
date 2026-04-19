@@ -10,7 +10,7 @@ import {
 import { useMemo, useState } from 'react'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { cn } from '@/lib/utils'
-import { useCollapsed } from '@/hooks/useCollapsed'
+import { useExpanded } from '@/hooks/useExpanded'
 import { useSectionPrefs } from '@/hooks/useSectionPrefs'
 import type { LiveSession, Project, SessionMeta, SessionSortBy } from '@/types'
 
@@ -71,7 +71,7 @@ export function SessionsSection({
   onDelete,
   renderState,
 }: Props) {
-  const { isCollapsed, toggle } = useCollapsed()
+  const { isExpanded, toggle } = useExpanded()
   const { prefs, toggleGrouping, setSortBy } = useSectionPrefs(prefsKey)
   const [sectionOpen, setSectionOpen] = useState(!defaultCollapsed)
 
@@ -146,19 +146,19 @@ export function SessionsSection({
         <div className="mt-1">
           {filteredProjects.map((p) => {
             const sessions = sortSessions(p.sessions, prefs.sortBy)
-            const collapseKey = `${prefsKey}:${p.slug}`
-            const collapsed = isCollapsed(collapseKey)
+            const expandKey = `${prefsKey}:${p.slug}`
+            const expanded = isExpanded(expandKey)
             return (
               <div key={p.slug} className="mb-2">
                 <button
                   className="flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-left text-xs font-semibold text-foreground hover:bg-accent cursor-pointer"
-                  onClick={() => toggle(collapseKey)}
+                  onClick={() => toggle(expandKey)}
                 >
                   <ChevronRight
                     size={12}
                     className={cn(
                       'text-muted-foreground transition-transform',
-                      !collapsed && 'rotate-90',
+                      expanded && 'rotate-90',
                     )}
                   />
                   <span className="flex-1 truncate">{basename(p.cwd)}</span>
@@ -166,7 +166,7 @@ export function SessionsSection({
                     {sessions.length}
                   </span>
                 </button>
-                {!collapsed ? (
+                {expanded ? (
                   <>
                     <div className="break-all px-2 pb-1 pl-6 font-mono text-[10px] text-muted-foreground/70">
                       {p.cwd}
