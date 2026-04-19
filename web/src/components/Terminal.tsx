@@ -88,7 +88,11 @@ export function TerminalView({
     }
 
     ws.onopen = () => {
-      onStatus?.(launch.resume ? `Resumido ${launch.resume}` : `Nova sessão em ${launch.cwd}`)
+      onStatus?.(
+        launch.resume
+          ? launch.label ?? launch.resume
+          : `Nova sessão em ${launch.cwd}`,
+      )
       safeSend({ type: 'resize', cols: term.cols, rows: term.rows })
       safeSend({ type: 'focus', active: isActiveRef.current })
     }
