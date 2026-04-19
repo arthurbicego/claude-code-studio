@@ -71,7 +71,7 @@ export function DiffPanel({ sessionId, onClose }: Props) {
     }
     return {
       hunks: parsed,
-      title: data?.branch ? `main → ${data.branch}` : 'Diff',
+      title: data?.branch ? `Uncommitted · ${data.branch}` : 'Uncommitted',
     }
   }, [data])
 
