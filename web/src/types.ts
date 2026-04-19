@@ -82,6 +82,8 @@ export type AppConfigResponse = {
   bounds: AppConfigBounds
 }
 
+export type SandboxScope = 'user' | 'user-local' | 'project' | 'project-local'
+
 export type SandboxPlatform = 'macos' | 'linux'
 
 export type SandboxSettings = {
@@ -101,6 +103,8 @@ export type SandboxSettings = {
 }
 
 export type ClaudeSettings = {
+  scope: SandboxScope
+  path: string
   sandbox: SandboxSettings
 }
 

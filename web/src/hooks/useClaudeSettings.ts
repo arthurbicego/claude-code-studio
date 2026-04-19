@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { ClaudeSettings } from '@/types'
+import type { ClaudeSettings, SandboxScope } from '@/types'
 
 type State = {
   settings: ClaudeSettings | null
@@ -9,13 +9,29 @@ type State = {
 
 const INITIAL: State = { settings: null, loading: true, error: null }
 
-export function useClaudeSettings() {
+function buildQuery(scope: SandboxScope, cwd: string | null): string {
+  const params = new URLSearchParams({ scope })
+  if ((scope === 'project' || scope === 'project-local') && cwd) {
+    params.set('cwd', cwd)
+  }
+  return params.toString()
+}
+
+function needsCwd(scope: SandboxScope, cwd: string | null): boolean {
+  return (scope === 'project' || scope === 'project-local') && !cwd
+}
+
+export function useClaudeSettings(scope: SandboxScope, cwd: string | null) {
   const [state, setState] = useState<State>(INITIAL)
 
   const load = useCallback(async () => {
+    if (needsCwd(scope, cwd)) {
+      setState({ settings: null, loading: false, error: null })
+      return
+    }
     setState((s) => ({ ...s, loading: true, error: null }))
     try {
-      const res = await fetch('/api/claude-settings', { cache: 'no-store' })
+      const res = await fetch(`/api/claude-settings?${buildQuery(scope, cwd)}`, { cache: 'no-store' })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = (await res.json()) as ClaudeSettings
       setState({ settings: data, loading: false, error: null })
@@ -26,24 +42,31 @@ export function useClaudeSettings() {
         error: err instanceof Error ? err.message : String(err),
       }))
     }
-  }, [])
+  }, [scope, cwd])
 
-  const update = useCallback(async (patch: Partial<ClaudeSettings>) => {
-    const res = await fetch('/api/claude-settings', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(patch),
-    })
-    if (!res.ok) {
-      const err = (await res.json().catch(() => ({}))) as { error?: string }
-      throw new Error(err.error || `HTTP ${res.status}`)
-    }
-    const data = (await res.json()) as ClaudeSettings
-    setState((s) => ({ ...s, settings: data }))
-    return data
-  }, [])
+  const update = useCallback(
+    async (patch: Partial<Pick<ClaudeSettings, 'sandbox'>>) => {
+      if (needsCwd(scope, cwd)) {
+        throw new Error('Selecione um projeto antes de salvar.')
+      }
+      const res = await fetch(`/api/claude-settings?${buildQuery(scope, cwd)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      })
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(err.error || `HTTP ${res.status}`)
+      }
+      const data = (await res.json()) as ClaudeSettings
+      setState((s) => ({ ...s, settings: data }))
+      return data
+    },
+    [scope, cwd],
+  )
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- refetch when scope/cwd changes
     load()
   }, [load])
 

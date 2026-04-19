@@ -250,21 +250,35 @@ app.patch('/api/config', (req, res) => {
   res.json({ config: currentConfig });
 });
 
-const CLAUDE_SETTINGS_LOCAL = path.join(os.homedir(), '.claude', 'settings.local.json');
+const USER_CLAUDE_DIR = path.join(os.homedir(), '.claude');
 
-function loadClaudeLocalSettings() {
+const SANDBOX_SCOPES = ['user', 'user-local', 'project', 'project-local'];
+
+function resolveSandboxSettingsPath(scope, rawCwd) {
+  if (scope === 'user') return path.join(USER_CLAUDE_DIR, 'settings.json');
+  if (scope === 'user-local') return path.join(USER_CLAUDE_DIR, 'settings.local.json');
+  if (scope === 'project' || scope === 'project-local') {
+    const cwd = isAllowedProjectCwd(rawCwd);
+    if (!cwd) return null;
+    const file = scope === 'project' ? 'settings.json' : 'settings.local.json';
+    return path.join(cwd, '.claude', file);
+  }
+  return null;
+}
+
+function loadSettingsFile(filePath) {
   try {
-    const raw = fs.readFileSync(CLAUDE_SETTINGS_LOCAL, 'utf8');
+    const raw = fs.readFileSync(filePath, 'utf8');
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' ? parsed : {};
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
   } catch {
     return {};
   }
 }
 
-function saveClaudeLocalSettings(obj) {
-  fs.mkdirSync(path.dirname(CLAUDE_SETTINGS_LOCAL), { recursive: true });
-  fs.writeFileSync(CLAUDE_SETTINGS_LOCAL, JSON.stringify(obj, null, 2) + '\n');
+function saveSettingsFile(filePath, obj) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, JSON.stringify(obj, null, 2) + '\n');
 }
 
 const SANDBOX_BOOL_KEYS = [
@@ -322,15 +336,33 @@ function projectSandbox(raw) {
   return out;
 }
 
-app.get('/api/claude-settings', (_req, res) => {
+function parseSandboxScope(req) {
+  const raw = (req.query?.scope ?? req.body?.scope ?? 'user-local');
+  const scope = typeof raw === 'string' ? raw : 'user-local';
+  if (!SANDBOX_SCOPES.includes(scope)) {
+    return { error: `scope inválido; use: ${SANDBOX_SCOPES.join(', ')}` };
+  }
+  const cwd = req.query?.cwd ?? req.body?.cwd;
+  const filePath = resolveSandboxSettingsPath(scope, cwd);
+  if (!filePath) {
+    return { error: 'cwd obrigatório e deve apontar para um diretório dentro de $HOME' };
+  }
+  return { scope, filePath };
+}
+
+app.get('/api/claude-settings', (req, res) => {
   res.set('Cache-Control', 'no-store');
-  const s = loadClaudeLocalSettings();
-  res.json({ sandbox: projectSandbox(s.sandbox) });
+  const parsed = parseSandboxScope(req);
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+  const s = loadSettingsFile(parsed.filePath);
+  res.json({ scope: parsed.scope, path: parsed.filePath, sandbox: projectSandbox(s.sandbox) });
 });
 
 app.patch('/api/claude-settings', (req, res) => {
+  const parsed = parseSandboxScope(req);
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
   const body = req.body || {};
-  const s = loadClaudeLocalSettings();
+  const s = loadSettingsFile(parsed.filePath);
   if (body.sandbox && typeof body.sandbox === 'object') {
     const cur = s.sandbox && typeof s.sandbox === 'object' ? { ...s.sandbox } : {};
     const incoming = body.sandbox;
@@ -369,8 +401,8 @@ app.patch('/api/claude-settings', (req, res) => {
     s.sandbox = cur;
   }
   try {
-    saveClaudeLocalSettings(s);
-    res.json({ sandbox: projectSandbox(s.sandbox) });
+    saveSettingsFile(parsed.filePath, s);
+    res.json({ scope: parsed.scope, path: parsed.filePath, sandbox: projectSandbox(s.sandbox) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
