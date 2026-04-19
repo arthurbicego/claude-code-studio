@@ -1130,7 +1130,7 @@ const DEFAULT_CONFIG = Object.freeze({
   standbyTimeoutMs: 10 * 60 * 1000,
 });
 
-const CONFIG_DIR = path.join(os.homedir(), '.claude-cli-ui');
+const CONFIG_DIR = path.join(os.homedir(), '.claude-code-studio');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 const MIN_STANDBY_MS = 60 * 1000;
 const MAX_STANDBY_MS = 24 * 60 * 60 * 1000;
@@ -1347,5 +1347,5 @@ if (fs.existsSync(WEB_DIST)) {
 }
 
 app.listen(PORT, HOST, () => {
-  console.log(`Claude CLI UI rodando em http://${HOST}:${PORT}`);
+  console.log(`Claude Code Studio rodando em http://${HOST}:${PORT}`);
 });

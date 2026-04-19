@@ -1,5 +1,5 @@
 {
-  "name": "claude-cli-ui",
+  "name": "claude-code-studio",
   "version": "0.1.0",
   "private": true,
   "description": "Local web UI wrapper around the Claude Code CLI",

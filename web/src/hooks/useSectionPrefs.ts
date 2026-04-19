@@ -9,7 +9,7 @@ export type SectionPrefs = {
 const DEFAULTS: SectionPrefs = { groupByProject: true, sortBy: 'lastResponse' }
 
 function storageKey(name: string) {
-  return `claude-cli-ui.section.${name}`
+  return `claude-code-studio.section.${name}`
 }
 
 function load(name: string): SectionPrefs {
