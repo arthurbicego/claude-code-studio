@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { type Locale, type Prefs, type SessionSortBy, SUPPORTED_LOCALES } from '@shared/types';
+import { type Locale, type Prefs, type SessionSortBy, SUPPORTED_LOCALES } from '../shared/types';
 import { CONFIG_DIR, STATE_FILE } from './paths';
 
 export const STATE_VERSION = 1;

@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { Worktree } from '@shared/types';
 import type { Express, Request, Response } from 'express';
 import { runGitArgs, runGitArgsOrThrow } from '../git';
-import { ERR, sendError } from '../lib/errors';
+import { ERR, sendError } from '../errors';
 import { liveSessionWorkspaces } from '../live-sessions';
 import { isAllowedProjectCwd, isPathWithinCwd, realpathSafe } from '../paths';
 import { BRANCH_NAME_RE } from '../validators';

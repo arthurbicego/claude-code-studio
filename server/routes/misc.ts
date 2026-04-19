@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { Express, Request, Response } from 'express';
-import { ERR, sendError, sendInternalError } from '../lib/errors';
+import { ERR, sendError, sendInternalError } from '../errors';
 import { isAllowedProjectCwd } from '../paths';
 
 function resolveVSCodeBin(): string | null {

@@ -11,7 +11,7 @@ import type {
 } from '@shared/types';
 import type { Express, Request, Response } from 'express';
 import { buildFrontmatter, parseFrontmatter } from '../frontmatter';
-import { ERR, sendError, sendInternalError } from '../lib/errors';
+import { ERR, sendError, sendInternalError } from '../errors';
 import { isAllowedProjectCwd, USER_AGENTS_DIR, USER_SKILLS_DIR } from '../paths';
 import { isValidName } from '../validators';
 

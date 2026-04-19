@@ -1,5 +1,5 @@
-import { API_ERROR_CODES, type ApiError, type ApiErrorCode } from '@shared/types';
 import type { Response } from 'express';
+import { API_ERROR_CODES, type ApiError, type ApiErrorCode } from '../shared/types';
 
 export const ERR = API_ERROR_CODES;
 
