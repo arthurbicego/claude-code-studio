@@ -1085,11 +1085,56 @@ function gitInfo(cwd) {
   }
 }
 
+function parseNumstat(raw) {
+  let added = 0;
+  let removed = 0;
+  for (const line of raw.split('\n')) {
+    if (!line) continue;
+    const [a, r] = line.split('\t');
+    if (a === '-' || r === '-') continue;
+    const ai = parseInt(a, 10);
+    const ri = parseInt(r, 10);
+    if (Number.isFinite(ai)) added += ai;
+    if (Number.isFinite(ri)) removed += ri;
+  }
+  return { added, removed };
+}
+
+function countTextLines(s) {
+  if (!s) return 0;
+  let n = 0;
+  for (let i = 0; i < s.length; i++) if (s.charCodeAt(i) === 10) n++;
+  if (s.charCodeAt(s.length - 1) !== 10) n++;
+  return n;
+}
+
+const UNTRACKED_MAX_BYTES = 2 * 1024 * 1024;
+
+function uncommittedLineStats(cwd) {
+  if (!cwd || !fs.existsSync(cwd)) return { added: null, removed: null };
+  const tracked = parseNumstat(runGit(cwd, 'diff --numstat HEAD'));
+  let added = tracked.added;
+  let removed = tracked.removed;
+  const untrackedRaw = runGit(cwd, 'ls-files --others --exclude-standard');
+  for (const rel of untrackedRaw.split('\n').map((s) => s.trim()).filter(Boolean)) {
+    try {
+      const p = path.join(cwd, rel);
+      const st = fs.statSync(p);
+      if (!st.isFile() || st.size > UNTRACKED_MAX_BYTES) continue;
+      const content = fs.readFileSync(p, 'utf8');
+      if (content.indexOf('\0') !== -1) continue;
+      added += countTextLines(content);
+    } catch {}
+  }
+  return { added, removed };
+}
+
 function buildFooterPayload(id) {
   const cache = readJsonSafe(path.join(STATUSLINE_CACHE_DIR, `${id}.json`));
   const global = readJsonSafe(STATUSLINE_GLOBAL_META);
   const cwd = cache?.workspace?.current_dir || cache?.cwd || null;
   const { branch, dirty } = gitInfo(cwd);
+  const { added: linesAdded, removed: linesRemoved } = uncommittedLineStats(cwd);
 
   const ctxPct = cache?.context_window?.used_percentage;
   const exceeds200k = cache?.exceeds_200k_tokens === true;
@@ -1106,8 +1151,8 @@ function buildFooterPayload(id) {
     model: cache?.model?.display_name || null,
     contextPct: typeof ctxPct === 'number' ? ctxPct : null,
     exceeds200k,
-    linesAdded: cache?.cost?.total_lines_added ?? null,
-    linesRemoved: cache?.cost?.total_lines_removed ?? null,
+    linesAdded,
+    linesRemoved,
     costUsd: cache?.cost?.total_cost_usd ?? null,
     fiveHourPct: typeof five?.used_percentage === 'number' ? five.used_percentage : null,
     fiveHourResetsAt: typeof five?.resets_at === 'number' ? five.resets_at : null,
