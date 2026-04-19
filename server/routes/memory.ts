@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { MemoryFile, MemoryHierarchyEntry, MemoryVariant } from '@shared/types';
 import type { Express, Request, Response } from 'express';
+import { ERR, sendError, sendInternalError } from '../lib/errors';
 import { expandImports } from '../memory-expand';
 import { GLOBAL_CLAUDE_MD, HOME_DIR_REAL, isAllowedProjectCwd } from '../paths';
 
@@ -66,13 +67,14 @@ export function register(app: Express): void {
       const payload: MemoryFile = { path: GLOBAL_CLAUDE_MD, ...data };
       res.json(payload);
     } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
+      sendInternalError(res, err);
     }
   });
 
   app.put('/api/memory/global', (req: Request, res: Response) => {
     const content = typeof req.body?.content === 'string' ? req.body.content : null;
-    if (content == null) return res.status(400).json({ error: 'content obrigatório (string)' });
+    if (content == null)
+      return sendError(res, 400, ERR.CONTENT_REQUIRED, 'content is required (string)');
     try {
       if (content === '') {
         const data = deleteMemoryFile(GLOBAL_CLAUDE_MD);
@@ -81,30 +83,31 @@ export function register(app: Express): void {
       const data = writeMemoryFile(GLOBAL_CLAUDE_MD, content);
       res.json({ path: GLOBAL_CLAUDE_MD, ...data });
     } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
+      sendInternalError(res, err);
     }
   });
 
   app.get('/api/memory/project', (req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store');
     const cwd = isAllowedProjectCwd(req.query.cwd);
-    if (!cwd) return res.status(400).json({ error: 'cwd inválido ou fora do home' });
+    if (!cwd) return sendError(res, 400, ERR.CWD_INVALID, 'invalid cwd or outside home');
     const variant: MemoryVariant = req.query.variant === 'local' ? 'local' : 'shared';
     const filePath = path.join(cwd, projectMemoryFileName(variant));
     try {
       const data = readMemoryFile(filePath);
       res.json({ path: filePath, variant, ...data });
     } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
+      sendInternalError(res, err);
     }
   });
 
   app.put('/api/memory/project', (req: Request, res: Response) => {
     const cwd = isAllowedProjectCwd(req.body?.cwd);
-    if (!cwd) return res.status(400).json({ error: 'cwd inválido ou fora do home' });
+    if (!cwd) return sendError(res, 400, ERR.CWD_INVALID, 'invalid cwd or outside home');
     const content = typeof req.body?.content === 'string' ? req.body.content : null;
-    if (content == null) return res.status(400).json({ error: 'content obrigatório (string)' });
-    if (!fs.existsSync(cwd)) return res.status(400).json({ error: 'cwd não existe' });
+    if (content == null)
+      return sendError(res, 400, ERR.CONTENT_REQUIRED, 'content is required (string)');
+    if (!fs.existsSync(cwd)) return sendError(res, 400, ERR.CWD_NOT_FOUND, 'cwd does not exist');
     const variant: MemoryVariant = req.body?.variant === 'local' ? 'local' : 'shared';
     const filePath = path.join(cwd, projectMemoryFileName(variant));
     try {
@@ -115,14 +118,14 @@ export function register(app: Express): void {
       const data = writeMemoryFile(filePath, content);
       res.json({ path: filePath, variant, ...data });
     } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
+      sendInternalError(res, err);
     }
   });
 
   app.get('/api/memory/hierarchy', (req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store');
     const cwd = isAllowedProjectCwd(req.query.cwd);
-    if (!cwd) return res.status(400).json({ error: 'cwd inválido ou fora do home' });
+    if (!cwd) return sendError(res, 400, ERR.CWD_INVALID, 'invalid cwd or outside home');
 
     const entries: MemoryHierarchyEntry[] = [];
     entries.push({
@@ -166,17 +169,19 @@ export function register(app: Express): void {
 
   app.post('/api/memory/expand', (req: Request, res: Response) => {
     const content = typeof req.body?.content === 'string' ? req.body.content : null;
-    if (content == null) return res.status(400).json({ error: 'content obrigatório (string)' });
+    if (content == null)
+      return sendError(res, 400, ERR.CONTENT_REQUIRED, 'content is required (string)');
     const rawBase = typeof req.body?.basePath === 'string' ? req.body.basePath : '';
     const basePath = path.resolve(rawBase || HOME_DIR_REAL);
     const withinHome =
       (basePath + path.sep).startsWith(HOME_DIR_REAL + path.sep) || basePath === HOME_DIR_REAL;
-    if (!withinHome) return res.status(400).json({ error: 'basePath fora do home' });
+    if (!withinHome)
+      return sendError(res, 400, ERR.BASE_PATH_OUTSIDE_HOME, 'basePath is outside home');
     try {
       const result = expandImports(content, basePath);
       res.json({ basePath, ...result });
     } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
+      sendInternalError(res, err);
     }
   });
 }

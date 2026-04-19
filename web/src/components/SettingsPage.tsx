@@ -121,7 +121,9 @@ function SettingsPageInner() {
 
   const standbyFactor = standbyUnit === 'minutes' ? 60000 : 1000
   const standbyUnitLabel =
-    standbyUnit === 'minutes' ? t('settings.sessions.unit.minutes') : t('settings.sessions.unit.seconds')
+    standbyUnit === 'minutes'
+      ? t('settings.sessions.unit.minutes')
+      : t('settings.sessions.unit.seconds')
   const minStandbyMs = bounds?.standbyTimeoutMs.min ?? 60000
   const maxStandbyMs = bounds?.standbyTimeoutMs.max ?? 24 * 60 * 60 * 1000
   const minStandby = Math.max(1, Math.ceil(minStandbyMs / standbyFactor))
@@ -295,7 +297,9 @@ function SettingsPageInner() {
           {loading ? (
             <p className="p-4 text-xs text-muted-foreground">{t('common.loading')}</p>
           ) : error ? (
-            <p className="p-4 text-xs text-red-400">{t('common.errorPrefix', { message: error })}</p>
+            <p className="p-4 text-xs text-red-400">
+              {t('common.errorPrefix', { message: error })}
+            </p>
           ) : tab === 'geral' ? (
             <GeralTab />
           ) : tab === 'sessions' ? (

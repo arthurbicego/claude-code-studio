@@ -1,3 +1,4 @@
+import { type Locale, SUPPORTED_LOCALES } from '@shared/types'
 import {
   createContext,
   type ReactNode,
@@ -8,7 +9,6 @@ import {
   useRef,
   useState,
 } from 'react'
-import { type Locale, SUPPORTED_LOCALES } from '@shared/types'
 import type { SessionSortBy } from '@/types'
 
 export type SectionPrefs = {
@@ -57,8 +57,7 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
           expanded: Array.isArray(data.expanded) ? data.expanded : [],
           projectOrder: Array.isArray(data.projectOrder) ? data.projectOrder : [],
           locale:
-            typeof data.locale === 'string' &&
-            (SUPPORTED_LOCALES as string[]).includes(data.locale)
+            typeof data.locale === 'string' && (SUPPORTED_LOCALES as string[]).includes(data.locale)
               ? (data.locale as Locale)
               : null,
         }

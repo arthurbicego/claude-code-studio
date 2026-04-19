@@ -210,13 +210,7 @@ export function MemoryEditor({
         <span className="text-[10px] text-muted-foreground">
           {data?.exists ? '' : t('settings.memory.editor.willCreate')}
         </span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="xs"
-          onClick={handleRevert}
-          disabled={!dirty}
-        >
+        <Button type="button" variant="ghost" size="xs" onClick={handleRevert} disabled={!dirty}>
           {t('settings.memory.editor.revert')}
         </Button>
       </div>

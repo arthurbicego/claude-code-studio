@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { ApiErrorException, readApiError } from '@/lib/apiError'
 import type { BrowseResult } from '@/types'
 
 export function useBrowser(initialPath?: string) {
@@ -18,8 +19,8 @@ export function useBrowser(initialPath?: string) {
       try {
         const res = await fetch(`/api/browse?${params.toString()}`, { cache: 'no-store' })
         if (!res.ok) {
-          const body = (await res.json().catch(() => ({}))) as { error?: string }
-          throw new Error(body.error || `HTTP ${res.status}`)
+          const apiErr = await readApiError(res)
+          throw new ApiErrorException(apiErr)
         }
         const result = (await res.json()) as BrowseResult
         setData(result)

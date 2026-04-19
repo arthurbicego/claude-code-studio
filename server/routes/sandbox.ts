@@ -10,6 +10,7 @@ import {
   updateConfig,
   validateConfig,
 } from '../config';
+import { ERR, sendError, sendInternalError } from '../lib/errors';
 import { isAllowedProjectCwd, USER_CLAUDE_DIR } from '../paths';
 
 const SANDBOX_SCOPES: SandboxScope[] = ['user', 'user-local', 'project', 'project-local'];
@@ -131,7 +132,7 @@ export function register(app: Express): void {
     try {
       validated = validateConfig(req.body || {});
     } catch (err) {
-      return res.status(400).json({ error: (err as Error).message });
+      return sendError(res, 400, ERR.CONFIG_INVALID, (err as Error).message);
     }
     const cfg = updateConfig(validated);
     res.json({ config: cfg });
@@ -140,14 +141,14 @@ export function register(app: Express): void {
   app.get('/api/claude-settings', (req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store');
     const parsed = parseSandboxScope(req);
-    if ('error' in parsed) return res.status(400).json({ error: parsed.error });
+    if ('error' in parsed) return sendError(res, 400, ERR.SCOPE_INVALID, parsed.error);
     const s = loadSettingsFile(parsed.filePath);
     res.json({ scope: parsed.scope, path: parsed.filePath, sandbox: projectSandbox(s.sandbox) });
   });
 
   app.patch('/api/claude-settings', (req: Request, res: Response) => {
     const parsed = parseSandboxScope(req);
-    if ('error' in parsed) return res.status(400).json({ error: parsed.error });
+    if ('error' in parsed) return sendError(res, 400, ERR.SCOPE_INVALID, parsed.error);
     const body = (req.body || {}) as Record<string, unknown>;
     const s = loadSettingsFile(parsed.filePath);
     if (body.sandbox && typeof body.sandbox === 'object') {
@@ -171,19 +172,34 @@ export function register(app: Express): void {
           } else if (typeof v === 'object' && !Array.isArray(v)) {
             cur[key] = v;
           } else {
-            return res.status(400).json({ error: `sandbox.${key} deve ser um objeto` });
+            return sendError(
+              res,
+              400,
+              ERR.SANDBOX_FIELD_NOT_OBJECT,
+              `sandbox.${key} must be an object`,
+              { field: key },
+            );
           }
         }
       }
       if (Object.hasOwn(incoming, 'enabledPlatforms')) {
         if (!Array.isArray(incoming.enabledPlatforms)) {
-          return res.status(400).json({ error: 'sandbox.enabledPlatforms deve ser um array' });
+          return sendError(
+            res,
+            400,
+            ERR.SANDBOX_PLATFORMS_NOT_ARRAY,
+            'sandbox.enabledPlatforms must be an array',
+          );
         }
         const normalized = normalizePlatforms(incoming.enabledPlatforms);
         if (normalized.length !== (incoming.enabledPlatforms as unknown[]).length) {
-          return res.status(400).json({
-            error: `sandbox.enabledPlatforms aceita apenas: ${SANDBOX_PLATFORMS.join(', ')}`,
-          });
+          return sendError(
+            res,
+            400,
+            ERR.SANDBOX_PLATFORM_INVALID,
+            `sandbox.enabledPlatforms only accepts: ${SANDBOX_PLATFORMS.join(', ')}`,
+            { allowed: SANDBOX_PLATFORMS },
+          );
         }
         cur.enabledPlatforms = normalized;
       }
@@ -194,7 +210,7 @@ export function register(app: Express): void {
       saveSettingsFile(parsed.filePath, s);
       res.json({ scope: parsed.scope, path: parsed.filePath, sandbox: projectSandbox(s.sandbox) });
     } catch (err) {
-      res.status(500).json({ error: (err as Error).message });
+      sendInternalError(res, err);
     }
   });
 }

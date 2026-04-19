@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next'
 import {
   Archive,
   ArchiveRestore,
@@ -9,7 +10,6 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import type { TFunction } from 'i18next'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CopyableField } from '@/components/ui/CopyableField'
@@ -214,7 +214,9 @@ export function SessionsSection({
         </button>
         {effectiveSectionOpen ? (
           <>
-            <Tooltip content={prefs.groupByProject ? t('sessions.groupOn') : t('sessions.groupOff')}>
+            <Tooltip
+              content={prefs.groupByProject ? t('sessions.groupOn') : t('sessions.groupOff')}
+            >
               <button
                 onClick={toggleGrouping}
                 className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"

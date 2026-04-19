@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { Worktree } from '@shared/types';
 import type { Express, Request, Response } from 'express';
 import { runGitArgs, runGitArgsOrThrow } from '../git';
+import { ERR, sendError } from '../lib/errors';
 import { liveSessionWorkspaces } from '../live-sessions';
 import { isAllowedProjectCwd, isPathWithinCwd, realpathSafe } from '../paths';
 import { BRANCH_NAME_RE } from '../validators';
@@ -19,7 +20,7 @@ export function register(app: Express): void {
   app.get('/api/worktrees', (req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store');
     const cwd = isAllowedProjectCwd(req.query.cwd);
-    if (!cwd) return res.status(400).json({ error: 'cwd inválido' });
+    if (!cwd) return sendError(res, 400, ERR.CWD_INVALID, 'invalid cwd');
     const rawBase = typeof req.query.base === 'string' ? req.query.base.trim() : '';
     const base = rawBase && BRANCH_NAME_RE.test(rawBase) ? rawBase : guessDefaultBranch(cwd);
 
@@ -74,11 +75,11 @@ export function register(app: Express): void {
   app.get('/api/worktrees/diff', (req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store');
     const cwd = isAllowedProjectCwd(req.query.cwd);
-    if (!cwd) return res.status(400).json({ error: 'cwd inválido' });
+    if (!cwd) return sendError(res, 400, ERR.CWD_INVALID, 'invalid cwd');
     const rawPath = typeof req.query.path === 'string' ? req.query.path : '';
     const resolved = path.resolve(rawPath);
     if (!isPathWithinCwd(resolved, cwd) || !fs.existsSync(resolved)) {
-      return res.status(400).json({ error: 'worktree path inválido' });
+      return sendError(res, 400, ERR.WORKTREE_PATH_INVALID, 'invalid worktree path');
     }
     const rawBase = typeof req.query.base === 'string' ? req.query.base.trim() : '';
     const base = rawBase && BRANCH_NAME_RE.test(rawBase) ? rawBase : guessDefaultBranch(cwd);
@@ -96,21 +97,31 @@ export function register(app: Express): void {
 
   app.delete('/api/worktrees', (req: Request, res: Response) => {
     const cwd = isAllowedProjectCwd(req.query.cwd);
-    if (!cwd) return res.status(400).json({ error: 'cwd inválido' });
+    if (!cwd) return sendError(res, 400, ERR.CWD_INVALID, 'invalid cwd');
     const rawPath = typeof req.query.path === 'string' ? req.query.path : '';
     const resolved = path.resolve(rawPath);
     if (!isPathWithinCwd(resolved, cwd)) {
-      return res.status(400).json({ error: 'worktree path fora do cwd' });
+      return sendError(res, 400, ERR.WORKTREE_PATH_OUTSIDE_CWD, 'worktree path outside cwd');
     }
     const force = req.query.force === '1' || req.query.force === 'true';
     const entries = listWorktrees(cwd);
     const main = pickMainWorktree(entries);
     if (main && realpathSafe(main.path) === realpathSafe(resolved)) {
-      return res.status(400).json({ error: 'não é possível remover o worktree principal' });
+      return sendError(
+        res,
+        400,
+        ERR.WORKTREE_MAIN_REMOVE_FORBIDDEN,
+        'cannot remove the main worktree',
+      );
     }
     const counts = liveSessionWorkspaces();
     if ((counts.get(realpathSafe(resolved)) || 0) > 0) {
-      return res.status(409).json({ error: 'há sessões ativas neste worktree' });
+      return sendError(
+        res,
+        409,
+        ERR.WORKTREE_HAS_ACTIVE_SESSIONS,
+        'there are active sessions in this worktree',
+      );
     }
     try {
       const args = ['worktree', 'remove'];
@@ -119,49 +130,74 @@ export function register(app: Express): void {
       runGitArgsOrThrow(cwd, args);
     } catch (err) {
       const e = err as { stderr?: Buffer; message?: string };
-      return res.status(500).json({ error: e.stderr?.toString() || e.message });
+      return sendError(
+        res,
+        500,
+        ERR.GIT_COMMAND_FAILED,
+        e.stderr?.toString() || e.message || 'git command failed',
+      );
     }
     res.json({ ok: true });
   });
 
   app.post('/api/worktrees/commit', (req: Request, res: Response) => {
     const cwd = isAllowedProjectCwd(req.body?.cwd);
-    if (!cwd) return res.status(400).json({ error: 'cwd inválido' });
+    if (!cwd) return sendError(res, 400, ERR.CWD_INVALID, 'invalid cwd');
     const rawPath = typeof req.body?.path === 'string' ? req.body.path : '';
     const resolved = path.resolve(rawPath);
     if (!isPathWithinCwd(resolved, cwd) || !fs.existsSync(resolved)) {
-      return res.status(400).json({ error: 'worktree path inválido' });
+      return sendError(res, 400, ERR.WORKTREE_PATH_INVALID, 'invalid worktree path');
     }
     const message = typeof req.body?.message === 'string' ? req.body.message.trim() : '';
     if (!message || message.length > 4096) {
-      return res.status(400).json({ error: 'mensagem obrigatória (máx 4096 chars)' });
+      return sendError(
+        res,
+        400,
+        ERR.WORKTREE_COMMIT_MESSAGE_REQUIRED,
+        'commit message is required (max 4096 chars)',
+      );
     }
     try {
       runGitArgsOrThrow(resolved, ['add', '-A']);
       runGitArgsOrThrow(resolved, ['commit', '-m', message]);
     } catch (err) {
       const e = err as { stderr?: Buffer; message?: string };
-      return res.status(500).json({ error: e.stderr?.toString() || e.message });
+      return sendError(
+        res,
+        500,
+        ERR.GIT_COMMAND_FAILED,
+        e.stderr?.toString() || e.message || 'git command failed',
+      );
     }
     res.json({ ok: true });
   });
 
   app.post('/api/worktrees/discard', (req: Request, res: Response) => {
     const cwd = isAllowedProjectCwd(req.body?.cwd);
-    if (!cwd) return res.status(400).json({ error: 'cwd inválido' });
+    if (!cwd) return sendError(res, 400, ERR.CWD_INVALID, 'invalid cwd');
     const rawPath = typeof req.body?.path === 'string' ? req.body.path : '';
     const resolved = path.resolve(rawPath);
     if (!isPathWithinCwd(resolved, cwd) || !fs.existsSync(resolved)) {
-      return res.status(400).json({ error: 'worktree path inválido' });
+      return sendError(res, 400, ERR.WORKTREE_PATH_INVALID, 'invalid worktree path');
     }
     const entries = listWorktrees(cwd);
     const main = pickMainWorktree(entries);
     if (main && realpathSafe(main.path) === realpathSafe(resolved)) {
-      return res.status(400).json({ error: 'não é possível descartar o worktree principal' });
+      return sendError(
+        res,
+        400,
+        ERR.WORKTREE_MAIN_DISCARD_FORBIDDEN,
+        'cannot discard the main worktree',
+      );
     }
     const counts = liveSessionWorkspaces();
     if ((counts.get(realpathSafe(resolved)) || 0) > 0) {
-      return res.status(409).json({ error: 'há sessões ativas neste worktree' });
+      return sendError(
+        res,
+        409,
+        ERR.WORKTREE_HAS_ACTIVE_SESSIONS,
+        'there are active sessions in this worktree',
+      );
     }
     try {
       runGitArgs(resolved, ['reset', '--hard', 'HEAD']);
@@ -169,44 +205,63 @@ export function register(app: Express): void {
       runGitArgsOrThrow(cwd, ['worktree', 'remove', '--force', resolved]);
     } catch (err) {
       const e = err as { stderr?: Buffer; message?: string };
-      return res.status(500).json({ error: e.stderr?.toString() || e.message });
+      return sendError(
+        res,
+        500,
+        ERR.GIT_COMMAND_FAILED,
+        e.stderr?.toString() || e.message || 'git command failed',
+      );
     }
     res.json({ ok: true });
   });
 
   app.post('/api/worktrees/merge', (req: Request, res: Response) => {
     const cwd = isAllowedProjectCwd(req.body?.cwd);
-    if (!cwd) return res.status(400).json({ error: 'cwd inválido' });
+    if (!cwd) return sendError(res, 400, ERR.CWD_INVALID, 'invalid cwd');
     const rawPath = typeof req.body?.path === 'string' ? req.body.path : '';
     const resolved = path.resolve(rawPath);
     if (!isPathWithinCwd(resolved, cwd) || !fs.existsSync(resolved)) {
-      return res.status(400).json({ error: 'worktree path inválido' });
+      return sendError(res, 400, ERR.WORKTREE_PATH_INVALID, 'invalid worktree path');
     }
     const rawBase = typeof req.body?.base === 'string' ? req.body.base.trim() : '';
     const base = rawBase && BRANCH_NAME_RE.test(rawBase) ? rawBase : guessDefaultBranch(cwd);
-    if (!base) return res.status(400).json({ error: 'não foi possível determinar a base' });
+    if (!base)
+      return sendError(res, 400, ERR.WORKTREE_BASE_NOT_DETECTED, 'could not determine base branch');
 
     const entries = listWorktrees(cwd);
     const main = pickMainWorktree(entries);
-    if (!main) return res.status(400).json({ error: 'worktree principal não encontrado' });
+    if (!main) return sendError(res, 400, ERR.WORKTREE_MAIN_NOT_FOUND, 'main worktree not found');
     const mainPath = main.path;
 
     const branch = runGitArgs(resolved, ['symbolic-ref', '--short', 'HEAD']).trim();
     if (!branch || !BRANCH_NAME_RE.test(branch)) {
-      return res.status(400).json({ error: 'branch do worktree não detectada' });
+      return sendError(
+        res,
+        400,
+        ERR.WORKTREE_BRANCH_NOT_DETECTED,
+        'worktree branch could not be detected',
+      );
     }
 
     const status = worktreeStatus(resolved);
     if (!status.clean) {
-      return res.status(409).json({
-        error: 'worktree tem mudanças não commitadas — commite antes de mergear',
-      });
+      return sendError(
+        res,
+        409,
+        ERR.WORKTREE_NOT_CLEAN,
+        'worktree has uncommitted changes — commit before merging',
+        { which: 'worktree' },
+      );
     }
     const mainStatus = worktreeStatus(mainPath);
     if (!mainStatus.clean) {
-      return res.status(409).json({
-        error: 'worktree principal tem mudanças não commitadas — sincronize antes',
-      });
+      return sendError(
+        res,
+        409,
+        ERR.WORKTREE_NOT_CLEAN,
+        'main worktree has uncommitted changes — sync before',
+        { which: 'main' },
+      );
     }
 
     const baseLocal = base.replace(/^origin\//, '');
@@ -221,7 +276,12 @@ export function register(app: Express): void {
       res.json({ ok: true, base: baseLocal, branch, switched });
     } catch (err) {
       const e = err as { stderr?: Buffer; message?: string };
-      res.status(500).json({ error: e.stderr?.toString() || e.message });
+      sendError(
+        res,
+        500,
+        ERR.GIT_COMMAND_FAILED,
+        e.stderr?.toString() || e.message || 'git command failed',
+      );
     }
   });
 }

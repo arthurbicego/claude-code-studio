@@ -15,6 +15,7 @@ import { useSessionDefaults } from '@/hooks/useSessionDefaults'
 import { useSessionFooter } from '@/hooks/useSessionFooter'
 import { useSessionLifecycle } from '@/hooks/useSessionLifecycle'
 import { useSessionList } from '@/hooks/useSessionList'
+import { readApiError, translateApiError } from '@/lib/apiError'
 import { layoutColumns } from '@/lib/panels'
 import { openInVSCode } from '@/lib/vscode'
 import type {
@@ -195,8 +196,8 @@ export default function App() {
             }),
           })
           if (!res.ok) {
-            const body = await res.json().catch(() => ({}))
-            throw new Error(body.error || `HTTP ${res.status}`)
+            const apiErr = await readApiError(res)
+            throw new Error(translateApiError(t, apiErr))
           }
           await closeSession(sessionKey)
         } else if (choice === 'keep') {
@@ -213,8 +214,8 @@ export default function App() {
             }),
           })
           if (!res.ok) {
-            const body = await res.json().catch(() => ({}))
-            throw new Error(body.error || `HTTP ${res.status}`)
+            const apiErr = await readApiError(res)
+            throw new Error(translateApiError(t, apiErr))
           }
         } else if (choice === 'discard') {
           await closeSession(sessionKey)
@@ -224,8 +225,8 @@ export default function App() {
             body: JSON.stringify({ cwd: projectCwd, path: worktree.path }),
           })
           if (!res.ok) {
-            const body = await res.json().catch(() => ({}))
-            throw new Error(body.error || `HTTP ${res.status}`)
+            const apiErr = await readApiError(res)
+            throw new Error(translateApiError(t, apiErr))
           }
         }
         setPendingCloseWorktree(null)

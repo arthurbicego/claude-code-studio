@@ -1,4 +1,5 @@
 import i18n from '@/i18n'
+import { readApiError, translateApiError } from '@/lib/apiError'
 import { toast } from '@/lib/toast'
 
 export async function openInVSCode(path: string): Promise<void> {
@@ -9,8 +10,8 @@ export async function openInVSCode(path: string): Promise<void> {
       body: JSON.stringify({ path }),
     })
     if (!res.ok) {
-      const body = (await res.json().catch(() => ({}))) as { error?: string }
-      const msg = body.error || `HTTP ${res.status}`
+      const apiErr = await readApiError(res)
+      const msg = translateApiError(i18n.t, apiErr)
       toast.error(i18n.t('vscode.openError', { message: msg }))
     }
   } catch (err) {

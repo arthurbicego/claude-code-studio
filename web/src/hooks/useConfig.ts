@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { ApiErrorException, readApiError } from '@/lib/apiError'
 import type { AppConfig, AppConfigBounds, AppConfigResponse } from '@/types'
 
 type State = {
@@ -49,8 +50,8 @@ export function useConfig() {
       body: JSON.stringify(patch),
     })
     if (!res.ok) {
-      const err = (await res.json().catch(() => ({}))) as { error?: string }
-      throw new Error(err.error || `HTTP ${res.status}`)
+      const apiErr = await readApiError(res)
+      throw new ApiErrorException(apiErr)
     }
     const data = (await res.json()) as { config: AppConfig }
     setState((s) => ({ ...s, config: data.config }))

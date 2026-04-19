@@ -6,6 +6,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { DropdownMenu, type DropdownMenuItem } from '@/components/ui/DropdownMenu'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { useWorktrees } from '@/hooks/useWorktrees'
+import { readApiError, translateApiError } from '@/lib/apiError'
 import { cn } from '@/lib/utils'
 import type { Worktree } from '@/types'
 import { PanelContainer } from './PanelContainer'
@@ -92,8 +93,8 @@ export function WorktreesPanel({
       const params = new URLSearchParams({ cwd, path: wt.path })
       const res = await fetch(`/api/worktrees?${params.toString()}`, { method: 'DELETE' })
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.error || `HTTP ${res.status}`)
+        const apiErr = await readApiError(res)
+        throw new Error(translateApiError(t, apiErr))
       }
       setActionNotice(t('panels.worktrees.removed', { name: wt.branch ?? wt.path }))
       refresh()
@@ -111,8 +112,11 @@ export function WorktreesPanel({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cwd, path: wt.path, base: data?.base ?? undefined }),
       })
-      const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`)
+      if (!res.ok) {
+        const apiErr = await readApiError(res)
+        throw new Error(translateApiError(t, apiErr))
+      }
+      const body = (await res.json()) as { branch?: string; base?: string }
       setActionNotice(t('panels.worktrees.merged', { branch: body.branch, base: body.base }))
       refresh()
     } catch (err) {

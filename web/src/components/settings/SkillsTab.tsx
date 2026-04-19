@@ -366,17 +366,7 @@ function SkillForm({
       }
     }, 700)
     return () => window.clearTimeout(handle)
-  }, [
-    state,
-    canSave,
-    isCreating,
-    scope,
-    cwd,
-    onSaved,
-    reportSaving,
-    setSaved,
-    reportSaveError,
-  ])
+  }, [state, canSave, isCreating, scope, cwd, onSaved, reportSaving, setSaved, reportSaveError])
 
   const handleCreate = async () => {
     setSaving(true)
