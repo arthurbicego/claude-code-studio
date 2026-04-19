@@ -9,6 +9,7 @@ import {
   X,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { CopyableField } from '@/components/ui/CopyableField'
 import { InfoPopover } from '@/components/ui/InfoPopover'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { cn } from '@/lib/utils'
@@ -445,7 +446,11 @@ function SessionRow({
 function PathPopover({ path }: { path: string }) {
   return (
     <InfoPopover ariaLabel="Mostrar caminho do projeto">
-      <span className="break-all font-mono">{path}</span>
+      <CopyableField
+        label="Caminho do projeto"
+        value={path}
+        copyAriaLabel="Copiar caminho do projeto"
+      />
     </InfoPopover>
   )
 }
