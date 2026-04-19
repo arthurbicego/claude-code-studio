@@ -1,5 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import {
@@ -12,6 +12,7 @@ import {
   useAgentList,
   useKnownTools,
 } from '@/hooks/useAgents'
+import { useSaveStatus } from '@/hooks/useSaveStatus'
 import { useSessionList } from '@/hooks/useSessionList'
 import { Field, Section } from './atoms'
 
@@ -336,10 +337,13 @@ function AgentForm({
 }) {
   const { t } = useTranslation()
   const knownTools = useKnownTools()
+  const { setSaving: reportSaving, setSaved, setError: reportSaveError } = useSaveStatus()
   const [state, setState] = useState<AgentFormState>(() => buildInitialState(initial))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const lastSavedNameRef = useRef<string | null>(initial?.name ?? null)
+  const lastSavedSnapshotRef = useRef<string>(JSON.stringify(buildInitialState(initial)))
 
   const isCreating = !initial
 
@@ -365,9 +369,53 @@ function AgentForm({
     })
   }
 
-  const handleSave = async () => {
+  // Auto-save (debounced) when editing an existing agent and form is valid.
+  useEffect(() => {
+    if (isCreating || !canSave) return
+    const snapshot = JSON.stringify(state)
+    if (snapshot === lastSavedSnapshotRef.current) return
+
+    const handle = window.setTimeout(async () => {
+      reportSaving()
+      try {
+        const saved = await saveAgent({
+          scope,
+          cwd,
+          name: state.name,
+          description: state.description.trim(),
+          model: state.model,
+          tools: state.toolsAll ? [] : state.tools,
+          body: state.body,
+          previousName: lastSavedNameRef.current,
+        })
+        lastSavedNameRef.current = saved.name
+        lastSavedSnapshotRef.current = snapshot
+        setError(null)
+        await onSaved(saved)
+        setSaved()
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        setError(message)
+        reportSaveError(message)
+      }
+    }, 700)
+    return () => window.clearTimeout(handle)
+  }, [
+    state,
+    canSave,
+    isCreating,
+    scope,
+    cwd,
+    onSaved,
+    reportSaving,
+    setSaved,
+    reportSaveError,
+  ])
+
+  const handleCreate = async () => {
     setSaving(true)
     setError(null)
+    reportSaving()
     try {
       const saved = await saveAgent({
         scope,
@@ -377,11 +425,16 @@ function AgentForm({
         model: state.model,
         tools: state.toolsAll ? [] : state.tools,
         body: state.body,
-        previousName: initial?.name ?? null,
+        previousName: null,
       })
+      lastSavedNameRef.current = saved.name
+      lastSavedSnapshotRef.current = JSON.stringify(state)
       await onSaved(saved)
+      setSaved()
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      const message = err instanceof Error ? err.message : String(err)
+      setError(message)
+      reportSaveError(message)
     } finally {
       setSaving(false)
     }
@@ -552,21 +605,19 @@ function AgentForm({
         </div>
         <div className="flex gap-2">
           <Button type="button" variant="ghost" size="xs" onClick={onCancel} disabled={saving}>
-            {t('settings.agents.cancel')}
+            {isCreating ? t('settings.agents.cancel') : t('common.close')}
           </Button>
-          <Button
-            type="button"
-            variant="primary"
-            size="xs"
-            onClick={handleSave}
-            disabled={!canSave}
-          >
-            {saving
-              ? t('settings.agents.saving')
-              : isCreating
-                ? t('settings.agents.create')
-                : t('settings.agents.save')}
-          </Button>
+          {isCreating ? (
+            <Button
+              type="button"
+              variant="primary"
+              size="xs"
+              onClick={handleCreate}
+              disabled={!canSave}
+            >
+              {saving ? t('settings.agents.saving') : t('settings.agents.create')}
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

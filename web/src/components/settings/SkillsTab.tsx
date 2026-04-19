@@ -1,7 +1,8 @@
 import { Plus, Trash2 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
+import { useSaveStatus } from '@/hooks/useSaveStatus'
 import { useSessionList } from '@/hooks/useSessionList'
 import {
   deleteSkill,
@@ -322,10 +323,13 @@ function SkillForm({
   onCancel: () => void
 }) {
   const { t } = useTranslation()
+  const { setSaving: reportSaving, setSaved, setError: reportSaveError } = useSaveStatus()
   const [state, setState] = useState<SkillFormState>(() => buildInitialState(initial))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const lastSavedNameRef = useRef<string | null>(initial?.name ?? null)
+  const lastSavedSnapshotRef = useRef<string>(JSON.stringify(buildInitialState(initial)))
 
   const isCreating = !initial
   const nameInvalid = !NAME_RE.test(state.name)
@@ -333,9 +337,51 @@ function SkillForm({
   const bodyInvalid = !state.body.trim()
   const canSave = !nameInvalid && !descriptionInvalid && !bodyInvalid && !saving
 
-  const handleSave = async () => {
+  // Auto-save (debounced) when editing an existing skill and form is valid.
+  useEffect(() => {
+    if (isCreating || !canSave) return
+    const snapshot = JSON.stringify(state)
+    if (snapshot === lastSavedSnapshotRef.current) return
+
+    const handle = window.setTimeout(async () => {
+      reportSaving()
+      try {
+        const saved = await saveSkill({
+          scope,
+          cwd,
+          name: state.name,
+          description: state.description.trim(),
+          body: state.body,
+          previousName: lastSavedNameRef.current,
+        })
+        lastSavedNameRef.current = saved.name
+        lastSavedSnapshotRef.current = snapshot
+        setError(null)
+        await onSaved(saved)
+        setSaved()
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        setError(message)
+        reportSaveError(message)
+      }
+    }, 700)
+    return () => window.clearTimeout(handle)
+  }, [
+    state,
+    canSave,
+    isCreating,
+    scope,
+    cwd,
+    onSaved,
+    reportSaving,
+    setSaved,
+    reportSaveError,
+  ])
+
+  const handleCreate = async () => {
     setSaving(true)
     setError(null)
+    reportSaving()
     try {
       const saved = await saveSkill({
         scope,
@@ -343,11 +389,16 @@ function SkillForm({
         name: state.name,
         description: state.description.trim(),
         body: state.body,
-        previousName: initial?.name ?? null,
+        previousName: null,
       })
+      lastSavedNameRef.current = saved.name
+      lastSavedSnapshotRef.current = JSON.stringify(state)
       await onSaved(saved)
+      setSaved()
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      const message = err instanceof Error ? err.message : String(err)
+      setError(message)
+      reportSaveError(message)
     } finally {
       setSaving(false)
     }
@@ -487,21 +538,19 @@ function SkillForm({
         </div>
         <div className="flex gap-2">
           <Button type="button" variant="ghost" size="xs" onClick={onCancel} disabled={saving}>
-            {t('settings.skills.cancel')}
+            {isCreating ? t('settings.skills.cancel') : t('common.close')}
           </Button>
-          <Button
-            type="button"
-            variant="primary"
-            size="xs"
-            onClick={handleSave}
-            disabled={!canSave}
-          >
-            {saving
-              ? t('settings.skills.saving')
-              : isCreating
-                ? t('settings.skills.create')
-                : t('settings.skills.save')}
-          </Button>
+          {isCreating ? (
+            <Button
+              type="button"
+              variant="primary"
+              size="xs"
+              onClick={handleCreate}
+              disabled={!canSave}
+            >
+              {saving ? t('settings.skills.saving') : t('settings.skills.create')}
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

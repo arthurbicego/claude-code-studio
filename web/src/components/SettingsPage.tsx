@@ -1,5 +1,5 @@
 import { ArrowLeft } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 import { AgentsTab } from '@/components/settings/AgentsTab'
@@ -7,7 +7,6 @@ import { GeralTab } from '@/components/settings/GeralTab'
 import { MemoryTab } from '@/components/settings/MemoryTab'
 import {
   emptySandbox,
-  JSON_FIELD_META,
   JSON_FIELDS,
   type JsonFieldKey,
   type JsonFieldState,
@@ -17,6 +16,7 @@ import {
   scopeNeedsProject,
   toJsonText,
 } from '@/components/settings/SandboxTab'
+import { SaveStatusIndicator } from '@/components/settings/SaveStatusIndicator'
 import { SessionsTab, type StandbyUnit } from '@/components/settings/SessionsTab'
 import { SidebarPrefsTab } from '@/components/settings/SidebarPrefsTab'
 import { SkillsTab } from '@/components/settings/SkillsTab'
@@ -25,12 +25,21 @@ import { Button } from '@/components/ui/Button'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { useClaudeSettings } from '@/hooks/useClaudeSettings'
 import { useConfig } from '@/hooks/useConfig'
+import { SaveStatusProvider, useSaveStatus } from '@/hooks/useSaveStatus'
 import { useSessionList } from '@/hooks/useSessionList'
 import type { SandboxPlatform, SandboxScope, SandboxSettings } from '@/types'
 
 type TabId = 'geral' | 'sessions' | 'sandbox' | 'memory' | 'agents' | 'skills' | 'sidebar'
 
 export function SettingsPage() {
+  return (
+    <SaveStatusProvider>
+      <SettingsPageInner />
+    </SaveStatusProvider>
+  )
+}
+
+function SettingsPageInner() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const goBack = useCallback(() => navigate('/'), [navigate])
@@ -58,8 +67,11 @@ export function SettingsPage() {
     ripgrep: { text: '', error: null },
     seccomp: { text: '', error: null },
   }))
-  const [saving, setSaving] = useState(false)
-  const [saveError, setSaveError] = useState<string | null>(null)
+  const [standbyError, setStandbyError] = useState<string | null>(null)
+  const lastSavedStandbyMsRef = useRef<number | null>(null)
+  const lastSavedSandboxRef = useRef<string | null>(null)
+  const saveStatus = useSaveStatus()
+  const { setSaving, setSaved, setError: reportSaveError } = saveStatus
 
   useEffect(() => {
     if (!scopeNeedsProject(sandboxScope)) return
@@ -80,6 +92,8 @@ export function SettingsPage() {
       setStandbyUnit('seconds')
       setStandbyValue(String(Math.round(ms / 1000)))
     }
+    lastSavedStandbyMsRef.current = ms
+    setStandbyError(null)
   }, [config])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: hydrate form state from sandbox settings on load
@@ -92,6 +106,7 @@ export function SettingsPage() {
         ripgrep: { text: toJsonText(cs.settings.sandbox.ripgrep), error: null },
         seccomp: { text: toJsonText(cs.settings.sandbox.seccomp), error: null },
       })
+      lastSavedSandboxRef.current = JSON.stringify(cs.settings.sandbox)
     } else {
       setSandbox(emptySandbox())
       setJsonState({
@@ -100,6 +115,7 @@ export function SettingsPage() {
         ripgrep: { text: '', error: null },
         seccomp: { text: '', error: null },
       })
+      lastSavedSandboxRef.current = null
     }
   }, [cs.settings])
 
@@ -150,63 +166,105 @@ export function SettingsPage() {
     setJsonState((prev) => ({ ...prev, [key]: { text, error: result.error } }))
   }
 
-  const save = async () => {
+  const sandboxLoading = cs.loading && canSaveSandbox
+
+  // Auto-save standby (debounced) when value is valid and changed since last save.
+  useEffect(() => {
+    if (!config) return
     const n = Number(standbyValue)
-    const ms = Math.round(n * standbyFactor)
-    if (!Number.isFinite(n) || ms < minStandbyMs || ms > maxStandbyMs) {
-      setSaveError(
+    if (!Number.isFinite(n)) {
+      setStandbyError(
         t('settings.sessions.standbyError', {
           min: minStandby,
           max: maxStandby,
           unit: standbyUnitLabel,
         }),
       )
-      setTab('sessions')
       return
     }
+    const ms = Math.round(n * standbyFactor)
+    if (ms < minStandbyMs || ms > maxStandbyMs) {
+      setStandbyError(
+        t('settings.sessions.standbyError', {
+          min: minStandby,
+          max: maxStandby,
+          unit: standbyUnitLabel,
+        }),
+      )
+      return
+    }
+    setStandbyError(null)
+    if (ms === lastSavedStandbyMsRef.current) return
+
+    const handle = window.setTimeout(async () => {
+      setSaving()
+      try {
+        await update({ standbyTimeoutMs: ms })
+        lastSavedStandbyMsRef.current = ms
+        setSaved()
+      } catch (err) {
+        reportSaveError(err instanceof Error ? err.message : String(err))
+      }
+    }, 600)
+    return () => window.clearTimeout(handle)
+  }, [
+    standbyValue,
+    standbyFactor,
+    config,
+    minStandbyMs,
+    maxStandbyMs,
+    minStandby,
+    maxStandby,
+    standbyUnitLabel,
+    setSaving,
+    setSaved,
+    reportSaveError,
+    update,
+    t,
+  ])
+
+  // Auto-save sandbox (debounced) when JSON is valid and payload changed since last save.
+  useEffect(() => {
+    if (!cs.settings || !canSaveSandbox || jsonHasErrors || sandboxLoading) return
 
     const parsed: Partial<Record<JsonFieldKey, Record<string, unknown> | null>> = {}
-    const nextJsonState = { ...jsonState }
-    let firstError: string | null = null
     for (const key of JSON_FIELDS) {
       const result = parseJsonField(jsonState[key].text)
-      nextJsonState[key] = { text: jsonState[key].text, error: result.error }
-      if (result.error) {
-        firstError = firstError ?? `${t(JSON_FIELD_META[key].titleKey)}: ${result.error}`
-      } else {
-        parsed[key] = result.value
-      }
+      if (result.error) return
+      parsed[key] = result.value
     }
-    if (firstError) {
-      setJsonState(nextJsonState)
-      setSaveError(firstError)
-      setTab('sandbox')
-      return
+    const payload: SandboxSettings = {
+      ...sandbox,
+      network: parsed.network ?? null,
+      filesystem: parsed.filesystem ?? null,
+      ripgrep: parsed.ripgrep ?? null,
+      seccomp: parsed.seccomp ?? null,
     }
+    const serialized = JSON.stringify(payload)
+    if (serialized === lastSavedSandboxRef.current) return
 
-    setSaving(true)
-    setSaveError(null)
-    try {
-      await update({ standbyTimeoutMs: ms })
-      if (canSaveSandbox) {
-        const payload: SandboxSettings = {
-          ...sandbox,
-          network: parsed.network ?? null,
-          filesystem: parsed.filesystem ?? null,
-          ripgrep: parsed.ripgrep ?? null,
-          seccomp: parsed.seccomp ?? null,
-        }
+    const handle = window.setTimeout(async () => {
+      setSaving()
+      try {
         await cs.update({ sandbox: payload })
+        lastSavedSandboxRef.current = serialized
+        setSaved()
+      } catch (err) {
+        reportSaveError(err instanceof Error ? err.message : String(err))
       }
-      goBack()
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const sandboxLoading = cs.loading && canSaveSandbox
+    }, 600)
+    return () => window.clearTimeout(handle)
+  }, [
+    sandbox,
+    jsonState,
+    jsonHasErrors,
+    canSaveSandbox,
+    sandboxLoading,
+    cs,
+    setSaving,
+    setSaved,
+    reportSaveError,
+  ])
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -216,7 +274,8 @@ export function SettingsPage() {
             <ArrowLeft size={16} />
           </Button>
         </Tooltip>
-        <h1 className="text-sm font-semibold text-foreground">{t('settings.title')}</h1>
+        <h1 className="flex-1 text-sm font-semibold text-foreground">{t('settings.title')}</h1>
+        <SaveStatusIndicator />
       </header>
       <div className="flex min-h-0 flex-1 flex-col">
         <Tabs
@@ -259,10 +318,7 @@ export function SettingsPage() {
           ) : (
             <SandboxTab
               scope={sandboxScope}
-              onScopeChange={(s) => {
-                setSandboxScope(s)
-                setSaveError(null)
-              }}
+              onScopeChange={setSandboxScope}
               projectCwd={sandboxProjectCwd}
               onProjectChange={setSandboxProjectCwd}
               projects={projects}
@@ -277,21 +333,11 @@ export function SettingsPage() {
               setJsonText={setJsonText}
             />
           )}
-          {saveError ? <p className="p-4 text-xs text-red-400">{saveError}</p> : null}
+          {standbyError && tab === 'sessions' ? (
+            <p className="p-4 text-xs text-red-400">{standbyError}</p>
+          ) : null}
         </div>
       </div>
-      <footer className="flex justify-end gap-2 border-t border-border bg-black/30 px-4 py-3">
-        <Button variant="ghost" onClick={goBack}>
-          {t('common.cancel')}
-        </Button>
-        <Button
-          variant="primary"
-          onClick={save}
-          disabled={saving || loading || !!error || jsonHasErrors || sandboxLoading}
-        >
-          {t('common.save')}
-        </Button>
-      </footer>
     </div>
   )
 }
