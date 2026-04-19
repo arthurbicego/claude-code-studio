@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { Sidebar } from '@/components/Sidebar'
 import { Toolbar } from '@/components/Toolbar'
 import { TerminalView } from '@/components/Terminal'
@@ -6,6 +6,8 @@ import { SessionFooter } from '@/components/SessionFooter'
 import { NewSessionModal } from '@/components/NewSessionModal'
 import { SettingsModal } from '@/components/SettingsModal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { ColumnResizer } from '@/components/panels/ColumnResizer'
+import { RowResizer } from '@/components/panels/RowResizer'
 import { DiffPanel } from '@/components/panels/DiffPanel'
 import { ShellPanel } from '@/components/panels/ShellPanel'
 import { TasksPanel } from '@/components/panels/TasksPanel'
@@ -53,6 +55,45 @@ export default function App() {
   )
   const openPanelKinds = useMemo(() => new Set(openPanels.map((p) => p.kind)), [openPanels])
   const panelColumns = useMemo(() => layoutColumns(openPanels), [openPanels])
+  const [columnWidths, setColumnWidths] = useState<number[]>([])
+  const [rowRatios, setRowRatios] = useState<number[]>([])
+
+  useEffect(() => {
+    setColumnWidths((prev) => {
+      const target = panelColumns.length
+      if (prev.length === target) return prev
+      if (target < prev.length) return prev.slice(0, target)
+      const next = prev.slice()
+      while (next.length < target) next.push(352)
+      return next
+    })
+    setRowRatios((prev) => {
+      const target = panelColumns.length
+      if (prev.length === target) return prev
+      if (target < prev.length) return prev.slice(0, target)
+      const next = prev.slice()
+      while (next.length < target) next.push(0.5)
+      return next
+    })
+  }, [panelColumns.length])
+
+  const setColumnWidth = useCallback((index: number, width: number) => {
+    setColumnWidths((prev) => {
+      if (prev[index] === width) return prev
+      const next = prev.slice()
+      next[index] = width
+      return next
+    })
+  }, [])
+
+  const setRowRatio = useCallback((index: number, ratio: number) => {
+    setRowRatios((prev) => {
+      if (prev[index] === ratio) return prev
+      const next = prev.slice()
+      next[index] = ratio
+      return next
+    })
+  }, [])
 
   const togglePanel = useCallback(
     (kind: PanelKind) => {
@@ -277,39 +318,57 @@ export default function App() {
           </div>
           {activeLaunch
             ? panelColumns.map((col, colIdx) => (
-                <div
-                  key={`col-${colIdx}`}
-                  className="flex min-h-0 w-[22rem] shrink-0 flex-col"
-                >
-                  {col.map((panel) => (
-                    <div
-                      key={panel.id}
-                      className="flex min-h-0 min-w-0 flex-1 flex-col border-b border-border last:border-b-0"
-                    >
-                      {panel.kind === 'diff' ? (
-                        <DiffPanel
-                          sessionId={activeSessionKey}
-                          onClose={() => closePanel(panel.kind, panel.id)}
-                        />
-                      ) : panel.kind === 'terminal' ? (
-                        <ShellPanel
-                          cwd={activeLaunch.cwd}
-                          onClose={() => closePanel(panel.kind, panel.id)}
-                        />
-                      ) : panel.kind === 'tasks' ? (
-                        <TasksPanel
-                          sessionId={activeSessionKey}
-                          onClose={() => closePanel(panel.kind, panel.id)}
-                        />
-                      ) : (
-                        <PlanPanel
-                          sessionId={activeSessionKey}
-                          onClose={() => closePanel(panel.kind, panel.id)}
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <Fragment key={`col-${colIdx}`}>
+                  <ColumnResizer
+                    width={columnWidths[colIdx] ?? 352}
+                    onChange={(w) => setColumnWidth(colIdx, w)}
+                  />
+                  <div
+                    className="flex min-h-0 shrink-0 flex-col"
+                    style={{ width: `${columnWidths[colIdx] ?? 352}px` }}
+                  >
+                      {col.map((panel, panelIdx) => {
+                      const ratio = rowRatios[colIdx] ?? 0.5
+                      const grow = col.length > 1 ? (panelIdx === 0 ? ratio : 1 - ratio) : 1
+                      return (
+                        <Fragment key={panel.id}>
+                          {panelIdx > 0 ? (
+                            <RowResizer
+                              ratio={ratio}
+                              onChange={(r) => setRowRatio(colIdx, r)}
+                            />
+                          ) : null}
+                          <div
+                            className="flex min-h-0 min-w-0 flex-col"
+                            style={{ flex: `${grow} 1 0%` }}
+                          >
+                            {panel.kind === 'diff' ? (
+                              <DiffPanel
+                                sessionId={activeSessionKey}
+                                onClose={() => closePanel(panel.kind, panel.id)}
+                              />
+                            ) : panel.kind === 'terminal' ? (
+                              <ShellPanel
+                                cwd={activeLaunch.cwd}
+                                onClose={() => closePanel(panel.kind, panel.id)}
+                              />
+                            ) : panel.kind === 'tasks' ? (
+                              <TasksPanel
+                                sessionId={activeSessionKey}
+                                onClose={() => closePanel(panel.kind, panel.id)}
+                              />
+                            ) : (
+                              <PlanPanel
+                                sessionId={activeSessionKey}
+                                onClose={() => closePanel(panel.kind, panel.id)}
+                              />
+                            )}
+                          </div>
+                        </Fragment>
+                      )
+                    })}
+                  </div>
+                </Fragment>
               ))
             : null}
         </div>
