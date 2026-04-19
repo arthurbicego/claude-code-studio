@@ -17,7 +17,7 @@ import {
 import { useSessionList } from '@/hooks/useSessionList'
 import { AgentsTab } from '@/components/settings/AgentsTab'
 import { SkillsTab } from '@/components/settings/SkillsTab'
-import type { Project, SandboxPlatform, SandboxSettings } from '@/types'
+import type { Project, SandboxPlatform, SandboxScope, SandboxSettings } from '@/types'
 
 type Props = {
   open: boolean
@@ -38,6 +38,33 @@ const PLATFORM_OPTIONS: { id: SandboxPlatform; label: string }[] = [
 
 const JSON_FIELDS = ['network', 'filesystem', 'ripgrep', 'seccomp'] as const
 type JsonFieldKey = (typeof JSON_FIELDS)[number]
+
+const SCOPE_OPTIONS: { id: SandboxScope; label: string; hint: string }[] = [
+  {
+    id: 'user',
+    label: 'User',
+    hint: '~/.claude/settings.json — vale para todos os projetos deste usuário.',
+  },
+  {
+    id: 'user-local',
+    label: 'User local',
+    hint: '~/.claude/settings.local.json — só este usuário, não commitado.',
+  },
+  {
+    id: 'project',
+    label: 'Projeto',
+    hint: '<cwd>/.claude/settings.json — compartilhado com o time (commitável).',
+  },
+  {
+    id: 'project-local',
+    label: 'Projeto local',
+    hint: '<cwd>/.claude/settings.local.json — só este projeto, gitignored.',
+  },
+]
+
+function scopeNeedsProject(scope: SandboxScope): boolean {
+  return scope === 'project' || scope === 'project-local'
+}
 
 const JSON_FIELD_META: Record<JsonFieldKey, { title: string; description: string; linuxOnly?: boolean }> = {
   network: {
@@ -99,9 +126,20 @@ function parseJsonField(text: string): { value: Record<string, unknown> | null; 
 
 export function SettingsModal({ open, onClose }: Props) {
   const { config, defaults, bounds, loading, error, update } = useConfig()
-  const cs = useClaudeSettings()
+  const sessions = useSessionList()
+  const projects = useMemo(
+    () => [...sessions.projects].sort((a, b) => a.cwd.localeCompare(b.cwd)),
+    [sessions.projects],
+  )
 
   const [tab, setTab] = useState<TabId>('sessions')
+  const [sandboxScope, setSandboxScope] = useState<SandboxScope>('user-local')
+  const [sandboxProjectCwd, setSandboxProjectCwd] = useState<string | null>(null)
+  const cs = useClaudeSettings(
+    sandboxScope,
+    scopeNeedsProject(sandboxScope) ? sandboxProjectCwd : null,
+  )
+
   const [standbyMinutes, setStandbyMinutes] = useState<string>('')
   const [sandbox, setSandbox] = useState<SandboxSettings>(emptySandbox)
   const [jsonState, setJsonState] = useState<Record<JsonFieldKey, JsonFieldState>>(() => ({
@@ -121,8 +159,16 @@ export function SettingsModal({ open, onClose }: Props) {
   }, [open])
 
   useEffect(() => {
+    if (!scopeNeedsProject(sandboxScope)) return
+    if (!sandboxProjectCwd && projects.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- pick first project when entering project scope
+      setSandboxProjectCwd(projects[0].cwd)
+    }
+  }, [sandboxScope, sandboxProjectCwd, projects])
+
+  useEffect(() => {
     if (!open) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate form state from server data when modal opens
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate form state from server data when modal opens or scope changes
     if (config) setStandbyMinutes(String(Math.round(config.standbyTimeoutMs / 60000)))
     if (cs.settings) {
       setSandbox(cs.settings.sandbox)
@@ -131,6 +177,14 @@ export function SettingsModal({ open, onClose }: Props) {
         filesystem: { text: toJsonText(cs.settings.sandbox.filesystem), error: null },
         ripgrep: { text: toJsonText(cs.settings.sandbox.ripgrep), error: null },
         seccomp: { text: toJsonText(cs.settings.sandbox.seccomp), error: null },
+      })
+    } else {
+      setSandbox(emptySandbox())
+      setJsonState({
+        network: { text: '', error: null },
+        filesystem: { text: '', error: null },
+        ripgrep: { text: '', error: null },
+        seccomp: { text: '', error: null },
       })
     }
   }, [open, config, cs.settings])
@@ -145,6 +199,9 @@ export function SettingsModal({ open, onClose }: Props) {
     () => JSON_FIELDS.some((k) => jsonState[k].error != null),
     [jsonState],
   )
+
+  const canSaveSandbox =
+    !scopeNeedsProject(sandboxScope) || sandboxProjectCwd != null
 
   const save = async () => {
     const n = Number(standbyMinutes)
@@ -177,14 +234,16 @@ export function SettingsModal({ open, onClose }: Props) {
     setSaveError(null)
     try {
       await update({ standbyTimeoutMs: Math.round(n * 60000) })
-      const payload: SandboxSettings = {
-        ...sandbox,
-        network: parsed.network ?? null,
-        filesystem: parsed.filesystem ?? null,
-        ripgrep: parsed.ripgrep ?? null,
-        seccomp: parsed.seccomp ?? null,
+      if (canSaveSandbox) {
+        const payload: SandboxSettings = {
+          ...sandbox,
+          network: parsed.network ?? null,
+          filesystem: parsed.filesystem ?? null,
+          ripgrep: parsed.ripgrep ?? null,
+          seccomp: parsed.seccomp ?? null,
+        }
+        await cs.update({ sandbox: payload })
       }
-      await cs.update({ sandbox: payload })
       onClose()
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : String(err))
@@ -193,8 +252,10 @@ export function SettingsModal({ open, onClose }: Props) {
     }
   }
 
-  const isLoading = loading || cs.loading
-  const loadError = error || cs.error
+  const isLoading = loading
+  const loadError = error
+  const sandboxLoading = cs.loading && canSaveSandbox
+  const sandboxError = cs.error
 
   const setSandboxField = <K extends keyof SandboxSettings>(key: K, value: SandboxSettings[K]) => {
     setSandbox((s) => ({ ...s, [key]: value }))
@@ -230,7 +291,7 @@ export function SettingsModal({ open, onClose }: Props) {
           <Button
             variant="primary"
             onClick={save}
-            disabled={saving || isLoading || !!loadError || jsonHasErrors}
+            disabled={saving || isLoading || !!loadError || jsonHasErrors || sandboxLoading}
           >
             Salvar
           </Button>
@@ -278,9 +339,42 @@ export function SettingsModal({ open, onClose }: Props) {
             <SkillsTab />
           ) : (
             <>
+              <SandboxScopeSection
+                scope={sandboxScope}
+                onScopeChange={(s) => {
+                  setSandboxScope(s)
+                  setSaveError(null)
+                }}
+                projectCwd={sandboxProjectCwd}
+                onProjectChange={setSandboxProjectCwd}
+                projects={projects}
+                projectsLoading={sessions.loading}
+                projectsError={sessions.error}
+              />
+
+              {scopeNeedsProject(sandboxScope) && !sandboxProjectCwd ? (
+                <Section title="Geral">
+                  <p className="text-xs text-muted-foreground">
+                    {sessions.loading
+                      ? 'Carregando projetos…'
+                      : projects.length === 0
+                        ? 'Nenhum projeto encontrado em ~/.claude/projects. Abra um claude neste diretório primeiro.'
+                        : 'Selecione um projeto acima para editar as configurações.'}
+                  </p>
+                </Section>
+              ) : sandboxLoading ? (
+                <Section title="Geral">
+                  <p className="text-xs text-muted-foreground">Carregando configurações…</p>
+                </Section>
+              ) : sandboxError ? (
+                <Section title="Geral">
+                  <p className="text-xs text-red-400">Erro: {sandboxError}</p>
+                </Section>
+              ) : (
+                <>
               <Section
                 title="Geral"
-                description="Configurado em ~/.claude/settings.local.json. Vale para novos processos do claude — sessões já abertas mantêm o estado anterior."
+                description="Vale para novos processos do claude — sessões já abertas mantêm o estado anterior."
               >
                 <ToggleField
                   label="Habilitar sandbox"
@@ -374,6 +468,8 @@ export function SettingsModal({ open, onClose }: Props) {
                   />
                 </Section>
               ))}
+                </>
+              )}
             </>
           )}
           {saveError ? <p className="p-4 text-xs text-red-400">{saveError}</p> : null}
@@ -412,6 +508,77 @@ function Tabs<T extends string>({
         )
       })}
     </div>
+  )
+}
+
+function SandboxScopeSection({
+  scope,
+  onScopeChange,
+  projectCwd,
+  onProjectChange,
+  projects,
+  projectsLoading,
+  projectsError,
+}: {
+  scope: SandboxScope
+  onScopeChange: (s: SandboxScope) => void
+  projectCwd: string | null
+  onProjectChange: (cwd: string) => void
+  projects: Project[]
+  projectsLoading: boolean
+  projectsError: string | null
+}) {
+  const active = SCOPE_OPTIONS.find((o) => o.id === scope)
+  const needsProject = scopeNeedsProject(scope)
+  return (
+    <Section
+      title="Escopo"
+      description="Onde as configurações serão salvas. A CLI aplica Managed > Local > Project > User, mesclando arrays entre escopos."
+    >
+      <div className="flex rounded border border-border overflow-hidden w-fit">
+        {SCOPE_OPTIONS.map((opt) => {
+          const isActive = opt.id === scope
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => onScopeChange(opt.id)}
+              className={`cursor-pointer px-3 py-1.5 text-xs font-medium transition-colors ${
+                isActive ? 'bg-sky-700 text-white' : 'bg-background text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {opt.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {active ? (
+        <p className="text-[10px] text-muted-foreground">{active.hint}</p>
+      ) : null}
+
+      {needsProject ? (
+        <Field label="Projeto">
+          {projectsLoading ? (
+            <span className="text-xs text-muted-foreground">Carregando projetos…</span>
+          ) : projectsError ? (
+            <span className="text-xs text-red-400">Erro: {projectsError}</span>
+          ) : projects.length === 0 ? (
+            <span className="text-xs text-muted-foreground">Nenhum projeto encontrado.</span>
+          ) : (
+            <select
+              value={projectCwd ?? ''}
+              onChange={(e) => onProjectChange(e.target.value)}
+              className="rounded border border-border bg-background px-2 py-1.5 font-mono text-xs text-foreground focus:border-sky-500 focus:outline-none"
+            >
+              {projects.map((p) => (
+                <option key={p.slug} value={p.cwd}>{p.cwd}</option>
+              ))}
+            </select>
+          )}
+        </Field>
+      ) : null}
+    </Section>
   )
 }
 
