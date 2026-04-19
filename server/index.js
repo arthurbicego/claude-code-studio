@@ -3,7 +3,7 @@ const expressWs = require('express-ws');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { execSync, execFileSync } = require('child_process');
+const { execSync, execFileSync, spawn } = require('child_process');
 const pty = require('node-pty');
 
 const PORT = process.env.PORT || 3000;
@@ -1606,6 +1606,49 @@ app.post('/api/sessions/:key/close', async (req, res) => {
   try { entry.pty.kill(); } catch {}
   const timeout = new Promise((resolve) => setTimeout(resolve, 3000));
   await Promise.race([entry.exited, timeout]);
+  res.json({ ok: true });
+});
+
+function resolveVSCodeBin() {
+  try {
+    const out = execSync('which code', { encoding: 'utf8', env: process.env }).trim();
+    if (out && fs.existsSync(out)) return fs.realpathSync(out);
+  } catch {}
+  const candidates = [
+    '/opt/homebrew/bin/code',
+    '/usr/local/bin/code',
+    '/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code',
+    path.join(os.homedir(), '.local/bin/code'),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return fs.realpathSync(c);
+  }
+  return null;
+}
+
+app.post('/api/open/vscode', (req, res) => {
+  const rawPath = typeof req.body?.path === 'string' ? req.body.path : '';
+  const target = isAllowedProjectCwd(rawPath);
+  if (!target) return res.status(400).json({ error: 'path inválido' });
+  try {
+    const st = fs.statSync(target);
+    if (!st.isDirectory()) return res.status(400).json({ error: 'path não é um diretório' });
+  } catch {
+    return res.status(404).json({ error: 'path não encontrado' });
+  }
+  const bin = resolveVSCodeBin();
+  if (!bin) {
+    return res.status(500).json({
+      error: 'binário `code` do VS Code não encontrado — instale via "Shell Command: Install \'code\' command in PATH"',
+    });
+  }
+  try {
+    const child = spawn(bin, [target], { detached: true, stdio: 'ignore' });
+    child.on('error', () => {});
+    child.unref();
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
   res.json({ ok: true });
 });
 

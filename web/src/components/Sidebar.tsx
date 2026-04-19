@@ -30,6 +30,9 @@ type Props = {
   onArchiveSession: (id: string) => void
   onUnarchiveSession: (id: string) => void
   onDeleteSession: (session: SessionMeta) => void
+  onOpenProjectInVSCode: (project: Project) => void
+  onArchiveProject: (project: Project) => void
+  onDeleteProject: (project: Project) => void
 }
 
 function formatTime(ts: number | null): string {
@@ -87,6 +90,9 @@ export function Sidebar({
   onArchiveSession,
   onUnarchiveSession,
   onDeleteSession,
+  onOpenProjectInVSCode,
+  onArchiveProject,
+  onDeleteProject,
 }: Props) {
   const navigate = useNavigate()
   const openSessionKeys = useMemo(() => new Set(openSessions.keys()), [openSessions])
@@ -135,6 +141,9 @@ export function Sidebar({
               onUnarchive={onUnarchiveSession}
               onDelete={onDeleteSession}
               onCloseSession={onCloseSession}
+              onOpenProjectInVSCode={onOpenProjectInVSCode}
+              onArchiveProject={onArchiveProject}
+              onDeleteProject={onDeleteProject}
               renderState={renderState}
               applyProjectOrder={applyOrder}
               onReorderProject={moveSlug}
@@ -161,6 +170,9 @@ export function Sidebar({
           onArchive={onArchiveSession}
           onUnarchive={onUnarchiveSession}
           onDelete={onDeleteSession}
+          onOpenProjectInVSCode={onOpenProjectInVSCode}
+          onArchiveProject={onArchiveProject}
+          onDeleteProject={onDeleteProject}
           renderState={renderState}
           applyProjectOrder={applyOrder}
           onReorderProject={moveSlug}
@@ -181,6 +193,9 @@ export function Sidebar({
               onArchive={onArchiveSession}
               onUnarchive={onUnarchiveSession}
               onDelete={onDeleteSession}
+              onOpenProjectInVSCode={onOpenProjectInVSCode}
+              onArchiveProject={onArchiveProject}
+              onDeleteProject={onDeleteProject}
               renderState={renderState}
               applyProjectOrder={applyOrder}
               onReorderProject={moveSlug}

@@ -22,6 +22,7 @@ import { useSessionDefaults } from '@/hooks/useSessionDefaults'
 import { useLiveSessions } from '@/hooks/useLiveSessions'
 import { useSessionFooter } from '@/hooks/useSessionFooter'
 import { layoutColumns } from '@/lib/panels'
+import { openInVSCode } from '@/lib/vscode'
 import type {
   OpenPanel,
   PanelKind,
@@ -67,6 +68,12 @@ export default function App() {
   const [pendingArchive, setPendingArchive] = useState<
     { id: string; action: 'archive' | 'unarchive' } | null
   >(null)
+  const [pendingProjectArchive, setPendingProjectArchive] = useState<Project | null>(null)
+  const [pendingProjectDelete, setPendingProjectDelete] = useState<Project | null>(null)
+  const [pendingVSCodeOpen, setPendingVSCodeOpen] = useState<{
+    path: string
+    label: string
+  } | null>(null)
   const [status, setStatus] = useState('Selecione uma sessão na barra lateral ou crie uma nova.')
   const [interruptSignal, setInterruptSignal] = useState(0)
   const [inputSignal, setInputSignal] = useState<{ seq: number; text: string } | null>(null)
@@ -416,6 +423,59 @@ export default function App() {
     }
   }, [pendingArchive, archiveSession, unarchiveSession])
 
+  const requestOpenInVSCode = useCallback((path: string, label: string) => {
+    setPendingVSCodeOpen({ path, label })
+  }, [])
+
+  const confirmProjectArchive = useCallback(async () => {
+    const target = pendingProjectArchive
+    if (!target) return
+    const ids = target.sessions.filter((s) => !s.archived).map((s) => s.id)
+    await Promise.all(
+      ids.map((id) =>
+        fetch(`/api/sessions/${encodeURIComponent(id)}/archive`, { method: 'POST' }).catch(
+          () => null,
+        ),
+      ),
+    )
+    refresh()
+  }, [pendingProjectArchive, refresh])
+
+  const confirmProjectDelete = useCallback(async () => {
+    const target = pendingProjectDelete
+    if (!target) return
+    const ids = target.sessions.map((s) => s.id)
+    for (const id of ids) {
+      try {
+        if (openSessions.has(id)) {
+          await fetch(`/api/sessions/${encodeURIComponent(id)}/close`, { method: 'POST' })
+        }
+        await fetch(`/api/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' })
+      } catch {
+        /* noop */
+      }
+    }
+    const idSet = new Set(ids)
+    setOpenSessions((prev) => {
+      let changed = false
+      const next = new Map(prev)
+      for (const id of idSet) {
+        if (next.delete(id)) changed = true
+      }
+      return changed ? next : prev
+    })
+    setOpenPanelsBySession((prev) => {
+      let changed = false
+      const next = new Map(prev)
+      for (const id of idSet) {
+        if (next.delete(id)) changed = true
+      }
+      return changed ? next : prev
+    })
+    setActiveSessionKey((prev) => (prev && idSet.has(prev) ? null : prev))
+    refresh()
+  }, [pendingProjectDelete, openSessions, refresh])
+
   const confirmDelete = useCallback(async () => {
     const target = pendingDelete
     if (!target) return
@@ -460,14 +520,24 @@ export default function App() {
         onArchiveSession={(id) => setPendingArchive({ id, action: 'archive' })}
         onUnarchiveSession={(id) => setPendingArchive({ id, action: 'unarchive' })}
         onDeleteSession={(s) => setPendingDelete(s)}
+        onOpenProjectInVSCode={(project) =>
+          requestOpenInVSCode(
+            project.cwd,
+            project.cwd.split('/').filter(Boolean).pop() || project.cwd,
+          )
+        }
+        onArchiveProject={(project) => setPendingProjectArchive(project)}
+        onDeleteProject={(project) => setPendingProjectDelete(project)}
       />
       <main className="flex min-w-0 flex-1 flex-col">
         <Toolbar
           disabled={!activeLaunch}
           status={status}
           sessionId={activeLaunch ? activeSessionKey : null}
+          openPath={activeLaunch?.cwd ?? null}
           openPanelKinds={openPanelKinds}
           onTogglePanel={togglePanel}
+          onOpenInVSCode={requestOpenInVSCode}
         />
         <div className="flex min-h-0 flex-1">
           <div className="relative flex min-w-0 flex-1">
@@ -606,6 +676,64 @@ export default function App() {
           setPendingCloseWorktree(null)
           setClosingError(null)
         }}
+      />
+
+      <ConfirmDialog
+        open={!!pendingVSCodeOpen}
+        title="Abrir no VS Code"
+        description={
+          pendingVSCodeOpen
+            ? `O diretório "${pendingVSCodeOpen.label}" será aberto no VS Code.`
+            : ''
+        }
+        confirmLabel="Abrir"
+        onConfirm={() => {
+          if (pendingVSCodeOpen) openInVSCode(pendingVSCodeOpen.path)
+        }}
+        onClose={() => setPendingVSCodeOpen(null)}
+      />
+
+      <ConfirmDialog
+        open={!!pendingProjectArchive}
+        title="Arquivar sessões do projeto"
+        description={
+          pendingProjectArchive
+            ? (() => {
+                const count = pendingProjectArchive.sessions.filter((s) => !s.archived).length
+                const name =
+                  pendingProjectArchive.cwd.split('/').filter(Boolean).pop() ||
+                  pendingProjectArchive.cwd
+                return count === 0
+                  ? `Não há sessões ativas para arquivar em "${name}".`
+                  : `${count} ${count === 1 ? 'sessão ativa será movida' : 'sessões ativas serão movidas'} para Arquivadas (projeto: ${name}).`
+              })()
+            : ''
+        }
+        confirmLabel="Arquivar todas"
+        onConfirm={confirmProjectArchive}
+        onClose={() => setPendingProjectArchive(null)}
+      />
+
+      <ConfirmDialog
+        open={!!pendingProjectDelete}
+        title="Apagar sessões do projeto definitivamente"
+        description={
+          pendingProjectDelete
+            ? (() => {
+                const count = pendingProjectDelete.sessions.length
+                const name =
+                  pendingProjectDelete.cwd.split('/').filter(Boolean).pop() ||
+                  pendingProjectDelete.cwd
+                return count === 0
+                  ? `Não há sessões para apagar em "${name}".`
+                  : `Esta ação remove do disco ${count} ${count === 1 ? 'sessão' : 'sessões'} do projeto "${name}". Não pode ser desfeita.`
+              })()
+            : ''
+        }
+        confirmLabel="Apagar todas"
+        destructive
+        onConfirm={confirmProjectDelete}
+        onClose={() => setPendingProjectDelete(null)}
       />
 
       <ConfirmDialog
