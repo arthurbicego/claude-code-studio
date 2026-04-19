@@ -1,9 +1,9 @@
-const { execSync } = require('node:child_process');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
+import { execSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
-function resolveClaudeBin() {
+export function resolveClaudeBin(): string | null {
   try {
     const out = execSync('which claude', { encoding: 'utf8', env: process.env }).trim();
     if (out && fs.existsSync(out)) return fs.realpathSync(out);
@@ -19,7 +19,7 @@ function resolveClaudeBin() {
   return null;
 }
 
-function resolveUserShell() {
+export function resolveUserShell(): string {
   const envShell = process.env.SHELL;
   if (envShell && fs.existsSync(envShell)) return envShell;
   for (const c of ['/bin/zsh', '/bin/bash', '/bin/sh']) {
@@ -28,7 +28,5 @@ function resolveUserShell() {
   return '/bin/sh';
 }
 
-const CLAUDE_BIN = resolveClaudeBin();
-const USER_SHELL = resolveUserShell();
-
-module.exports = { CLAUDE_BIN, USER_SHELL, resolveClaudeBin, resolveUserShell };
+export const CLAUDE_BIN = resolveClaudeBin();
+export const USER_SHELL = resolveUserShell();

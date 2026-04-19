@@ -4,8 +4,9 @@
   "private": true,
   "description": "Local web UI wrapper around the Claude Code CLI",
   "scripts": {
-    "start": "node server/index.js",
+    "start": "tsx server/index.ts",
     "dev": "./start.sh",
+    "typecheck": "tsc -p server/tsconfig.json --noEmit && tsc -b web",
     "check": "biome check",
     "format": "biome format --write",
     "fix": "biome check --write",
@@ -17,6 +18,11 @@
     "node-pty": "^1.0.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.12"
+    "@biomejs/biome": "2.4.12",
+    "@types/express": "5.0.6",
+    "@types/express-ws": "3.0.6",
+    "@types/node": "25.6.0",
+    "tsx": "4.21.0",
+    "typescript": "6.0.3"
   }
 }

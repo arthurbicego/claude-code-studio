@@ -1,13 +1,15 @@
-const fs = require('node:fs');
-const { CLAUDE_PROJECTS } = require('./paths');
-const { liveSessions, computeState } = require('./live-sessions');
+import fs from 'node:fs';
+import type { LiveSessionsSnapshot } from '@shared/types';
+import type { Express, Request, Response } from 'express';
+import { computeState, liveSessions } from './live-sessions';
+import { CLAUDE_PROJECTS } from './paths';
 
-const clients = new Set();
-let watcher = null;
-let invalidateDebounceTimer = null;
-let activityDebounceTimer = null;
+const clients = new Set<Response>();
+let watcher: fs.FSWatcher | null = null;
+let invalidateDebounceTimer: NodeJS.Timeout | null = null;
+let activityDebounceTimer: NodeJS.Timeout | null = null;
 
-function broadcastInvalidate() {
+export function broadcastInvalidate(): void {
   if (invalidateDebounceTimer) return;
   invalidateDebounceTimer = setTimeout(() => {
     invalidateDebounceTimer = null;
@@ -19,13 +21,13 @@ function broadcastInvalidate() {
   }, 500);
 }
 
-function liveSessionsSnapshot() {
-  const sessions = [];
+export function liveSessionsSnapshot(): LiveSessionsSnapshot {
+  const sessions: LiveSessionsSnapshot['sessions'] = [];
   for (const [key, entry] of liveSessions) {
     sessions.push({
       sessionKey: key,
       state: computeState(entry),
-      cwd: entry.cwd,
+      cwd: entry.cwd ?? '',
       lastOutputAt: entry.lastOutputAt,
       idleSince: entry.idleSince,
     });
@@ -33,13 +35,13 @@ function liveSessionsSnapshot() {
   return { at: Date.now(), sessions };
 }
 
-function writeActivityTo(res) {
+export function writeActivityTo(res: Response): void {
   try {
     res.write(`event: activity\ndata: ${JSON.stringify(liveSessionsSnapshot())}\n\n`);
   } catch {}
 }
 
-function broadcastActivity() {
+export function broadcastActivity(): void {
   if (activityDebounceTimer) return;
   activityDebounceTimer = setTimeout(() => {
     activityDebounceTimer = null;
@@ -47,24 +49,24 @@ function broadcastActivity() {
   }, 150);
 }
 
-function ensureWatcher() {
+export function ensureWatcher(): void {
   if (watcher || !fs.existsSync(CLAUDE_PROJECTS)) return;
   try {
     watcher = fs.watch(CLAUDE_PROJECTS, { recursive: true }, () => broadcastInvalidate());
     watcher.on('error', (err) => {
       console.warn(`[sse] watcher error: ${err.message}`);
       try {
-        watcher.close();
+        watcher?.close();
       } catch {}
       watcher = null;
     });
   } catch (err) {
-    console.warn(`[sse] fs.watch failed: ${err.message}`);
+    console.warn(`[sse] fs.watch failed: ${(err as Error).message}`);
   }
 }
 
-function register(app) {
-  app.get('/api/sessions/stream', (req, res) => {
+export function register(app: Express): void {
+  app.get('/api/sessions/stream', (req: Request, res: Response) => {
     res.set({
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-store, no-transform',
@@ -96,12 +98,3 @@ function register(app) {
     });
   });
 }
-
-module.exports = {
-  broadcastInvalidate,
-  broadcastActivity,
-  liveSessionsSnapshot,
-  writeActivityTo,
-  ensureWatcher,
-  register,
-};

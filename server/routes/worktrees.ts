@@ -1,20 +1,22 @@
-const fs = require('node:fs');
-const path = require('node:path');
-const { isAllowedProjectCwd, isPathWithinCwd, realpathSafe } = require('../paths');
-const { BRANCH_NAME_RE } = require('../validators');
-const { runGitArgs, runGitArgsOrThrow } = require('../git');
-const {
+import fs from 'node:fs';
+import path from 'node:path';
+import type { Worktree } from '@shared/types';
+import type { Express, Request, Response } from 'express';
+import { runGitArgs, runGitArgsOrThrow } from '../git';
+import { liveSessionWorkspaces } from '../live-sessions';
+import { isAllowedProjectCwd, isPathWithinCwd, realpathSafe } from '../paths';
+import { BRANCH_NAME_RE } from '../validators';
+import {
+  guessDefaultBranch,
   listWorktrees,
-  worktreeStatus,
+  pickMainWorktree,
   worktreeAheadBehind,
   worktreeDiffStat,
-  guessDefaultBranch,
-  pickMainWorktree,
-} = require('../worktrees');
-const { liveSessionWorkspaces } = require('../live-sessions');
+  worktreeStatus,
+} from '../worktrees';
 
-function register(app) {
-  app.get('/api/worktrees', (req, res) => {
+export function register(app: Express): void {
+  app.get('/api/worktrees', (req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store');
     const cwd = isAllowedProjectCwd(req.query.cwd);
     if (!cwd) return res.status(400).json({ error: 'cwd inválido' });
@@ -26,14 +28,14 @@ function register(app) {
     const mainRealPath = main ? realpathSafe(main.path) : realpathSafe(cwd);
     const workspaceCounts = liveSessionWorkspaces();
 
-    const worktrees = entries.map((e) => {
+    const worktrees: Worktree[] = entries.map((e) => {
       const realPath = realpathSafe(e.path);
       const isMain = realPath === mainRealPath;
       const status = worktreeStatus(e.path);
-      let ahead = 0,
-        behind = 0,
-        linesAdded = 0,
-        linesRemoved = 0;
+      let ahead = 0;
+      let behind = 0;
+      let linesAdded = 0;
+      let linesRemoved = 0;
       if (!isMain && base && !e.detached && e.branch) {
         const ab = worktreeAheadBehind(e.path, base);
         ahead = ab.ahead;
@@ -42,7 +44,7 @@ function register(app) {
         linesAdded = ns.added;
         linesRemoved = ns.removed;
       }
-      let mtime = null;
+      let mtime: number | null = null;
       try {
         mtime = fs.statSync(e.path).mtimeMs;
       } catch {}
@@ -67,7 +69,7 @@ function register(app) {
     res.json({ cwd, base: base || null, mainPath: main ? main.path : null, worktrees });
   });
 
-  app.get('/api/worktrees/diff', (req, res) => {
+  app.get('/api/worktrees/diff', (req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store');
     const cwd = isAllowedProjectCwd(req.query.cwd);
     if (!cwd) return res.status(400).json({ error: 'cwd inválido' });
@@ -90,7 +92,7 @@ function register(app) {
     res.json({ cwd: resolved, branch, base: base || null, committed, unstaged, staged, untracked });
   });
 
-  app.delete('/api/worktrees', (req, res) => {
+  app.delete('/api/worktrees', (req: Request, res: Response) => {
     const cwd = isAllowedProjectCwd(req.query.cwd);
     if (!cwd) return res.status(400).json({ error: 'cwd inválido' });
     const rawPath = typeof req.query.path === 'string' ? req.query.path : '';
@@ -114,12 +116,13 @@ function register(app) {
       args.push(resolved);
       runGitArgsOrThrow(cwd, args);
     } catch (err) {
-      return res.status(500).json({ error: err.stderr?.toString() || err.message });
+      const e = err as { stderr?: Buffer; message?: string };
+      return res.status(500).json({ error: e.stderr?.toString() || e.message });
     }
     res.json({ ok: true });
   });
 
-  app.post('/api/worktrees/commit', (req, res) => {
+  app.post('/api/worktrees/commit', (req: Request, res: Response) => {
     const cwd = isAllowedProjectCwd(req.body?.cwd);
     if (!cwd) return res.status(400).json({ error: 'cwd inválido' });
     const rawPath = typeof req.body?.path === 'string' ? req.body.path : '';
@@ -135,12 +138,13 @@ function register(app) {
       runGitArgsOrThrow(resolved, ['add', '-A']);
       runGitArgsOrThrow(resolved, ['commit', '-m', message]);
     } catch (err) {
-      return res.status(500).json({ error: err.stderr?.toString() || err.message });
+      const e = err as { stderr?: Buffer; message?: string };
+      return res.status(500).json({ error: e.stderr?.toString() || e.message });
     }
     res.json({ ok: true });
   });
 
-  app.post('/api/worktrees/discard', (req, res) => {
+  app.post('/api/worktrees/discard', (req: Request, res: Response) => {
     const cwd = isAllowedProjectCwd(req.body?.cwd);
     if (!cwd) return res.status(400).json({ error: 'cwd inválido' });
     const rawPath = typeof req.body?.path === 'string' ? req.body.path : '';
@@ -162,12 +166,13 @@ function register(app) {
       runGitArgs(resolved, ['clean', '-fd']);
       runGitArgsOrThrow(cwd, ['worktree', 'remove', '--force', resolved]);
     } catch (err) {
-      return res.status(500).json({ error: err.stderr?.toString() || err.message });
+      const e = err as { stderr?: Buffer; message?: string };
+      return res.status(500).json({ error: e.stderr?.toString() || e.message });
     }
     res.json({ ok: true });
   });
 
-  app.post('/api/worktrees/merge', (req, res) => {
+  app.post('/api/worktrees/merge', (req: Request, res: Response) => {
     const cwd = isAllowedProjectCwd(req.body?.cwd);
     if (!cwd) return res.status(400).json({ error: 'cwd inválido' });
     const rawPath = typeof req.body?.path === 'string' ? req.body.path : '';
@@ -213,9 +218,8 @@ function register(app) {
       runGitArgsOrThrow(mainPath, ['merge', '--ff-only', branch]);
       res.json({ ok: true, base: baseLocal, branch, switched });
     } catch (err) {
-      res.status(500).json({ error: err.stderr?.toString() || err.message });
+      const e = err as { stderr?: Buffer; message?: string };
+      res.status(500).json({ error: e.stderr?.toString() || e.message });
     }
   });
 }
-
-module.exports = { register };

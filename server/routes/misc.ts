@@ -1,10 +1,11 @@
-const { execSync, spawn } = require('node:child_process');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-const { isAllowedProjectCwd } = require('../paths');
+import { execSync, spawn } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import type { Express, Request, Response } from 'express';
+import { isAllowedProjectCwd } from '../paths';
 
-function resolveVSCodeBin() {
+function resolveVSCodeBin(): string | null {
   try {
     const out = execSync('which code', { encoding: 'utf8', env: process.env }).trim();
     if (out && fs.existsSync(out)) return fs.realpathSync(out);
@@ -21,8 +22,8 @@ function resolveVSCodeBin() {
   return null;
 }
 
-function register(app) {
-  app.post('/api/open/vscode', (req, res) => {
+export function register(app: Express): void {
+  app.post('/api/open/vscode', (req: Request, res: Response) => {
     const rawPath = typeof req.body?.path === 'string' ? req.body.path : '';
     const target = isAllowedProjectCwd(rawPath);
     if (!target) return res.status(400).json({ error: 'path inválido' });
@@ -44,19 +45,23 @@ function register(app) {
       child.on('error', () => {});
       child.unref();
     } catch (err) {
-      return res.status(500).json({ error: err.message });
+      return res.status(500).json({ error: (err as Error).message });
     }
     res.json({ ok: true });
   });
 
-  app.get('/api/defaults', (_req, res) => {
+  app.get('/api/defaults', (_req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store');
-    const defaults = { model: null, effort: null, permissionMode: 'default' };
+    const defaults = {
+      model: null as string | null,
+      effort: null as string | null,
+      permissionMode: 'default',
+    };
     const files = ['settings.json', 'settings.local.json'];
     for (const name of files) {
       const p = path.join(os.homedir(), '.claude', name);
       try {
-        const s = JSON.parse(fs.readFileSync(p, 'utf8'));
+        const s = JSON.parse(fs.readFileSync(p, 'utf8')) as Record<string, unknown>;
         if (typeof s.model === 'string') defaults.model = s.model;
         if (typeof s.effortLevel === 'string') defaults.effort = s.effortLevel;
         if (typeof s.permissionMode === 'string') defaults.permissionMode = s.permissionMode;
@@ -65,7 +70,7 @@ function register(app) {
     res.json(defaults);
   });
 
-  app.get('/api/browse', (req, res) => {
+  app.get('/api/browse', (req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store');
     const requested = req.query.path ? String(req.query.path) : os.homedir();
     const showHidden = req.query.hidden === '1';
@@ -85,9 +90,7 @@ function register(app) {
         entries,
       });
     } catch (e) {
-      res.status(400).json({ error: e.message });
+      res.status(400).json({ error: (e as Error).message });
     }
   });
 }
-
-module.exports = { register };

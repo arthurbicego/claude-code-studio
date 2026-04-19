@@ -1,13 +1,21 @@
-const fs = require('node:fs');
-const path = require('node:path');
-const { runGitArgs } = require('./git');
-const { parseNumstat } = require('./git');
+import fs from 'node:fs';
+import path from 'node:path';
+import { type NumStat, parseNumstat, runGitArgs } from './git';
 
-function listWorktrees(cwd) {
+export type WorktreeEntry = {
+  path: string;
+  branch: string | null;
+  head: string | null;
+  bare: boolean;
+  detached: boolean;
+  prunable: boolean;
+};
+
+export function listWorktrees(cwd: string): WorktreeEntry[] {
   const raw = runGitArgs(cwd, ['worktree', 'list', '--porcelain']);
   if (!raw) return [];
-  const entries = [];
-  let current = null;
+  const entries: WorktreeEntry[] = [];
+  let current: WorktreeEntry | null = null;
   const flush = () => {
     if (current) {
       entries.push(current);
@@ -43,7 +51,9 @@ function listWorktrees(cwd) {
   return entries;
 }
 
-function worktreeStatus(wtPath) {
+export type WorktreeStatus = { clean: boolean; modifiedCount: number };
+
+export function worktreeStatus(wtPath: string): WorktreeStatus {
   if (!wtPath || !fs.existsSync(wtPath)) return { clean: true, modifiedCount: 0 };
   const status = runGitArgs(wtPath, ['status', '--porcelain']);
   const lines = status
@@ -53,7 +63,10 @@ function worktreeStatus(wtPath) {
   return { clean: lines.length === 0, modifiedCount: lines.length };
 }
 
-function worktreeAheadBehind(wtPath, base) {
+export function worktreeAheadBehind(
+  wtPath: string,
+  base: string,
+): { ahead: number; behind: number } {
   if (!wtPath || !base) return { ahead: 0, behind: 0 };
   const out = runGitArgs(wtPath, ['rev-list', '--left-right', '--count', `${base}...HEAD`]).trim();
   if (!out) return { ahead: 0, behind: 0 };
@@ -62,13 +75,13 @@ function worktreeAheadBehind(wtPath, base) {
   return { behind: parseInt(parts[0], 10) || 0, ahead: parseInt(parts[1], 10) || 0 };
 }
 
-function worktreeDiffStat(wtPath, base) {
+export function worktreeDiffStat(wtPath: string, base: string): NumStat {
   if (!wtPath || !base) return { added: 0, removed: 0 };
   const raw = runGitArgs(wtPath, ['diff', '--numstat', `${base}...HEAD`]);
   return parseNumstat(raw);
 }
 
-function guessDefaultBranch(cwd) {
+export function guessDefaultBranch(cwd: string): string {
   const head = runGitArgs(cwd, ['symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD']).trim();
   if (head) return head.replace(/^refs\/remotes\//, '');
   for (const cand of ['main', 'master']) {
@@ -77,7 +90,9 @@ function guessDefaultBranch(cwd) {
   return '';
 }
 
-function detectWorktree(cwd) {
+export type WorktreeRefDetected = { path: string; name: string };
+
+export function detectWorktree(cwd: string | null): WorktreeRefDetected | null {
   if (!cwd || !fs.existsSync(cwd)) return null;
   const gitDir = runGitArgs(cwd, ['rev-parse', '--git-dir']).trim();
   const commonDir = runGitArgs(cwd, ['rev-parse', '--git-common-dir']).trim();
@@ -96,19 +111,9 @@ function detectWorktree(cwd) {
   return { path: top, name: path.basename(top) };
 }
 
-function pickMainWorktree(entries) {
+export function pickMainWorktree(entries: WorktreeEntry[]): WorktreeEntry | null {
   for (const e of entries) {
     if (!e.detached && !e.bare && !e.prunable) return e;
   }
   return entries[0] || null;
 }
-
-module.exports = {
-  listWorktrees,
-  worktreeStatus,
-  worktreeAheadBehind,
-  worktreeDiffStat,
-  guessDefaultBranch,
-  detectWorktree,
-  pickMainWorktree,
-};

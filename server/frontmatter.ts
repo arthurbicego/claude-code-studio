@@ -1,9 +1,11 @@
-function parseFrontmatter(text) {
+export type Frontmatter = Record<string, string | string[]>;
+
+export function parseFrontmatter(text: string): { frontmatter: Frontmatter; body: string } {
   const match = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/.exec(text || '');
   if (!match) return { frontmatter: {}, body: text || '' };
   const yaml = match[1];
   const body = match[2] || '';
-  const fm = {};
+  const fm: Frontmatter = {};
   for (const rawLine of yaml.split('\n')) {
     const line = rawLine.trimEnd();
     if (!line || line.startsWith('#')) continue;
@@ -32,14 +34,14 @@ function parseFrontmatter(text) {
   return { frontmatter: fm, body };
 }
 
-function escapeYamlString(s) {
+export function escapeYamlString(s: string): string {
   if (s === '' || /[:#\-?&*!|>'"%@`{}[\],\n\r]/.test(s) || /^\s|\s$/.test(s)) {
     return JSON.stringify(s);
   }
   return s;
 }
 
-function buildFrontmatter(fields) {
+export function buildFrontmatter(fields: Record<string, string | string[] | undefined>): string {
   const lines = ['---'];
   for (const [key, value] of Object.entries(fields)) {
     if (value == null || value === '') continue;
@@ -59,5 +61,3 @@ function buildFrontmatter(fields) {
   lines.push('---', '');
   return lines.join('\n');
 }
-
-module.exports = { parseFrontmatter, escapeYamlString, buildFrontmatter };

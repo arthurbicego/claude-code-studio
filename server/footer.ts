@@ -1,29 +1,50 @@
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-const { STATUSLINE_CACHE_DIR, STATUSLINE_GLOBAL_META } = require('./paths');
-const { FOOTER_ID_RE } = require('./validators');
-const { gitInfo, uncommittedLineStats } = require('./git');
-const { detectWorktree } = require('./worktrees');
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import type { SessionFooter } from '@shared/types';
+import { gitInfo, uncommittedLineStats } from './git';
+import { STATUSLINE_CACHE_DIR, STATUSLINE_GLOBAL_META } from './paths';
+import { FOOTER_ID_RE } from './validators';
+import { detectWorktree } from './worktrees';
 
-function readJsonSafe(filePath) {
+type RateLimitBlock = {
+  used_percentage?: number;
+  resets_at?: number;
+};
+
+type StatuslineCache = {
+  workspace?: { current_dir?: string };
+  cwd?: string;
+  context_window?: { used_percentage?: number };
+  exceeds_200k_tokens?: boolean;
+  model?: { display_name?: string };
+  cost?: { total_cost_usd?: number };
+  rate_limits?: { five_hour?: RateLimitBlock; seven_day?: RateLimitBlock };
+};
+
+type GlobalMeta = {
+  at?: number;
+  rate_limits?: { five_hour?: RateLimitBlock; seven_day?: RateLimitBlock };
+};
+
+export function readJsonSafe<T>(filePath: string): T | null {
   try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    return JSON.parse(fs.readFileSync(filePath, 'utf8')) as T;
   } catch {
     return null;
   }
 }
 
-function removeFooterCacheFor(id) {
+export function removeFooterCacheFor(id: string): void {
   if (!FOOTER_ID_RE.test(id)) return;
   try {
     fs.unlinkSync(path.join(STATUSLINE_CACHE_DIR, `${id}.json`));
   } catch {}
 }
 
-function buildFooterPayload(id) {
-  const cache = readJsonSafe(path.join(STATUSLINE_CACHE_DIR, `${id}.json`));
-  const global = readJsonSafe(STATUSLINE_GLOBAL_META);
+export function buildFooterPayload(id: string): SessionFooter {
+  const cache = readJsonSafe<StatuslineCache>(path.join(STATUSLINE_CACHE_DIR, `${id}.json`));
+  const global = readJsonSafe<GlobalMeta>(STATUSLINE_GLOBAL_META);
   const cwd = cache?.workspace?.current_dir || cache?.cwd || null;
   const { branch, dirty } = gitInfo(cwd);
   const { added: linesAdded, removed: linesRemoved } = uncommittedLineStats(cwd);
@@ -64,5 +85,3 @@ function buildFooterPayload(id) {
     worktree,
   };
 }
-
-module.exports = { readJsonSafe, removeFooterCacheFor, buildFooterPayload };

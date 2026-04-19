@@ -1,15 +1,16 @@
-const fs = require('node:fs');
-const { CONFIG_DIR, CONFIG_FILE } = require('./paths');
+import fs from 'node:fs';
+import type { AppConfig } from '@shared/types';
+import { CONFIG_DIR, CONFIG_FILE } from './paths';
 
-const DEFAULT_CONFIG = Object.freeze({
+export const DEFAULT_CONFIG: Readonly<AppConfig> = Object.freeze({
   standbyTimeoutMs: 10 * 60 * 1000,
 });
 
-const MIN_STANDBY_MS = 60 * 1000;
-const MAX_STANDBY_MS = 24 * 60 * 60 * 1000;
+export const MIN_STANDBY_MS = 60 * 1000;
+export const MAX_STANDBY_MS = 24 * 60 * 60 * 1000;
 
-function validateConfig(partial) {
-  const out = {};
+export function validateConfig(partial: Record<string, unknown>): Partial<AppConfig> {
+  const out: Partial<AppConfig> = {};
   if (partial.standbyTimeoutMs !== undefined) {
     const v = Number(partial.standbyTimeoutMs);
     if (!Number.isFinite(v) || v < MIN_STANDBY_MS || v > MAX_STANDBY_MS) {
@@ -20,7 +21,7 @@ function validateConfig(partial) {
   return out;
 }
 
-function loadConfig() {
+export function loadConfig(): AppConfig {
   try {
     const raw = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
     const validated = validateConfig(raw);
@@ -30,34 +31,23 @@ function loadConfig() {
   }
 }
 
-function saveConfig(cfg) {
+export function saveConfig(cfg: AppConfig): void {
   try {
     fs.mkdirSync(CONFIG_DIR, { recursive: true });
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2));
   } catch (err) {
-    console.warn(`[config] save failed: ${err.message}`);
+    console.warn(`[config] save failed: ${(err as Error).message}`);
   }
 }
 
 let currentConfig = loadConfig();
 
-function getConfig() {
+export function getConfig(): AppConfig {
   return currentConfig;
 }
 
-function updateConfig(partial) {
+export function updateConfig(partial: Partial<AppConfig>): AppConfig {
   currentConfig = { ...currentConfig, ...partial };
   saveConfig(currentConfig);
   return currentConfig;
 }
-
-module.exports = {
-  DEFAULT_CONFIG,
-  MIN_STANDBY_MS,
-  MAX_STANDBY_MS,
-  validateConfig,
-  loadConfig,
-  saveConfig,
-  getConfig,
-  updateConfig,
-};
