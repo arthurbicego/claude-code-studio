@@ -1039,6 +1039,17 @@ app.post('/api/sessions/:id/unarchive', (req, res) => {
   res.json({ ok: true, archived: false });
 });
 
+app.get('/api/prefs', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json(appState.prefs);
+});
+
+app.put('/api/prefs', (req, res) => {
+  appState.prefs = sanitizePrefs(req.body);
+  saveState(appState);
+  res.json(appState.prefs);
+});
+
 app.delete('/api/sessions/:id', (req, res) => {
   const id = String(req.params.id || '').trim();
   if (!id) return res.status(400).json({ error: 'id obrigatório' });
@@ -1440,20 +1451,50 @@ function getConfig() {
 
 const STATE_FILE = path.join(CONFIG_DIR, 'state.json');
 
+function defaultPrefs() {
+  return { sections: {}, expanded: [], projectOrder: [] };
+}
+
+function sanitizePrefs(raw) {
+  if (!raw || typeof raw !== 'object') return defaultPrefs();
+  const sectionsRaw = raw.sections && typeof raw.sections === 'object' ? raw.sections : {};
+  const sections = {};
+  for (const [name, value] of Object.entries(sectionsRaw)) {
+    if (!value || typeof value !== 'object') continue;
+    sections[name] = {
+      groupByProject: typeof value.groupByProject === 'boolean' ? value.groupByProject : true,
+      sortBy:
+        value.sortBy === 'createdAt' || value.sortBy === 'lastResponse'
+          ? value.sortBy
+          : 'lastResponse',
+    };
+  }
+  const expanded = Array.isArray(raw.expanded)
+    ? raw.expanded.filter(x => typeof x === 'string')
+    : [];
+  const projectOrder = Array.isArray(raw.projectOrder)
+    ? raw.projectOrder.filter(x => typeof x === 'string')
+    : [];
+  return { sections, expanded, projectOrder };
+}
+
 function loadState() {
   try {
     const raw = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
     const archived = Array.isArray(raw.archived) ? raw.archived.filter(x => typeof x === 'string') : [];
-    return { archived: new Set(archived) };
+    return { archived: new Set(archived), prefs: sanitizePrefs(raw.prefs) };
   } catch {
-    return { archived: new Set() };
+    return { archived: new Set(), prefs: defaultPrefs() };
   }
 }
 
 function saveState(state) {
   try {
     fs.mkdirSync(CONFIG_DIR, { recursive: true });
-    fs.writeFileSync(STATE_FILE, JSON.stringify({ archived: [...state.archived] }, null, 2));
+    fs.writeFileSync(
+      STATE_FILE,
+      JSON.stringify({ archived: [...state.archived], prefs: state.prefs }, null, 2),
+    );
   } catch (err) {
     console.warn(`[state] save failed: ${err.message}`);
   }
