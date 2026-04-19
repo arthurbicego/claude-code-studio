@@ -1,41 +1,43 @@
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-const pty = require('node-pty');
-
-const { CLAUDE_BIN } = require('./claude-bin');
-const { getConfig } = require('./config');
-const { STATUSLINE_CACHE_DIR, STATUSLINE_TAP } = require('./paths');
-const {
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import type { LiveSessionState } from '@shared/types';
+import type { IPty } from 'node-pty';
+import * as pty from 'node-pty';
+import type { WebSocket } from 'ws';
+import { CLAUDE_BIN } from './claude-bin';
+import { getConfig } from './config';
+import { STATUSLINE_CACHE_DIR, STATUSLINE_TAP } from './paths';
+import {
   UUID_RE,
   VALID_EFFORT,
   VALID_MODEL_RE,
   VALID_PERMISSION_MODE,
   WORKTREE_NAME_RE,
-} = require('./validators');
+} from './validators';
 
-const ACTIVE_OUTPUT_WINDOW_MS = 600;
-const TAIL_BUFFER_SIZE = 4096;
-const IDLE_SWEEP_INTERVAL_MS = 30 * 1000;
+export const ACTIVE_OUTPUT_WINDOW_MS = 600;
+export const TAIL_BUFFER_SIZE = 4096;
+export const IDLE_SWEEP_INTERVAL_MS = 30 * 1000;
 
-const ANSI_RE = /\x1b\[[0-9;?]*[A-Za-z]|\x1b\][^\x07]*\x07|\x1b[=>]|\r/g;
+export const ANSI_RE = /\x1b\[[0-9;?]*[A-Za-z]|\x1b\][^\x07]*\x07|\x1b[=>]|\r/g;
 
-function stripAnsi(s) {
+export function stripAnsi(s: string): string {
   return s.replace(ANSI_RE, '');
 }
 
-const APPROVAL_PATTERNS = [
+export const APPROVAL_PATTERNS = [
   /❯\s*\d+\.\s+(Yes|No|Approve|Allow|Accept|Always|Skip|Don't)/i,
   /Do you want to (proceed|allow|approve|continue)/i,
   /Would you like to (proceed|allow|continue)/i,
 ];
 
-function needsApproval(tail) {
+export function needsApproval(tail: string): boolean {
   const s = stripAnsi(tail);
   return APPROVAL_PATTERNS.some((re) => re.test(s));
 }
 
-function buildStatusLineSettingsArg() {
+export function buildStatusLineSettingsArg(): string | null {
   try {
     if (!fs.existsSync(STATUSLINE_TAP)) return null;
   } catch {
@@ -46,17 +48,34 @@ function buildStatusLineSettingsArg() {
   });
 }
 
-function buildPtyArgs({ resume, sessionId, model, effort, permissionMode, worktree }) {
-  const args = [];
+export type PtyArgs = {
+  resume?: unknown;
+  sessionId?: unknown;
+  model?: unknown;
+  effort?: unknown;
+  permissionMode?: unknown;
+  worktree?: unknown;
+};
+
+export function buildPtyArgs({
+  resume,
+  sessionId,
+  model,
+  effort,
+  permissionMode,
+  worktree,
+}: PtyArgs): string[] {
+  const args: string[] = [];
   const tapSettings = buildStatusLineSettingsArg();
   if (tapSettings) args.push('--settings', tapSettings);
-  if (resume) {
+  if (resume && typeof resume === 'string') {
     args.push('--resume', resume);
   } else {
-    if (sessionId && UUID_RE.test(sessionId)) args.push('--session-id', sessionId);
-    if (model && VALID_MODEL_RE.test(model)) args.push('--model', model);
-    if (effort && VALID_EFFORT.has(effort)) args.push('--effort', effort);
-    if (permissionMode && VALID_PERMISSION_MODE.has(permissionMode)) {
+    if (typeof sessionId === 'string' && UUID_RE.test(sessionId))
+      args.push('--session-id', sessionId);
+    if (typeof model === 'string' && VALID_MODEL_RE.test(model)) args.push('--model', model);
+    if (typeof effort === 'string' && VALID_EFFORT.has(effort)) args.push('--effort', effort);
+    if (typeof permissionMode === 'string' && VALID_PERMISSION_MODE.has(permissionMode)) {
       args.push('--permission-mode', permissionMode);
     }
     if (typeof worktree === 'string' && worktree.length > 0) {
@@ -70,8 +89,9 @@ function buildPtyArgs({ resume, sessionId, model, effort, permissionMode, worktr
   return args;
 }
 
-function buildChildEnv() {
+export function buildChildEnv(): NodeJS.ProcessEnv {
   const env = { ...process.env };
+  if (!CLAUDE_BIN) return env;
   const claudeDir = path.dirname(CLAUDE_BIN);
   if (!env.PATH?.split(':').includes(claudeDir)) {
     env.PATH = `${claudeDir}:${env.PATH || ''}`;
@@ -79,7 +99,8 @@ function buildChildEnv() {
   return env;
 }
 
-function spawnClaudePty({ cwd, args }) {
+export function spawnClaudePty({ cwd, args }: { cwd?: string; args: string[] }): IPty {
+  if (!CLAUDE_BIN) throw new Error('claude binary not found');
   const targetCwd = cwd && fs.existsSync(cwd) ? cwd : os.homedir();
   console.log(`[pty] spawn: claude ${args.join(' ')}  (cwd=${targetCwd})`);
   return pty.spawn(CLAUDE_BIN, args, {
@@ -91,17 +112,33 @@ function spawnClaudePty({ cwd, args }) {
   });
 }
 
-function safeSend(ws, obj) {
-  if (ws.readyState === ws.OPEN) {
+export function safeSend(ws: WebSocket, obj: unknown): void {
+  // biome-ignore lint/suspicious/noExplicitAny: ws type definitions require OPEN constant check
+  if (ws.readyState === (ws as any).OPEN) {
     try {
       ws.send(JSON.stringify(obj));
     } catch {}
   }
 }
 
-const liveSessions = new Map();
+export type LiveSessionEntry = {
+  sessionKey: string;
+  pty: IPty;
+  cwd?: string;
+  args: string[];
+  subscribers: Set<WebSocket>;
+  focusedWs: Set<WebSocket>;
+  lastOutputAt: number;
+  idleSince: number | null;
+  tail: string;
+  cachedState: LiveSessionState;
+  exited: Promise<void>;
+  standbyRecheckTimer?: NodeJS.Timeout | null;
+};
 
-function computeState(entry) {
+export const liveSessions = new Map<string, LiveSessionEntry>();
+
+export function computeState(entry: LiveSessionEntry | undefined | null): LiveSessionState {
   if (!entry) return 'finalizado';
   if (entry.focusedWs && entry.focusedWs.size > 0) return 'ativo';
   if (needsApproval(entry.tail)) return 'aguardando';
@@ -109,16 +146,16 @@ function computeState(entry) {
   return 'standby';
 }
 
-function maybeBroadcastStateChange(entry) {
+export function maybeBroadcastStateChange(entry: LiveSessionEntry): void {
   const current = computeState(entry);
   if (current !== entry.cachedState) {
     entry.cachedState = current;
-    // lazy require to break cycle with sse.js
+    // lazy require to break cycle with sse.ts
     require('./sse').broadcastActivity();
   }
 }
 
-function scheduleStandbyRecheck(entry) {
+export function scheduleStandbyRecheck(entry: LiveSessionEntry): void {
   if (entry.standbyRecheckTimer) clearTimeout(entry.standbyRecheckTimer);
   entry.standbyRecheckTimer = setTimeout(() => {
     entry.standbyRecheckTimer = null;
@@ -126,16 +163,19 @@ function scheduleStandbyRecheck(entry) {
   }, ACTIVE_OUTPUT_WINDOW_MS + 100);
 }
 
-function getOrCreateLiveSession(sessionKey, { cwd, args }) {
+export function getOrCreateLiveSession(
+  sessionKey: string,
+  { cwd, args }: { cwd?: string; args: string[] },
+): LiveSessionEntry {
   const existing = liveSessions.get(sessionKey);
   if (existing) return existing;
 
   const term = spawnClaudePty({ cwd, args });
-  let resolveExit;
-  const exited = new Promise((resolve) => {
+  let resolveExit!: () => void;
+  const exited = new Promise<void>((resolve) => {
     resolveExit = resolve;
   });
-  const entry = {
+  const entry: LiveSessionEntry = {
     sessionKey,
     pty: term,
     cwd,
@@ -149,7 +189,7 @@ function getOrCreateLiveSession(sessionKey, { cwd, args }) {
     exited,
   };
 
-  term.onData((data) => {
+  term.onData((data: string) => {
     entry.lastOutputAt = Date.now();
     entry.tail += data;
     if (entry.tail.length > TAIL_BUFFER_SIZE) {
@@ -160,7 +200,7 @@ function getOrCreateLiveSession(sessionKey, { cwd, args }) {
     scheduleStandbyRecheck(entry);
   });
 
-  term.onExit(({ exitCode }) => {
+  term.onExit(({ exitCode }: { exitCode: number }) => {
     if (entry.standbyRecheckTimer) clearTimeout(entry.standbyRecheckTimer);
     for (const ws of entry.subscribers) {
       safeSend(ws, { type: 'exit', exitCode });
@@ -180,13 +220,16 @@ function getOrCreateLiveSession(sessionKey, { cwd, args }) {
   return entry;
 }
 
-function liveSessionWorkspaces() {
-  const counts = new Map();
+export function liveSessionWorkspaces(): Map<string, number> {
+  const counts = new Map<string, number>();
   for (const [key, entry] of liveSessions) {
-    let target = entry.cwd || null;
+    let target: string | null = entry.cwd || null;
     try {
       const cachePath = path.join(STATUSLINE_CACHE_DIR, `${key}.json`);
-      const cache = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+      const cache = JSON.parse(fs.readFileSync(cachePath, 'utf8')) as {
+        workspace?: { current_dir?: string };
+        cwd?: string;
+      };
       const wd = cache?.workspace?.current_dir || cache?.cwd;
       if (wd) target = wd;
     } catch {}
@@ -200,7 +243,7 @@ function liveSessionWorkspaces() {
   return counts;
 }
 
-function startIdleSweep() {
+export function startIdleSweep(): NodeJS.Timeout {
   return setInterval(() => {
     const now = Date.now();
     const timeout = getConfig().standbyTimeoutMs;
@@ -217,25 +260,3 @@ function startIdleSweep() {
     }
   }, IDLE_SWEEP_INTERVAL_MS).unref();
 }
-
-module.exports = {
-  ACTIVE_OUTPUT_WINDOW_MS,
-  TAIL_BUFFER_SIZE,
-  IDLE_SWEEP_INTERVAL_MS,
-  ANSI_RE,
-  stripAnsi,
-  APPROVAL_PATTERNS,
-  needsApproval,
-  buildStatusLineSettingsArg,
-  buildPtyArgs,
-  buildChildEnv,
-  spawnClaudePty,
-  safeSend,
-  liveSessions,
-  computeState,
-  maybeBroadcastStateChange,
-  scheduleStandbyRecheck,
-  getOrCreateLiveSession,
-  liveSessionWorkspaces,
-  startIdleSweep,
-};

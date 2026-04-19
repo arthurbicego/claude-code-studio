@@ -1,8 +1,18 @@
-const fs = require('node:fs');
-const path = require('node:path');
-const { USER_AGENTS_DIR, USER_SKILLS_DIR, isAllowedProjectCwd } = require('../paths');
-const { isValidName } = require('../validators');
-const { parseFrontmatter, buildFrontmatter } = require('../frontmatter');
+import fs from 'node:fs';
+import path from 'node:path';
+import type {
+  AgentDetail,
+  AgentScope,
+  AgentSummary,
+  SkillDetail,
+  SkillExtra,
+  SkillScope,
+  SkillSummary,
+} from '@shared/types';
+import type { Express, Request, Response } from 'express';
+import { buildFrontmatter, parseFrontmatter } from '../frontmatter';
+import { isAllowedProjectCwd, USER_AGENTS_DIR, USER_SKILLS_DIR } from '../paths';
+import { isValidName } from '../validators';
 
 const KNOWN_TOOLS = [
   'Bash',
@@ -25,7 +35,10 @@ const KNOWN_TOOLS = [
   'ExitPlanMode',
 ];
 
-function resolveScopeDir(scope, kind, rawCwd) {
+type Kind = 'agent' | 'skill';
+type Scope = AgentScope | SkillScope;
+
+function resolveScopeDir(scope: unknown, kind: Kind, rawCwd: unknown): string | null {
   if (scope === 'user') {
     return kind === 'agent' ? USER_AGENTS_DIR : USER_SKILLS_DIR;
   }
@@ -37,13 +50,13 @@ function resolveScopeDir(scope, kind, rawCwd) {
   return null;
 }
 
-function listAgentsIn(dir) {
+function listAgentsIn(dir: string): AgentSummary[] {
   if (!fs.existsSync(dir)) return [];
-  const entries = [];
+  const entries: AgentSummary[] = [];
   for (const f of fs.readdirSync(dir)) {
     if (!f.endsWith('.md')) continue;
     const fpath = path.join(dir, f);
-    let stat;
+    let stat: fs.Stats;
     try {
       stat = fs.statSync(fpath);
     } catch {
@@ -62,12 +75,12 @@ function listAgentsIn(dir) {
   return entries.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function listSkillsIn(dir) {
+function listSkillsIn(dir: string): SkillSummary[] {
   if (!fs.existsSync(dir)) return [];
-  const entries = [];
+  const entries: SkillSummary[] = [];
   for (const f of fs.readdirSync(dir)) {
     const fpath = path.join(dir, f);
-    let stat;
+    let stat: fs.Stats;
     try {
       stat = fs.statSync(fpath);
     } catch {
@@ -87,15 +100,15 @@ function listSkillsIn(dir) {
   return entries.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function listSkillExtras(dir) {
+function listSkillExtras(dir: string): SkillExtra[] {
   if (!fs.existsSync(dir)) return [];
-  const out = [];
-  const walk = (cur, rel) => {
+  const out: SkillExtra[] = [];
+  const walk = (cur: string, rel: string) => {
     for (const f of fs.readdirSync(cur)) {
       if (rel === '' && f === 'SKILL.md') continue;
       const fpath = path.join(cur, f);
       const relPath = rel ? `${rel}/${f}` : f;
-      let stat;
+      let stat: fs.Stats;
       try {
         stat = fs.statSync(fpath);
       } catch {
@@ -109,20 +122,21 @@ function listSkillExtras(dir) {
   return out.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
 }
 
-function agentResponse(name, dir) {
+function agentResponse(name: string, dir: string): AgentDetail | null {
   const filePath = path.join(dir, `${name}.md`);
   if (!fs.existsSync(filePath)) return null;
   const content = fs.readFileSync(filePath, 'utf8');
   const { frontmatter, body } = parseFrontmatter(content);
+  const toolsField = frontmatter.tools;
   return {
     name,
     path: filePath,
     description: typeof frontmatter.description === 'string' ? frontmatter.description : '',
     model: typeof frontmatter.model === 'string' ? frontmatter.model : '',
-    tools: Array.isArray(frontmatter.tools)
-      ? frontmatter.tools
-      : typeof frontmatter.tools === 'string' && frontmatter.tools.trim()
-        ? frontmatter.tools
+    tools: Array.isArray(toolsField)
+      ? toolsField
+      : typeof toolsField === 'string' && toolsField.trim()
+        ? toolsField
             .split(',')
             .map((s) => s.trim())
             .filter(Boolean)
@@ -132,7 +146,7 @@ function agentResponse(name, dir) {
   };
 }
 
-function skillResponse(name, dir) {
+function skillResponse(name: string, dir: string): SkillDetail | null {
   const skillDir = path.join(dir, name);
   const filePath = path.join(skillDir, 'SKILL.md');
   if (!fs.existsSync(filePath)) return null;
@@ -149,39 +163,34 @@ function skillResponse(name, dir) {
   };
 }
 
-function rmDirRecursive(dir) {
-  if (typeof fs.rmSync === 'function') {
-    fs.rmSync(dir, { recursive: true, force: true });
-  } else {
-    fs.rmdirSync(dir, { recursive: true });
-  }
+function rmDirRecursive(dir: string): void {
+  fs.rmSync(dir, { recursive: true, force: true });
 }
 
-function register(app) {
-  app.get('/api/agents', (req, res) => {
+export function register(app: Express): void {
+  app.get('/api/agents', (req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store');
-    const out = { user: listAgentsIn(USER_AGENTS_DIR), project: [] };
+    const out = { user: listAgentsIn(USER_AGENTS_DIR), project: [] as AgentSummary[] };
     if (req.query.cwd) {
-      const dir = resolveScopeDir('project', 'agent', req.query.cwd);
+      const dir = resolveScopeDir('project' satisfies Scope, 'agent', req.query.cwd);
       if (dir) out.project = listAgentsIn(dir);
     }
     res.json(out);
   });
 
-  app.get('/api/agents/file', (req, res) => {
+  app.get('/api/agents/file', (req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store');
-    const scope = req.query.scope;
-    const name = req.query.name;
+    const { scope, name } = req.query;
     const dir = resolveScopeDir(scope, 'agent', req.query.cwd);
     if (!dir) return res.status(400).json({ error: 'scope inválido' });
     if (!isValidName(name)) return res.status(400).json({ error: 'nome inválido' });
-    const data = agentResponse(String(name), dir);
+    const data = agentResponse(name, dir);
     if (!data) return res.status(404).json({ error: 'agente não encontrado' });
     res.json(data);
   });
 
-  app.put('/api/agents/file', (req, res) => {
-    const body = req.body || {};
+  app.put('/api/agents/file', (req: Request, res: Response) => {
+    const body = (req.body || {}) as Record<string, unknown>;
     const dir = resolveScopeDir(body.scope, 'agent', body.cwd);
     if (!dir) return res.status(400).json({ error: 'scope inválido' });
     const name = body.name;
@@ -190,7 +199,9 @@ function register(app) {
     if (!description) return res.status(400).json({ error: 'description obrigatório' });
     const model = typeof body.model === 'string' ? body.model.trim() : '';
     const tools = Array.isArray(body.tools)
-      ? body.tools.filter((t) => typeof t === 'string' && t.trim())
+      ? (body.tools as unknown[]).filter(
+          (t): t is string => typeof t === 'string' && t.trim() !== '',
+        )
       : [];
     const promptBody = typeof body.body === 'string' ? body.body : '';
     const previousName =
@@ -198,7 +209,7 @@ function register(app) {
         ? body.previousName
         : null;
 
-    const fm = { name, description };
+    const fm: Record<string, string | string[]> = { name, description };
     if (model) fm.model = model;
     if (tools.length > 0) fm.tools = tools;
     const fullContent =
@@ -220,13 +231,12 @@ function register(app) {
       fs.writeFileSync(targetFile, fullContent, 'utf8');
       res.json(agentResponse(name, dir));
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: (err as Error).message });
     }
   });
 
-  app.delete('/api/agents/file', (req, res) => {
-    const scope = req.query.scope;
-    const name = req.query.name;
+  app.delete('/api/agents/file', (req: Request, res: Response) => {
+    const { scope, name } = req.query;
     const dir = resolveScopeDir(scope, 'agent', req.query.cwd);
     if (!dir) return res.status(400).json({ error: 'scope inválido' });
     if (!isValidName(name)) return res.status(400).json({ error: 'nome inválido' });
@@ -235,34 +245,33 @@ function register(app) {
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       res.json({ ok: true });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: (err as Error).message });
     }
   });
 
-  app.get('/api/skills', (req, res) => {
+  app.get('/api/skills', (req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store');
-    const out = { user: listSkillsIn(USER_SKILLS_DIR), project: [] };
+    const out = { user: listSkillsIn(USER_SKILLS_DIR), project: [] as SkillSummary[] };
     if (req.query.cwd) {
-      const dir = resolveScopeDir('project', 'skill', req.query.cwd);
+      const dir = resolveScopeDir('project' satisfies Scope, 'skill', req.query.cwd);
       if (dir) out.project = listSkillsIn(dir);
     }
     res.json(out);
   });
 
-  app.get('/api/skills/file', (req, res) => {
+  app.get('/api/skills/file', (req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store');
-    const scope = req.query.scope;
-    const name = req.query.name;
+    const { scope, name } = req.query;
     const dir = resolveScopeDir(scope, 'skill', req.query.cwd);
     if (!dir) return res.status(400).json({ error: 'scope inválido' });
     if (!isValidName(name)) return res.status(400).json({ error: 'nome inválido' });
-    const data = skillResponse(String(name), dir);
+    const data = skillResponse(name, dir);
     if (!data) return res.status(404).json({ error: 'skill não encontrada' });
     res.json(data);
   });
 
-  app.put('/api/skills/file', (req, res) => {
-    const body = req.body || {};
+  app.put('/api/skills/file', (req: Request, res: Response) => {
+    const body = (req.body || {}) as Record<string, unknown>;
     const dir = resolveScopeDir(body.scope, 'skill', body.cwd);
     if (!dir) return res.status(400).json({ error: 'scope inválido' });
     const name = body.name;
@@ -295,29 +304,26 @@ function register(app) {
       fs.writeFileSync(path.join(targetDir, 'SKILL.md'), fullContent, 'utf8');
       res.json(skillResponse(name, dir));
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: (err as Error).message });
     }
   });
 
-  app.delete('/api/skills/file', (req, res) => {
-    const scope = req.query.scope;
-    const name = req.query.name;
+  app.delete('/api/skills/file', (req: Request, res: Response) => {
+    const { scope, name } = req.query;
     const dir = resolveScopeDir(scope, 'skill', req.query.cwd);
     if (!dir) return res.status(400).json({ error: 'scope inválido' });
     if (!isValidName(name)) return res.status(400).json({ error: 'nome inválido' });
-    const skillDir = path.join(dir, String(name));
+    const skillDir = path.join(dir, name);
     try {
       if (fs.existsSync(skillDir)) rmDirRecursive(skillDir);
       res.json({ ok: true });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: (err as Error).message });
     }
   });
 
-  app.get('/api/known-tools', (_req, res) => {
+  app.get('/api/known-tools', (_req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store');
     res.json({ tools: KNOWN_TOOLS });
   });
 }
-
-module.exports = { register };

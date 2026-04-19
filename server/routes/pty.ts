@@ -1,16 +1,23 @@
-const fs = require('node:fs');
-const os = require('node:os');
-const pty = require('node-pty');
-const { USER_SHELL } = require('../claude-bin');
-const {
+import fs from 'node:fs';
+import os from 'node:os';
+import type { Express, Request } from 'express';
+import * as pty from 'node-pty';
+import type { WebSocket } from 'ws';
+import { USER_SHELL } from '../claude-bin';
+import {
   buildPtyArgs,
   getOrCreateLiveSession,
   maybeBroadcastStateChange,
   safeSend,
-} = require('../live-sessions');
+} from '../live-sessions';
 
-function register(app) {
-  app.ws('/pty', (ws, req) => {
+type WsHandler = (ws: WebSocket, req: Request) => void;
+type AppWithWs = Express & { ws: (path: string, handler: WsHandler) => void };
+
+export function register(app: Express): void {
+  const wsApp = app as AppWithWs;
+
+  wsApp.ws('/pty', (ws, req) => {
     const sessionKey = req.query.sessionKey ? String(req.query.sessionKey).trim() : '';
     if (!sessionKey) {
       safeSend(ws, { type: 'error', message: 'sessionKey obrigatório' });
@@ -21,11 +28,14 @@ function register(app) {
     }
 
     const args = buildPtyArgs({ ...req.query, sessionId: sessionKey });
-    let entry;
+    let entry: ReturnType<typeof getOrCreateLiveSession>;
     try {
-      entry = getOrCreateLiveSession(sessionKey, { cwd: req.query.cwd, args });
+      entry = getOrCreateLiveSession(sessionKey, {
+        cwd: typeof req.query.cwd === 'string' ? req.query.cwd : undefined,
+        args,
+      });
     } catch (err) {
-      safeSend(ws, { type: 'error', message: `Failed to spawn claude: ${err.message}` });
+      safeSend(ws, { type: 'error', message: `Failed to spawn claude: ${(err as Error).message}` });
       try {
         ws.close();
       } catch {}
@@ -36,8 +46,8 @@ function register(app) {
     entry.idleSince = null;
     maybeBroadcastStateChange(entry);
 
-    ws.on('message', (raw) => {
-      let msg;
+    ws.on('message', (raw: Buffer) => {
+      let msg: { type?: string; data?: string; cols?: number; rows?: number; active?: boolean };
       try {
         msg = JSON.parse(raw.toString());
       } catch {
@@ -45,11 +55,12 @@ function register(app) {
       }
       if (msg.type === 'input') {
         try {
-          entry.pty.write(msg.data);
+          if (typeof msg.data === 'string') entry.pty.write(msg.data);
         } catch {}
       } else if (msg.type === 'resize') {
         try {
-          entry.pty.resize(msg.cols, msg.rows);
+          if (typeof msg.cols === 'number' && typeof msg.rows === 'number')
+            entry.pty.resize(msg.cols, msg.rows);
         } catch {}
       } else if (msg.type === 'focus') {
         if (msg.active) entry.focusedWs.add(ws);
@@ -68,10 +79,10 @@ function register(app) {
     });
   });
 
-  app.ws('/pty/shell', (ws, req) => {
+  wsApp.ws('/pty/shell', (ws, req) => {
     const rawCwd = req.query.cwd ? String(req.query.cwd) : '';
     const targetCwd = rawCwd && fs.existsSync(rawCwd) ? rawCwd : os.homedir();
-    let term;
+    let term: ReturnType<typeof pty.spawn>;
     try {
       term = pty.spawn(USER_SHELL, ['-l'], {
         name: 'xterm-256color',
@@ -81,23 +92,23 @@ function register(app) {
         env: { ...process.env, TERM: 'xterm-256color' },
       });
     } catch (err) {
-      safeSend(ws, { type: 'error', message: `shell spawn falhou: ${err.message}` });
+      safeSend(ws, { type: 'error', message: `shell spawn falhou: ${(err as Error).message}` });
       try {
         ws.close();
       } catch {}
       return;
     }
 
-    term.onData((data) => safeSend(ws, { type: 'data', data }));
-    term.onExit(({ exitCode }) => {
+    term.onData((data: string) => safeSend(ws, { type: 'data', data }));
+    term.onExit(({ exitCode }: { exitCode: number }) => {
       safeSend(ws, { type: 'exit', exitCode });
       try {
         ws.close();
       } catch {}
     });
 
-    ws.on('message', (raw) => {
-      let msg;
+    ws.on('message', (raw: Buffer) => {
+      let msg: { type?: string; data?: string; cols?: number; rows?: number };
       try {
         msg = JSON.parse(raw.toString());
       } catch {
@@ -105,11 +116,12 @@ function register(app) {
       }
       if (msg.type === 'input') {
         try {
-          term.write(msg.data);
+          if (typeof msg.data === 'string') term.write(msg.data);
         } catch {}
       } else if (msg.type === 'resize') {
         try {
-          term.resize(msg.cols, msg.rows);
+          if (typeof msg.cols === 'number' && typeof msg.rows === 'number')
+            term.resize(msg.cols, msg.rows);
         } catch {}
       }
     });
@@ -121,5 +133,3 @@ function register(app) {
     });
   });
 }
-
-module.exports = { register };

@@ -39,7 +39,7 @@ cleanup() {
 trap cleanup INT TERM
 
 echo "[start] subindo backend (porta ${SERVER_PORT})..."
-(cd "${ROOT}" && node server/index.js) &
+(cd "${ROOT}" && npx tsx server/index.ts) &
 PIDS+=($!)
 
 echo "[start] subindo frontend (porta ${WEB_PORT})..."

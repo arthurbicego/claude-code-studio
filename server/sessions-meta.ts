@@ -1,19 +1,21 @@
-const fs = require('node:fs');
-const path = require('node:path');
-const { CLAUDE_PROJECTS } = require('./paths');
+import fs from 'node:fs';
+import path from 'node:path';
+import { CLAUDE_PROJECTS } from './paths';
 
-const SYSTEM_TAG_RE =
+export const SYSTEM_TAG_RE =
   /^\s*<(command-[\w-]+|local-command-[\w-]+|system-reminder|user-prompt-submit-hook|bash-stdout|bash-stderr)\b/;
 
-function isSystemText(s) {
+export function isSystemText(s: string | null | undefined): boolean {
   return !s || SYSTEM_TAG_RE.test(s);
 }
 
-function fallbackSlugToCwd(slug) {
+export function fallbackSlugToCwd(slug: string): string {
   return `/${slug.replace(/^-/, '').replace(/-/g, '/')}`;
 }
 
-function readSessionMeta(filePath) {
+export type SessionMetaResult = { cwd: string | null; preview: string | null };
+
+export function readSessionMeta(filePath: string): SessionMetaResult {
   try {
     const fd = fs.openSync(filePath, 'r');
     const buf = Buffer.alloc(64 * 1024);
@@ -21,12 +23,12 @@ function readSessionMeta(filePath) {
     fs.closeSync(fd);
     const head = buf.slice(0, n).toString('utf8');
 
-    let cwd = null;
-    let preview = null;
+    let cwd: string | null = null;
+    let preview: string | null = null;
 
     for (const line of head.split('\n')) {
       if (!line) continue;
-      let obj;
+      let obj: Record<string, unknown>;
       try {
         obj = JSON.parse(line);
       } catch {
@@ -36,13 +38,18 @@ function readSessionMeta(filePath) {
       if (!cwd && typeof obj.cwd === 'string') cwd = obj.cwd;
 
       if (!preview && obj.type === 'user' && !obj.isSidechain) {
-        const content = obj.message?.content;
-        let text = null;
+        const msg = obj.message as { content?: unknown } | undefined;
+        const content = msg?.content;
+        let text: string | null = null;
         if (typeof content === 'string') {
           text = content;
         } else if (Array.isArray(content)) {
           const textPart = content.find(
-            (p) => p && p.type === 'text' && typeof p.text === 'string',
+            (p: unknown): p is { type: string; text: string } =>
+              !!p &&
+              typeof p === 'object' &&
+              (p as { type?: unknown }).type === 'text' &&
+              typeof (p as { text?: unknown }).text === 'string',
           );
           if (textPart) text = textPart.text;
         }
@@ -58,7 +65,7 @@ function readSessionMeta(filePath) {
   }
 }
 
-function findSessionFile(id) {
+export function findSessionFile(id: string): string | null {
   if (!fs.existsSync(CLAUDE_PROJECTS)) return null;
   const safeId = String(id).replace(/[^A-Za-z0-9._-]/g, '');
   if (!safeId || safeId !== String(id)) return null;
@@ -69,11 +76,14 @@ function findSessionFile(id) {
   return null;
 }
 
-function scanJsonlLines(filePath, onLine) {
+export function scanJsonlLines(
+  filePath: string,
+  onLine: (obj: Record<string, unknown>) => void,
+): void {
   const content = fs.readFileSync(filePath, 'utf8');
   for (const line of content.split('\n')) {
     if (!line) continue;
-    let obj;
+    let obj: Record<string, unknown>;
     try {
       obj = JSON.parse(line);
     } catch {
@@ -83,15 +93,27 @@ function scanJsonlLines(filePath, onLine) {
   }
 }
 
-function findLastToolUse(sessionFile, toolName) {
-  let last = null;
+export type ToolUseResult = { input: Record<string, unknown>; timestamp: string | null };
+
+export function findLastToolUse(sessionFile: string, toolName: string): ToolUseResult | null {
+  let last: ToolUseResult | null = null;
   try {
     scanJsonlLines(sessionFile, (obj) => {
-      const content = obj?.message?.content;
+      const msg = obj.message as { content?: unknown } | undefined;
+      const content = msg?.content;
       if (!Array.isArray(content)) return;
       for (const part of content) {
-        if (part && part.type === 'tool_use' && part.name === toolName) {
-          last = { input: part.input, timestamp: obj.timestamp || null };
+        if (
+          part &&
+          typeof part === 'object' &&
+          (part as { type?: unknown }).type === 'tool_use' &&
+          (part as { name?: unknown }).name === toolName
+        ) {
+          const p = part as { input: Record<string, unknown> };
+          last = {
+            input: p.input,
+            timestamp: typeof obj.timestamp === 'string' ? obj.timestamp : null,
+          };
         }
       }
     });
@@ -99,7 +121,7 @@ function findLastToolUse(sessionFile, toolName) {
   return last;
 }
 
-function resolveSessionCwd(id) {
+export function resolveSessionCwd(id: string): string | null {
   const fpath = findSessionFile(id);
   if (!fpath) return null;
   const meta = readSessionMeta(fpath);
@@ -107,14 +129,3 @@ function resolveSessionCwd(id) {
   const slug = path.basename(path.dirname(fpath));
   return fallbackSlugToCwd(slug);
 }
-
-module.exports = {
-  SYSTEM_TAG_RE,
-  isSystemText,
-  fallbackSlugToCwd,
-  readSessionMeta,
-  findSessionFile,
-  scanJsonlLines,
-  findLastToolUse,
-  resolveSessionCwd,
-};

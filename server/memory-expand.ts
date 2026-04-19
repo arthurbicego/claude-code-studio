@@ -1,12 +1,13 @@
-const fs = require('node:fs');
-const path = require('node:path');
-const { HOME_DIR_REAL } = require('./paths');
+import fs from 'node:fs';
+import path from 'node:path';
+import type { MemoryImportEntry } from '@shared/types';
+import { HOME_DIR_REAL } from './paths';
 
-const IMPORT_MAX_DEPTH = 5;
-const IMPORT_LINE_RE = /^(\s*)@(\S+)\s*$/;
-const FENCE_RE = /^\s*(```|~~~)/;
+export const IMPORT_MAX_DEPTH = 5;
+export const IMPORT_LINE_RE = /^(\s*)@(\S+)\s*$/;
+export const FENCE_RE = /^\s*(```|~~~)/;
 
-function resolveImportPath(raw, basePath) {
+export function resolveImportPath(raw: string, basePath: string): string | null {
   if (!raw) return null;
   if (raw.startsWith('~/') || raw === '~') {
     return path.join(HOME_DIR_REAL, raw.slice(1));
@@ -15,10 +16,20 @@ function resolveImportPath(raw, basePath) {
   return path.resolve(path.dirname(basePath), raw);
 }
 
-function expandImports(content, basePath, options = {}) {
+export type ExpandResult = {
+  expanded: string;
+  imports: MemoryImportEntry[];
+  truncated: boolean;
+};
+
+export function expandImports(
+  content: string,
+  basePath: string,
+  options: { depth?: number; visited?: Set<string> } = {},
+): ExpandResult {
   const depth = options.depth || 0;
-  const visited = options.visited || new Set();
-  const imports = [];
+  const visited = options.visited || new Set<string>();
+  const imports: MemoryImportEntry[] = [];
 
   if (depth >= IMPORT_MAX_DEPTH) {
     return {
@@ -30,7 +41,7 @@ function expandImports(content, basePath, options = {}) {
 
   const lines = (content || '').split('\n');
   let inFence = false;
-  const out = [];
+  const out: string[] = [];
   let truncated = false;
 
   for (const line of lines) {
@@ -52,7 +63,14 @@ function expandImports(content, basePath, options = {}) {
 
     const rawPath = m[2];
     const resolved = resolveImportPath(rawPath, basePath);
-    const entry = { raw: rawPath, resolved, basePath, depth, exists: false, error: null };
+    const entry: MemoryImportEntry = {
+      raw: rawPath,
+      resolved,
+      basePath,
+      depth,
+      exists: false,
+      error: null,
+    };
 
     if (!resolved) {
       entry.error = 'invalid_path';
@@ -77,7 +95,7 @@ function expandImports(content, basePath, options = {}) {
       continue;
     }
 
-    let stat;
+    let stat: fs.Stats | null;
     try {
       stat = fs.statSync(resolved);
     } catch {
@@ -91,13 +109,13 @@ function expandImports(content, basePath, options = {}) {
     }
 
     entry.exists = true;
-    let inner;
+    let inner: string;
     try {
       inner = fs.readFileSync(resolved, 'utf8');
     } catch (err) {
-      entry.error = err.message;
+      entry.error = (err as Error).message;
       imports.push(entry);
-      out.push(`<!-- @${rawPath} — erro: ${err.message} -->`);
+      out.push(`<!-- @${rawPath} — erro: ${(err as Error).message} -->`);
       continue;
     }
 
@@ -111,11 +129,3 @@ function expandImports(content, basePath, options = {}) {
 
   return { expanded: out.join('\n'), imports, truncated };
 }
-
-module.exports = {
-  IMPORT_MAX_DEPTH,
-  IMPORT_LINE_RE,
-  FENCE_RE,
-  resolveImportPath,
-  expandImports,
-};

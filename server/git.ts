@@ -1,10 +1,10 @@
-const { execSync, execFileSync } = require('node:child_process');
-const fs = require('node:fs');
-const path = require('node:path');
+import { execFileSync, execSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 
-const UNTRACKED_MAX_BYTES = 2 * 1024 * 1024;
+export const UNTRACKED_MAX_BYTES = 2 * 1024 * 1024;
 
-function runGit(cwd, args) {
+export function runGit(cwd: string, args: string): string {
   try {
     return execSync(`git --no-optional-locks ${args}`, {
       cwd,
@@ -17,7 +17,7 @@ function runGit(cwd, args) {
   }
 }
 
-function runGitArgs(cwd, args) {
+export function runGitArgs(cwd: string, args: string[]): string {
   try {
     return execFileSync('git', ['--no-optional-locks', ...args], {
       cwd,
@@ -30,7 +30,7 @@ function runGitArgs(cwd, args) {
   }
 }
 
-function runGitArgsOrThrow(cwd, args) {
+export function runGitArgsOrThrow(cwd: string, args: string[]): string {
   return execFileSync('git', ['--no-optional-locks', ...args], {
     cwd,
     encoding: 'utf8',
@@ -39,7 +39,9 @@ function runGitArgsOrThrow(cwd, args) {
   });
 }
 
-function parseNumstat(raw) {
+export type NumStat = { added: number; removed: number };
+
+export function parseNumstat(raw: string): NumStat {
   let added = 0;
   let removed = 0;
   for (const line of raw.split('\n')) {
@@ -54,7 +56,7 @@ function parseNumstat(raw) {
   return { added, removed };
 }
 
-function countTextLines(s) {
+export function countTextLines(s: string): number {
   if (!s) return 0;
   let n = 0;
   for (let i = 0; i < s.length; i++) if (s.charCodeAt(i) === 10) n++;
@@ -62,7 +64,9 @@ function countTextLines(s) {
   return n;
 }
 
-function gitInfo(cwd) {
+export type GitInfo = { branch: string | null; dirty: boolean };
+
+export function gitInfo(cwd: string | null): GitInfo {
   if (!cwd) return { branch: null, dirty: false };
   try {
     const branch =
@@ -82,7 +86,9 @@ function gitInfo(cwd) {
   }
 }
 
-function uncommittedLineStats(cwd) {
+export type UncommittedLineStats = { added: number | null; removed: number | null };
+
+export function uncommittedLineStats(cwd: string | null): UncommittedLineStats {
   if (!cwd || !fs.existsSync(cwd)) return { added: null, removed: null };
   const tracked = parseNumstat(runGit(cwd, 'diff --numstat HEAD'));
   let added = tracked.added;
@@ -103,14 +109,3 @@ function uncommittedLineStats(cwd) {
   }
   return { added, removed };
 }
-
-module.exports = {
-  UNTRACKED_MAX_BYTES,
-  runGit,
-  runGitArgs,
-  runGitArgsOrThrow,
-  parseNumstat,
-  countTextLines,
-  gitInfo,
-  uncommittedLineStats,
-};
