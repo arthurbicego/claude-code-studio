@@ -1,11 +1,37 @@
 # Claude Code Studio
 
-Local web UI wrapper around the [Claude Code](https://docs.claude.com/en/docs/claude-code) CLI.
-Lets you browse `~/.claude/projects`, resume sessions, manage git worktrees,
-edit memory files (`CLAUDE.md`), agents and skills — all from a browser tab.
+A local mission-control dashboard for the [Claude Code](https://docs.claude.com/en/docs/claude-code)
+CLI. Run multiple sessions in parallel, manage git worktrees first-class, and
+keep an eye on the model's plan, tasks, diff, cost and quota — all in your
+browser, no extra service to configure.
 
-The app runs **only on loopback** (`127.0.0.1`). There is no authentication;
-do not expose it to a network.
+> Runs only on loopback (`127.0.0.1`). There is no authentication; do not
+> expose it to a network.
+
+<!-- TODO: replace with a real screenshot of the running app -->
+<!-- ![Claude Code Studio overview](docs/screenshot.png) -->
+
+## What you get over the bare CLI
+
+- **Multiple concurrent sessions** with state badges (waiting / active /
+  standby / closed) — no more juggling tmux panes.
+- **Worktrees first-class**: create one straight from the *New session*
+  modal, work in isolation, then close the session with a guided dialog
+  (keep / commit / merge fast-forward / discard).
+- **Live mission-control panels** alongside the terminal:
+  - **Plan** — the plan the model is building.
+  - **Tasks** — TODOs the model is tracking.
+  - **Diff** — uncommitted changes in the working tree.
+  - **Terminal** — extra (non-Claude) shell sharing the same cwd.
+  - **Worktrees** — full lifecycle for the project's worktrees.
+- **Cost and quota in the footer**: per-session spend, plus rolling
+  5h/7d quota usage with reset countdowns.
+- **In-app editors** for `CLAUDE.md` (global / shared / personal),
+  agents, skills, and sandbox JSON — auto-saved, no save button.
+- **Searchable sidebar** that filters across Open / History / Archived by
+  preview text or session ID.
+- **i18n**: pt-BR, en-US, es-ES. Persisted in your user preferences.
+- **Help guide** built in (the `?` button) covering every feature.
 
 ## Requirements
 
@@ -61,11 +87,12 @@ The backend discovers the `claude` binary via `which claude`, falling back to
                                        CLAUDE.md files
 ```
 
-- `server/index.js` — single-file Express app. Exposes `/api/*` for sessions,
-  worktrees, memory, agents, skills, prefs, and two WebSockets (`/pty` for a
-  Claude-CLI-backed PTY, `/pty/shell` for a plain shell).
+- `server/` — Express app exposing `/api/*` for sessions, worktrees, memory,
+  agents, skills, prefs, and two WebSockets (`/pty` for a Claude-CLI-backed
+  PTY, `/pty/shell` for a plain shell).
 - `web/` — React + Vite SPA. Uses a Vite proxy so `/api` and `/pty` reach the
   backend during development.
+- `shared/` — TypeScript types shared between server and web.
 - `start.sh` — dev launcher invoked by `npm run dev`.
 - `docs/buffer-replay.md` — notes on terminal buffer replay.
 
@@ -73,12 +100,15 @@ The backend discovers the `claude` binary via `which claude`, falling back to
 
 ```
 .
-├── server/              backend (Express + node-pty)
-│   ├── index.js         all routes and PTY lifecycle
-│   └── scripts/         postinstall helpers
-├── web/                 frontend (React + Vite + Tailwind)
+├── server/              backend (Express + node-pty, TypeScript)
+├── shared/              shared TS types between server and web
+├── web/                 frontend (React + Vite + Tailwind + i18next)
 │   ├── src/
+│   │   ├── components/  panels, dialogs, settings tabs
+│   │   ├── hooks/       prefs, save status, session lifecycle
+│   │   └── i18n/        config + locale JSONs
 │   └── vite.config.ts
+├── e2e/                 Playwright smoke tests
 ├── docs/                design notes
 ├── start.sh             dev launcher
 └── package.json         server deps + top-level scripts
