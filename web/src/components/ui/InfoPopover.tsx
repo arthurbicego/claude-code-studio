@@ -1,6 +1,7 @@
 import { Info, X } from 'lucide-react'
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { cn } from '@/lib/utils'
 
@@ -11,16 +12,14 @@ type Props = {
   children: ReactNode
 }
 
-export function InfoPopover({
-  ariaLabel = 'Mostrar informações',
-  triggerClassName,
-  tooltip,
-  children,
-}: Props) {
+export function InfoPopover({ ariaLabel, triggerClassName, tooltip, children }: Props) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const anchorRef = useRef<HTMLButtonElement | null>(null)
   const popoverRef = useRef<HTMLDivElement | null>(null)
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null)
+
+  const resolvedAriaLabel = ariaLabel ?? t('infoPopover.show')
 
   useLayoutEffect(() => {
     if (!open || !anchorRef.current || !popoverRef.current) return
@@ -68,7 +67,7 @@ export function InfoPopover({
         e.stopPropagation()
         setOpen((v) => !v)
       }}
-      aria-label={ariaLabel}
+      aria-label={resolvedAriaLabel}
       aria-expanded={open}
     >
       <Info size={12} />
@@ -93,12 +92,12 @@ export function InfoPopover({
               onMouseDown={(e) => e.stopPropagation()}
             >
               <div className="min-w-0 flex-1">{children}</div>
-              <Tooltip content="Fechar">
+              <Tooltip content={t('infoPopover.close')}>
                 <button
                   type="button"
                   className="mt-0.5 shrink-0 text-muted-foreground hover:text-foreground cursor-pointer"
                   onClick={() => setOpen(false)}
-                  aria-label="Fechar"
+                  aria-label={t('infoPopover.close')}
                 >
                   <X size={12} />
                 </button>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   type MemoryHierarchyEntry,
   type MemoryVariant,
@@ -18,9 +19,18 @@ function VariantTabs({
   value: MemoryVariant
   onChange: (v: MemoryVariant) => void
 }) {
+  const { t } = useTranslation()
   const options: { id: MemoryVariant; label: string; hint: string }[] = [
-    { id: 'shared', label: 'CLAUDE.md', hint: 'Commitado — regras do time.' },
-    { id: 'local', label: 'CLAUDE.local.md', hint: 'Gitignored — pessoal.' },
+    {
+      id: 'shared',
+      label: t('settings.memory.variants.shared.title'),
+      hint: t('settings.memory.variants.shared.help'),
+    },
+    {
+      id: 'local',
+      label: t('settings.memory.variants.local.title'),
+      hint: t('settings.memory.variants.local.help'),
+    },
   ]
   return (
     <div className="flex flex-col gap-1">
@@ -51,8 +61,14 @@ function VariantTabs({
 }
 
 function HierarchyRow({ entry, cwd }: { entry: MemoryHierarchyEntry; cwd: string }) {
+  const { t } = useTranslation()
   const isProject = entry.scope === 'project'
-  const scopeLabel = entry.scope === 'global' ? 'global' : isProject ? 'projeto' : 'ancestral'
+  const scopeLabel =
+    entry.scope === 'global'
+      ? t('settings.memory.scope.global')
+      : isProject
+        ? t('settings.memory.scope.project')
+        : t('settings.memory.scope.ancestor')
   const variantBadge = entry.variant === 'local' ? '.local' : ''
   const displayPath = isProject ? entry.path.replace(cwd, '.') : entry.path
   return (
@@ -78,27 +94,30 @@ function HierarchyRow({ entry, cwd }: { entry: MemoryHierarchyEntry; cwd: string
 }
 
 function MemoryHierarchyView({ cwd }: { cwd: string }) {
+  const { t } = useTranslation()
   const { entries, loading, error } = useMemoryHierarchy(cwd)
   const existing = entries.filter((e) => e.exists)
 
   if (loading) {
-    return <p className="text-[10px] text-muted-foreground">Carregando hierarquia…</p>
+    return (
+      <p className="text-[10px] text-muted-foreground">{t('settings.memory.loadingHierarchy')}</p>
+    )
   }
   if (error) {
-    return <p className="text-[10px] text-red-400">Erro na hierarquia: {error}</p>
+    return (
+      <p className="text-[10px] text-red-400">{t('settings.memory.hierarchyError', { error })}</p>
+    )
   }
   if (existing.length === 0) {
     return (
-      <p className="text-[10px] text-muted-foreground">
-        Nenhum CLAUDE.md encontrado na cadeia (global + ancestrais + projeto).
-      </p>
+      <p className="text-[10px] text-muted-foreground">{t('settings.memory.hierarchyEmpty')}</p>
     )
   }
 
   return (
     <div className="flex flex-col gap-1 rounded border border-border bg-black/10 p-2">
       <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-        Arquivos carregados pelo CLI
+        {t('settings.memory.hierarchyTitle')}
       </span>
       <ul className="flex flex-col gap-0.5">
         {existing.map((e) => (
@@ -118,8 +137,9 @@ function ProjectPicker({
   value: string | null
   onChange: (cwd: string) => void
 }) {
+  const { t } = useTranslation()
   return (
-    <Field label="Projeto">
+    <Field label={t('settings.memory.project')}>
       <select
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value)}
@@ -128,7 +148,7 @@ function ProjectPicker({
         {projects.map((p) => (
           <option key={p.slug} value={p.cwd}>
             {p.cwd}
-            {p.cwdResolved ? '' : ' (cwd inferido do slug)'}
+            {p.cwdResolved ? '' : t('settings.memory.cwdInferred')}
           </option>
         ))}
       </select>
@@ -137,6 +157,7 @@ function ProjectPicker({
 }
 
 function GlobalMemoryEditor() {
+  const { t } = useTranslation()
   const memory = useGlobalMemory()
   return (
     <MemoryEditor
@@ -145,25 +166,24 @@ function GlobalMemoryEditor() {
       loadError={memory.error}
       onSave={memory.save}
       onReload={memory.reload}
-      placeholder="# Instruções globais&#10;Adicione regras que valem para todas as sessões…"
+      placeholder={t('settings.memory.globalPlaceholder')}
     />
   )
 }
 
 function ProjectMemoryEditor({ project, variant }: { project: Project; variant: MemoryVariant }) {
+  const { t } = useTranslation()
   const memory = useProjectMemory(project.cwd, variant)
   const placeholder =
     variant === 'local'
-      ? `# CLAUDE.local.md de ${project.cwd}\nPreferências pessoais (não commitadas)…`
-      : `# CLAUDE.md de ${project.cwd}\nRegras que valem só para este projeto…`
+      ? t('settings.memory.localPlaceholder', { cwd: project.cwd })
+      : t('settings.memory.sharedPlaceholder', { cwd: project.cwd })
   const hintParts: string[] = []
   if (!project.cwdResolved) {
-    hintParts.push(
-      'O cwd foi inferido do slug do projeto e pode não corresponder ao diretório real.',
-    )
+    hintParts.push(t('settings.memory.cwdInferredWarn'))
   }
   if (variant === 'local') {
-    hintParts.push('Lembre de adicionar CLAUDE.local.md ao seu .gitignore.')
+    hintParts.push(t('settings.memory.rememberGitignore'))
   }
   return (
     <MemoryEditor
@@ -179,6 +199,7 @@ function ProjectMemoryEditor({ project, variant }: { project: Project; variant: 
 }
 
 export function MemoryTab() {
+  const { t } = useTranslation()
   const sessions = useSessionList()
   const projects = useMemo(
     () => [...sessions.projects].sort((a, b) => a.cwd.localeCompare(b.cwd)),
@@ -205,24 +226,24 @@ export function MemoryTab() {
   return (
     <>
       <Section
-        title="Memória global"
-        description="Arquivo ~/.claude/CLAUDE.md. Aplicado a todas as sessões deste usuário."
+        title={t('settings.memory.globalTitle')}
+        description={t('settings.memory.globalHelp')}
       >
         <GlobalMemoryEditor />
       </Section>
 
       <Section
-        title="Memória por projeto"
-        description="O Claude Code carrega CLAUDE.md (time, commitado) e CLAUDE.local.md (pessoal, gitignored) do cwd — e também dos diretórios pais até $HOME."
+        title={t('settings.memory.projectTitle')}
+        description={t('settings.memory.projectHelp')}
       >
         {sessions.loading ? (
-          <p className="text-xs text-muted-foreground">Carregando projetos…</p>
+          <p className="text-xs text-muted-foreground">{t('settings.memory.loadingProjects')}</p>
         ) : sessions.error ? (
-          <p className="text-xs text-red-400">Erro ao carregar projetos: {sessions.error}</p>
-        ) : projects.length === 0 ? (
-          <p className="text-xs text-muted-foreground">
-            Nenhum projeto encontrado em ~/.claude/projects.
+          <p className="text-xs text-red-400">
+            {t('settings.memory.loadProjectsError', { error: sessions.error })}
           </p>
+        ) : projects.length === 0 ? (
+          <p className="text-xs text-muted-foreground">{t('settings.memory.noProjects')}</p>
         ) : (
           <>
             <ProjectPicker projects={projects} value={selectedCwd} onChange={setSelectedCwd} />

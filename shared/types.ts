@@ -205,10 +205,15 @@ export type SectionPrefs = {
   sortBy: SessionSortBy;
 };
 
+export type Locale = 'pt-BR' | 'en-US' | 'es-ES';
+
+export const SUPPORTED_LOCALES: Locale[] = ['pt-BR', 'en-US', 'es-ES'];
+
 export type Prefs = {
   sections: Record<string, SectionPrefs>;
   expanded: string[];
   projectOrder: string[];
+  locale: Locale | null;
 };
 
 export type MemoryFile = {

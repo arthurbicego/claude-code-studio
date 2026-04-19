@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { AppDialogs, type PendingCloseWorktree } from '@/components/AppDialogs'
 import { NewSessionModal } from '@/components/NewSessionModal'
 import { PanelColumns } from '@/components/PanelColumns'
@@ -25,6 +26,7 @@ import type {
 } from '@/types'
 
 export default function App() {
+  const { t } = useTranslation()
   const { projects, loading, error, refreshedAt, refresh } = useSessionList()
   const { defaults } = useSessionDefaults()
   const liveSessions = useLiveSessions(refresh)
@@ -60,7 +62,7 @@ export default function App() {
     path: string
     label: string
   } | null>(null)
-  const [status, setStatus] = useState('Selecione uma sessão na barra lateral ou crie uma nova.')
+  const [status, setStatus] = useState<string>(() => t('terminal.noSessions'))
   const [interruptSignal, setInterruptSignal] = useState(0)
   const [inputSignal, setInputSignal] = useState<{ seq: number; text: string } | null>(null)
 
@@ -180,7 +182,7 @@ export default function App() {
       try {
         if (choice === 'commit') {
           if (!payload.commitMessage) {
-            setClosingError('mensagem de commit obrigatória')
+            setClosingError(t('worktreeClose.commitMissing'))
             return
           }
           const res = await fetch('/api/worktrees/commit', {
@@ -233,7 +235,7 @@ export default function App() {
         setClosingBusy(false)
       }
     },
-    [pendingCloseWorktree, closeSession],
+    [pendingCloseWorktree, closeSession, t],
   )
 
   useEffect(() => {
@@ -376,7 +378,7 @@ export default function App() {
             })}
             {!activeLaunch ? (
               <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-                Nenhuma sessão ativa.
+                {t('terminal.noActiveSession')}
               </div>
             ) : null}
           </div>

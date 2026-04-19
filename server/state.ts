@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import type { Prefs, SessionSortBy } from '@shared/types';
+import { type Locale, type Prefs, type SessionSortBy, SUPPORTED_LOCALES } from '@shared/types';
 import { CONFIG_DIR, STATE_FILE } from './paths';
 
 export const STATE_VERSION = 1;
@@ -10,7 +10,7 @@ export type AppState = {
 };
 
 export function defaultPrefs(): Prefs {
-  return { sections: {}, expanded: [], projectOrder: [] };
+  return { sections: {}, expanded: [], projectOrder: [], locale: null };
 }
 
 export function sanitizePrefs(raw: unknown): Prefs {
@@ -37,7 +37,11 @@ export function sanitizePrefs(raw: unknown): Prefs {
   const projectOrder = Array.isArray(rawObj.projectOrder)
     ? (rawObj.projectOrder as unknown[]).filter((x): x is string => typeof x === 'string')
     : [];
-  return { sections, expanded, projectOrder };
+  const locale: Locale | null =
+    typeof rawObj.locale === 'string' && (SUPPORTED_LOCALES as string[]).includes(rawObj.locale)
+      ? (rawObj.locale as Locale)
+      : null;
+  return { sections, expanded, projectOrder, locale };
 }
 
 export function migrateState(raw: Record<string, unknown>): Record<string, unknown> {

@@ -1,0 +1,592 @@
+{
+  "common": {
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "confirm": "Confirmar",
+    "delete": "Eliminar",
+    "remove": "Quitar",
+    "add": "Añadir",
+    "back": "Volver",
+    "loading": "Cargando…",
+    "errorPrefix": "Error: {{message}}",
+    "openInVscode": "Abrir en VS Code",
+    "copied": "¡Copiado!",
+    "copy": "Copiar {{label}}",
+    "empty": "Vacío.",
+    "tryAgain": "Intentar de nuevo",
+    "dismiss": "Descartar",
+    "openMenu": "Abrir menú",
+    "showInfo": "Mostrar información"
+  },
+  "sidebar": {
+    "appName": "Claude Code Studio",
+    "settings": "Configuración",
+    "newSession": "Nueva sesión",
+    "reloadList": "Recargar lista",
+    "reloadListAt": "Recargar lista · {{time}}",
+    "noSessions": "No se encontraron sesiones. Crea una nueva.",
+    "section": {
+      "open": "Abiertas",
+      "history": "Historial",
+      "archived": "Archivadas"
+    },
+    "state": {
+      "waiting": "Esperando acción del usuario",
+      "active": "Activa — modelo procesando",
+      "standby": "En espera — abierta y ociosa",
+      "closed": "Cerrada"
+    }
+  },
+  "sessions": {
+    "count_one": "{{count}} sesión",
+    "count_other": "{{count}} sesiones",
+    "groupOn": "Mostrar lista plana",
+    "groupOff": "Agrupar por proyecto",
+    "toggleGrouping": "Alternar agrupación",
+    "sortBy": "Ordenar por: {{label}}",
+    "toggleSort": "Alternar orden",
+    "sortLabel": {
+      "lastResponse": "Última respuesta",
+      "createdAt": "Fecha de creación"
+    },
+    "actions": {
+      "title": "Acciones de la sesión",
+      "close": "Cerrar sesión",
+      "archive": "Archivar",
+      "unarchive": "Desarchivar",
+      "delete": "Eliminar"
+    },
+    "project": {
+      "actions": "Acciones del proyecto",
+      "openInVscode": "Abrir en VS Code",
+      "archiveAll": "Archivar sesiones",
+      "deleteAll": "Eliminar sesiones",
+      "showPath": "Mostrar ruta del proyecto",
+      "path": "Ruta del proyecto",
+      "copyPath": "Copiar ruta del proyecto"
+    }
+  },
+  "newSession": {
+    "title": "Nueva sesión",
+    "start": "Iniciar sesión",
+    "config": "Configuración",
+    "model": "Modelo",
+    "effort": "Effort",
+    "permission": "Permiso",
+    "worktree": "Worktree",
+    "isolate": "Aislar en un nuevo worktree",
+    "name": "Nombre (opcional)",
+    "namePlaceholder": "déjalo en blanco para autogenerar",
+    "nameRules": "usa solo letras, números, punto, guion o subrayado (hasta 64 caracteres)",
+    "createdFrom": "creado en {{when}} a partir de {{base}}",
+    "activeWarning": "Ya existe una sesión activa en este directorio — sesiones paralelas en el mismo working tree pueden sobrescribir archivos entre sí.",
+    "activeAutoIsolate": "Ya hay una sesión activa aquí — premarcamos para aislar en worktree.",
+    "existingProjects": "Proyectos existentes",
+    "noProjects": "Aún no hay proyectos.",
+    "activeCount_one": "{{count}} sesión activa aquí",
+    "activeCount_other": "{{count}} sesiones activas aquí",
+    "chooseFolder": "O elegir otra carpeta",
+    "upLevel": "Subir un nivel",
+    "goHome": "Ir a HOME",
+    "loading": "cargando…",
+    "select": "Seleccionar",
+    "hidden": "ocultos",
+    "empty": "Carpeta vacía",
+    "defaultSuffix": "{{value}} (por defecto)"
+  },
+  "dialogs": {
+    "archiveSession": {
+      "unarchiveTitle": "Desarchivar sesión",
+      "archiveTitle": "Archivar sesión",
+      "unarchiveBody": "La sesión ({{id}}…) volverá al historial.",
+      "archiveBody": "La sesión ({{id}}…) se moverá a Archivadas.",
+      "unarchiveConfirm": "Desarchivar",
+      "archiveConfirm": "Archivar"
+    },
+    "openVscode": {
+      "title": "Abrir en VS Code",
+      "body": "El directorio \"{{label}}\" se abrirá en VS Code.",
+      "confirm": "Abrir"
+    },
+    "archiveProject": {
+      "title": "Archivar sesiones del proyecto",
+      "empty": "No hay sesiones activas para archivar en \"{{name}}\".",
+      "body_one": "{{count}} sesión activa se moverá a Archivadas (proyecto: {{name}}).",
+      "body_other": "{{count}} sesiones activas se moverán a Archivadas (proyecto: {{name}}).",
+      "confirm": "Archivar todas"
+    },
+    "deleteProject": {
+      "title": "Eliminar sesiones del proyecto definitivamente",
+      "empty": "No hay sesiones para eliminar en \"{{name}}\".",
+      "body_one": "Esta acción elimina del disco {{count}} sesión del proyecto \"{{name}}\". No se puede deshacer.",
+      "body_other": "Esta acción elimina del disco {{count}} sesiones del proyecto \"{{name}}\". No se puede deshacer.",
+      "confirm": "Eliminar todas"
+    },
+    "deleteSession": {
+      "title": "Eliminar sesión definitivamente",
+      "body": "Esta acción elimina del disco el archivo de la sesión ({{id}}…). No se puede deshacer.",
+      "confirm": "Eliminar"
+    }
+  },
+  "worktreeClose": {
+    "title": "Sesión en worktree con cambios",
+    "cancel": "Cancelar",
+    "mainWorktree": "worktree principal",
+    "nothingAhead": "nada por delante de la base",
+    "uncommitted": "hay cambios sin commitear",
+    "clean": "limpio",
+    "modifiedCount_one": "{{count}} archivo modificado",
+    "modifiedCount_other": "{{count}} archivos modificados",
+    "keep": "Mantener",
+    "keepHint": "Solo cierra la sesión. El worktree y los cambios quedan intactos — puedes retomar luego.",
+    "commit": "Commitear y mantener",
+    "commitHint": "Ejecuta git add -A && git commit en el worktree, luego cierra la sesión.",
+    "commitMessage": "Mensaje del commit",
+    "commitButton": "Commitear y cerrar",
+    "merge": "Mergear en {{base}}",
+    "mergeBaseFallback": "base",
+    "mergeHint": "Fast-forward merge en el worktree principal. Después se cierra la sesión.",
+    "mergeUnavailable": "No disponible: {{reason}}.",
+    "discard": "Descartar",
+    "discardHint": "Resetea todos los cambios y elimina el worktree. Los commits no mergeados también se pierden.",
+    "project": "Proyecto:",
+    "commitMissing": "el mensaje del commit es obligatorio"
+  },
+  "modal": {
+    "close": "Cerrar"
+  },
+  "toolbar": {
+    "sessionInfo": "Información de la sesión",
+    "showSessionInfo": "Mostrar información de la sesión",
+    "sessionId": "ID de la sesión",
+    "copySessionId": "Copiar ID de la sesión",
+    "openInVscode": "Abrir en VS Code"
+  },
+  "sessionActions": {
+    "compact": "Compactar el historial de la conversación",
+    "clear": "Limpiar la conversación",
+    "cost": "Mostrar costo de la sesión",
+    "help": "Mostrar ayuda",
+    "openModelPicker": "Abrir selector de modelo",
+    "model": "Modelo",
+    "openEffortPicker": "Abrir selector de effort",
+    "effort": "Effort",
+    "openPermissionPicker": "Abrir selector de permisos",
+    "permission": "Permiso",
+    "interrupt": "Interrumpir (envía Ctrl+C)"
+  },
+  "sessionFooter": {
+    "waiting": "Esperando datos de la sesión…",
+    "contextOver": ">200k",
+    "worktreeAt": "Worktree en {{path}}",
+    "fields": {
+      "dir": "dir",
+      "git": "git",
+      "model": "model",
+      "context": "context",
+      "diff": "diff",
+      "cost": "cost",
+      "5h": "5h",
+      "7d": "7d"
+    },
+    "relative": {
+      "now": "ahora",
+      "in_d_h": "en {{d}}d{{h}}h",
+      "in_h_m": "en {{h}}h{{m}}m",
+      "in_m": "en {{m}}m",
+      "in_s": "en {{s}}s"
+    }
+  },
+  "terminal": {
+    "newSessionAt": "Nueva sesión en {{cwd}}",
+    "processExited": "Proceso terminó (exit {{code}})",
+    "error": "Error: {{message}}",
+    "connectionClosed": "Conexión cerrada.",
+    "wsError": "Error de WebSocket.",
+    "noSessions": "Selecciona una sesión en la barra lateral o crea una nueva.",
+    "noActiveSession": "No hay sesión activa."
+  },
+  "panels": {
+    "menu": {
+      "open": "Abrir menú de paneles",
+      "tooltip": "Paneles"
+    },
+    "close": "Cerrar {{title}}",
+    "labels": {
+      "diff": "Diff",
+      "terminal": "Terminal",
+      "tasks": "Tasks",
+      "plan": "Plan",
+      "worktrees": "Worktrees"
+    },
+    "diff": {
+      "uncommittedWithBranch": "Sin commitear · {{branch}}",
+      "uncommitted": "Sin commitear",
+      "empty": "No hay cambios para mostrar."
+    },
+    "plan": {
+      "title": "Plan",
+      "empty": "Aún no hay plan.",
+      "help": "Claude escribe el plan aquí mientras explora. Sigue conversando."
+    },
+    "tasks": {
+      "title": "Tasks",
+      "empty": "Aún no hay tasks.",
+      "status": {
+        "inProgress": "En progreso",
+        "pending": "Pendiente",
+        "completed": "Completada"
+      }
+    },
+    "shell": {
+      "title": "Terminal",
+      "errorPrefix": "[error] {{message}}",
+      "exited": "[shell salió con {{code}}]"
+    },
+    "worktrees": {
+      "title": "Worktrees",
+      "titleWithLast": "Worktrees — {{last}}",
+      "reload": "Recargar",
+      "reloadAria": "Recargar worktrees",
+      "createTooltip": "Crear nuevo worktree (abre Nueva sesión)",
+      "createAria": "Crear nuevo worktree",
+      "removed": "Worktree eliminado: {{name}}",
+      "merged": "Mergeado {{branch}} en {{base}}",
+      "mainCannotRemove": "El worktree principal no se puede eliminar",
+      "activeBlocking": "Hay sesión activa — ciérrala antes de eliminar",
+      "modifiedBeforeRemove_one": "{{count}} archivo modificado — commitea o descarta antes",
+      "modifiedBeforeRemove_other": "{{count}} archivos modificados — commitea o descarta antes",
+      "remove": "Eliminar worktree",
+      "main": "Worktree principal",
+      "noCommitsAhead": "Ningún commit por delante de la base",
+      "commitBeforeMerge": "Commitea antes de mergear",
+      "ffMerge": "Mergear en {{base}} (fast-forward)",
+      "viewDiff": "Ver diff",
+      "merge": "Mergear en {{base}}",
+      "mergeBaseFallback": "base",
+      "removeWorktree": "Eliminar worktree",
+      "detached": "(detached)",
+      "mainLabel": "principal",
+      "activeCount_one": "{{count}} sesión activa",
+      "activeCount_other": "{{count}} sesiones activas",
+      "clean": "limpio",
+      "modifiedCount_one": "{{count}} modificado",
+      "modifiedCount_other": "{{count}} modificados",
+      "createdAgo": "creado hace {{age}}",
+      "openSessionAt": "Abrir nueva sesión en {{path}}",
+      "newSessionAria": "Nueva sesión en este worktree",
+      "newSession": "Nueva",
+      "actionsAria": "Acciones del worktree",
+      "actionsTooltip": "Más acciones",
+      "noActionsMain": "Sin acciones para el worktree principal",
+      "noActions": "Sin acciones disponibles",
+      "openSessionFirst": "Abre una sesión para ver los worktrees del proyecto.",
+      "loading": "Cargando worktrees…",
+      "notARepo": "No se encontraron worktrees. ¿Es un repositorio git?",
+      "emptyTitle": "Sin worktrees adicionales",
+      "emptyHelp": "Los worktrees permiten trabajar en branches paralelas sin perturbar el working tree principal. Ideal para correr varias sesiones de Claude sin conflictos de archivos.",
+      "createFirst": "Crear primer worktree",
+      "baseLabel": "base:",
+      "removeConfirmTitle": "Eliminar worktree",
+      "removeConfirmBody": "¿Eliminar worktree {{name}}? El directorio y la branch local se eliminarán (solo si están limpios).",
+      "removeConfirm": "Eliminar",
+      "mergeConfirmTitle": "Mergear worktree",
+      "mergeConfirmBody": "Mergear {{branch}} en {{base}} (fast-forward). La base se actualizará en el worktree principal.",
+      "mergeConfirm": "Mergear",
+      "ageSeconds": "{{n}}s",
+      "ageMinutes": "{{n}}min",
+      "ageHours": "{{n}}h",
+      "ageDays": "{{n}}d"
+    }
+  },
+  "settings": {
+    "title": "Configuración",
+    "loading": "Cargando…",
+    "tabs": {
+      "geral": "General",
+      "sessions": "Sesiones",
+      "sandbox": "Sandbox",
+      "memory": "Memoria",
+      "agents": "Agentes",
+      "skills": "Skills",
+      "sidebar": "Sidebar"
+    },
+    "geral": {
+      "language": {
+        "title": "Idioma",
+        "help": "Idioma de la interfaz. La elección se persiste en tus preferencias.",
+        "options": {
+          "pt-BR": "Português (Brasil)",
+          "en-US": "English (United States)",
+          "es-ES": "Español (España)"
+        }
+      }
+    },
+    "sessions": {
+      "title": "Sesiones",
+      "standbyLabel": "Timeout de standby ({{unit}})",
+      "standbyHelp": "Las sesiones en standby se cierran tras este tiempo. Entre {{min}} y {{max}} {{unit}}. Por defecto: {{def}}.",
+      "standbyError": "Standby debe estar entre {{min}} y {{max}} {{unit}}.",
+      "unit": {
+        "minutes": "minutos",
+        "seconds": "segundos"
+      },
+      "unitOption": {
+        "Seconds": "Segundos",
+        "Minutes": "Minutos"
+      }
+    },
+    "sandbox": {
+      "scope": "Ámbito",
+      "scopeHelp": "Dónde se guarda la configuración. La CLI aplica Managed > Local > Project > User, mezclando arrays entre ámbitos.",
+      "scopes": {
+        "user": "User",
+        "userLocal": "User local",
+        "project": "Proyecto",
+        "projectLocal": "Proyecto local"
+      },
+      "scopeHints": {
+        "user": "Configuración compartida a nivel de usuario (~/.claude).",
+        "userLocal": "Configuración personal (~/.claude/.local). No va al git.",
+        "project": "Configuración del equipo, commiteada en el repositorio (.claude/settings.json).",
+        "projectLocal": "Configuración personal del proyecto (.claude/settings.local.json). No va al git."
+      },
+      "platforms": {
+        "macos": "macOS",
+        "linux": "Linux"
+      },
+      "sections": {
+        "network": {
+          "title": "Red",
+          "help": "Allowlists y bloqueos de hosts/puertos para tráfico saliente."
+        },
+        "filesystem": {
+          "title": "Sistema de archivos",
+          "help": "Restricciones de lectura/escritura por path."
+        },
+        "ripgrep": {
+          "title": "Ripgrep",
+          "help": "Bloquea la ejecución del binario rg dentro del sandbox."
+        },
+        "seccomp": {
+          "title": "Seccomp",
+          "help": "Filtros syscall específicos de Linux."
+        }
+      },
+      "mustBeObject": "Debe ser un objeto JSON.",
+      "invalidJson": "JSON inválido.",
+      "project": "Proyecto",
+      "loadingProjects": "Cargando proyectos…",
+      "noProjects": "No se encontraron proyectos.",
+      "noProjectsExplain": "No se encontraron proyectos en ~/.claude/projects. Abre claude en un directorio primero.",
+      "selectProject": "Selecciona un proyecto arriba para editar la configuración.",
+      "loadingSettings": "Cargando configuración…",
+      "general": "General",
+      "applyToNew": "Vale para nuevos procesos de claude — las sesiones ya abiertas mantienen el estado anterior.",
+      "enable": "Habilitar sandbox",
+      "behavior": "Comportamiento",
+      "failClosed": "Fallar si el runtime de sandbox no está disponible",
+      "failClosedHint": "Sin esto, claude corre fuera del sandbox cuando el runtime no está disponible.",
+      "autoAllowBash": "Auto-permitir Bash cuando hay sandbox",
+      "logOnly": "Solo loguear violaciones (no bloquear)",
+      "allowNested": "Permitir sandbox anidado más débil",
+      "relaxNetwork": "Relajar aislamiento de red",
+      "platforms_label": "Plataformas",
+      "platformsHelp": "Plataformas donde se activa el sandbox. Si está vacío, decide el runtime.",
+      "allowOutside": "Comandos permitidos fuera del sandbox",
+      "allowOutsideHelp": "Los comandos listados corren fuera del sandbox (sujetos a permisos normales).",
+      "allowOutsidePlaceholder": "ej.: npm install",
+      "bypass": "Comandos que bypassean el sandbox",
+      "bypassHelp": "Comandos que no deben ejecutarse vía sandbox (excluidos por completo).",
+      "bypassPlaceholder": "ej.: docker"
+    },
+    "memory": {
+      "globalTitle": "Memoria global",
+      "globalHelp": "Archivo ~/.claude/CLAUDE.md. Aplicado a todas las sesiones de este usuario.",
+      "projectTitle": "Memoria por proyecto",
+      "projectHelp": "Claude Code carga CLAUDE.md (equipo, commiteado) y CLAUDE.local.md (personal, gitignored) del cwd — y también de los directorios padres hasta $HOME.",
+      "loadingProjects": "Cargando proyectos…",
+      "loadProjectsError": "Error cargando proyectos: {{error}}",
+      "noProjects": "No se encontraron proyectos en ~/.claude/projects.",
+      "variants": {
+        "shared": {
+          "title": "CLAUDE.md",
+          "help": "Commiteado — reglas del equipo."
+        },
+        "local": {
+          "title": "CLAUDE.local.md",
+          "help": "Gitignored — personal."
+        }
+      },
+      "scope": {
+        "global": "global",
+        "project": "proyecto",
+        "ancestor": "ancestral"
+      },
+      "loadingHierarchy": "Cargando jerarquía…",
+      "hierarchyError": "Error en la jerarquía: {{error}}",
+      "hierarchyEmpty": "No se encontró ningún CLAUDE.md en la cadena (global + ancestrales + proyecto).",
+      "hierarchyTitle": "Archivos cargados por la CLI",
+      "project": "Proyecto",
+      "cwdInferred": " (cwd inferido del slug)",
+      "globalPlaceholder": "# Instrucciones globales\nAñade reglas que valen para todas las sesiones…",
+      "localPlaceholder": "# CLAUDE.local.md de {{cwd}}\nPreferencias personales (no commiteadas)…",
+      "sharedPlaceholder": "# CLAUDE.md de {{cwd}}\nReglas que valen solo para este proyecto…",
+      "cwdInferredWarn": "El cwd fue inferido del slug del proyecto y puede no coincidir con el directorio real.",
+      "rememberGitignore": "Acuérdate de añadir CLAUDE.local.md a tu .gitignore.",
+      "editor": {
+        "loading": "Cargando…",
+        "loadError": "Error: {{error}}",
+        "tryAgain": "Intentar de nuevo",
+        "edit": "Editar",
+        "preview": "Preview con imports expandidos",
+        "containsImports": "contiene imports @",
+        "error": "Error: {{error}}",
+        "unsaved": "Cambios sin guardar.",
+        "saved": "Guardado.",
+        "willCreate": "El archivo aún no existe — se creará al guardar.",
+        "revert": "Revertir",
+        "save": "Guardar memoria",
+        "saving": "Guardando…",
+        "emptyHint": "Guardar con texto vacío elimina el archivo.",
+        "expandError": "Error al expandir: {{error}}",
+        "expanding": "Expandiendo imports…",
+        "preparing": "Preparando preview…",
+        "empty": "(vacío)",
+        "depthExceeded": "Límite de profundidad alcanzado — algunos imports no fueron expandidos.",
+        "importsResolved_one": "{{count}} import resuelto",
+        "importsResolved_other": "{{count}} imports resueltos",
+        "importsIssues": " ({{count}} con problemas)",
+        "ok": "ok"
+      }
+    },
+    "agents": {
+      "title": "Agentes",
+      "help": "Subagentes invocables por el Claude principal. Cada uno se vuelve un archivo .md con frontmatter.",
+      "noProjects": "No se encontraron proyectos.",
+      "newAgent": "Nuevo agente",
+      "editAgent": "Editar: {{name}}",
+      "loading": "Cargando…",
+      "detailError": "Error: {{error}}",
+      "scope": "Ámbito",
+      "scopeUser": "User (~/.claude)",
+      "scopeProject": "Proyecto",
+      "project": "Proyecto",
+      "loadingProjects": "Cargando proyectos…",
+      "projectsError": "Error: {{error}}",
+      "count_one": "{{count}} agente",
+      "count_other": "{{count}} agentes",
+      "loadingList": "Cargando…",
+      "listError": "Error: {{error}}",
+      "emptyList": "No hay agentes en este ámbito.",
+      "noDescription": "sin description",
+      "modelInherit": "(heredar del contexto)",
+      "name": "Nombre",
+      "nameHelp": "a-z, 0-9 y guiones. Será el nombre del archivo.",
+      "namePlaceholder": "ej.: code-reviewer",
+      "description": "Description",
+      "descriptionHelp": "Cómo el Claude principal decide invocar este agente. Sé específico (ej.: 'usa cuando…').",
+      "descriptionPlaceholder": "Usa este agente cuando…",
+      "model": "Model",
+      "modelHelp": "Vacío = hereda el modelo de la sesión.",
+      "tools": "Tools",
+      "toolsAll": "Acceso a todas las tools (campo omitido).",
+      "toolsRestricted": "Restringe a solo las tools marcadas.",
+      "allTools": "Todas las tools",
+      "systemPrompt": "System prompt",
+      "systemPromptHelp": "Cuerpo del agente. Puede usar markdown.",
+      "systemPromptPlaceholder": "Eres un agente especializado en…",
+      "saveError": "Error: {{error}}",
+      "deletePrompt": "¿Eliminar este agente?",
+      "delete": "Eliminar",
+      "cancel": "Cancelar",
+      "create": "Crear agente",
+      "save": "Guardar",
+      "saving": "Guardando…"
+    },
+    "skills": {
+      "title": "Skills",
+      "help": "Instrucciones cargadas en el contexto bajo demanda. Cada skill es una carpeta con SKILL.md dentro.",
+      "noProjects": "No se encontraron proyectos.",
+      "newSkill": "Nueva skill",
+      "editSkill": "Editar: {{name}}",
+      "loading": "Cargando…",
+      "detailError": "Error: {{error}}",
+      "scope": "Ámbito",
+      "scopeUser": "User (~/.claude)",
+      "scopeProject": "Proyecto",
+      "project": "Proyecto",
+      "loadingProjects": "Cargando proyectos…",
+      "projectsError": "Error: {{error}}",
+      "count_one": "{{count}} skill",
+      "count_other": "{{count}} skills",
+      "loadingList": "Cargando…",
+      "listError": "Error: {{error}}",
+      "emptyList": "No hay skills en este ámbito.",
+      "noDescription": "sin description",
+      "name": "Nombre",
+      "nameHelp": "a-z, 0-9 y guiones. Será el nombre de la carpeta.",
+      "namePlaceholder": "ej.: code-quality-check",
+      "description": "Description",
+      "descriptionHelp": "Cómo Claude decide cargar esta skill. Enfócate en el disparador ('usa cuando…').",
+      "descriptionPlaceholder": "Usa esta skill cuando…",
+      "content": "Contenido (SKILL.md)",
+      "contentHelp": "Markdown. Puede referenciar otros archivos de la carpeta.",
+      "contentPlaceholder": "## Cuándo usar\n...\n\n## Cómo usar\n...",
+      "extras": "Otros archivos de la carpeta (read-only)",
+      "extrasHelp": "Edita estos archivos directamente en {{dir}}.",
+      "saveError": "Error: {{error}}",
+      "deletePrompt": "¿Eliminar la carpeta entera de la skill?",
+      "delete": "Eliminar",
+      "cancel": "Cancelar",
+      "create": "Crear skill",
+      "save": "Guardar",
+      "saving": "Guardando…"
+    },
+    "sidebarPrefs": {
+      "title": "Preferencias de la sidebar",
+      "loading": "Cargando…",
+      "perSection": "Preferencias por sección",
+      "perSectionHelp": "Valores leídos por cada sección de la sidebar (agrupación y orden). Editables directamente desde los botones de cada sección; aquí solo los inspeccionas y reseteas.",
+      "section": {
+        "open": "Abiertas",
+        "history": "Historial",
+        "archived": "Archivadas"
+      },
+      "reset": "Volver al valor por defecto",
+      "default": "Por defecto",
+      "sortOptions": {
+        "lastResponse": "Última respuesta",
+        "createdAt": "Fecha de creación"
+      },
+      "yes": "sí",
+      "no": "no",
+      "expandedGroups": "Grupos expandidos",
+      "expandedGroupsHelp": "Proyectos cuyos grupos quedan abiertos/cerrados entre sesiones. Cada clave tiene el formato <sección>:<slug>.",
+      "noItems": "Sin elementos.",
+      "clearN": "Limpiar ({{count}})",
+      "customOrder": "Orden personalizado de proyectos",
+      "customOrderHelp": "Orden definido por arrastrar y soltar en la sidebar. Sin entradas aquí, el orden es automático (última actividad).",
+      "noOrder": "Ninguno — orden automático.",
+      "resetOrder": "Resetear orden ({{count}})"
+    }
+  },
+  "stringList": {
+    "empty": "Sin elementos.",
+    "remove": "Quitar",
+    "add": "Añadir"
+  },
+  "jsonEditor": {
+    "invalid": "JSON inválido: {{error}}",
+    "emptyHint": "Vacío = elimina la clave de settings.local.json."
+  },
+  "infoPopover": {
+    "show": "Mostrar información",
+    "close": "Cerrar"
+  },
+  "vscode": {
+    "openError": "No se pudo abrir en VS Code: {{message}}"
+  }
+}

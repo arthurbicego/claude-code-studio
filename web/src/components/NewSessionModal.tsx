@@ -1,5 +1,6 @@
 import { AlertTriangle, ArrowUp, Folder, GitBranch, Home } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/Modal'
 import { Button } from '@/components/ui/Button'
 import { Tooltip } from '@/components/ui/Tooltip'
@@ -37,10 +38,6 @@ const PERMISSION_MODES: PermissionMode[] = [
 
 const WORKTREE_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/
 
-function labelWithDefault<T extends string>(value: T, defaultValue: T | null | undefined): string {
-  return value === defaultValue ? `${value} (padrão)` : value
-}
-
 function basename(p: string): string {
   const parts = p.split('/').filter(Boolean)
   return parts[parts.length - 1] || p
@@ -61,6 +58,7 @@ function FieldSelect<T extends string>({
   defaultValue,
   onChange,
 }: FieldSelectProps<T>) {
+  const { t } = useTranslation()
   return (
     <label className="flex flex-col gap-1 text-xs text-muted-foreground">
       <span className="text-[10px] uppercase tracking-wide">{label}</span>
@@ -71,7 +69,7 @@ function FieldSelect<T extends string>({
       >
         {options.map((o) => (
           <option key={o} value={o}>
-            {labelWithDefault(o, defaultValue)}
+            {o === defaultValue ? t('newSession.defaultSuffix', { value: o }) : o}
           </option>
         ))}
       </select>
@@ -88,6 +86,7 @@ export function NewSessionModal({
   onClose,
   onLaunch,
 }: Props) {
+  const { t } = useTranslation()
   const initialModel = (defaults.model as Model) ?? MODELS[0]
   const initialEffort = (defaults.effort as Effort) ?? EFFORTS[2]
   const initialPermission = (defaults.permissionMode as PermissionMode) ?? 'default'
@@ -165,15 +164,15 @@ export function NewSessionModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="Nova sessão"
+      title={t('newSession.title')}
       className="w-[min(720px,94vw)]"
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
-            Cancelar
+            {t('common.cancel')}
           </Button>
           <Button variant="primary" disabled={!canLaunch} onClick={launch}>
-            Iniciar sessão
+            {t('newSession.start')}
           </Button>
         </>
       }
@@ -181,25 +180,25 @@ export function NewSessionModal({
       <div className="flex flex-col overflow-y-auto">
         <section className="border-b border-border p-4">
           <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Configuração
+            {t('newSession.config')}
           </h3>
           <div className="grid grid-cols-3 gap-2">
             <FieldSelect
-              label="Modelo"
+              label={t('newSession.model')}
               value={model}
               options={MODELS}
               defaultValue={defaults.model as Model | null}
               onChange={setModel}
             />
             <FieldSelect
-              label="Effort"
+              label={t('newSession.effort')}
               value={effort}
               options={EFFORTS}
               defaultValue={defaults.effort as Effort | null}
               onChange={setEffort}
             />
             <FieldSelect
-              label="Permissão"
+              label={t('newSession.permission')}
               value={permissionMode}
               options={PERMISSION_MODES}
               defaultValue={defaults.permissionMode as PermissionMode}
@@ -210,7 +209,7 @@ export function NewSessionModal({
 
         <section className="border-b border-border p-4">
           <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Worktree
+            {t('newSession.worktree')}
           </h3>
           <label className="flex cursor-pointer items-center gap-2 text-xs text-foreground">
             <input
@@ -222,30 +221,30 @@ export function NewSessionModal({
               }}
             />
             <GitBranch size={12} className="text-muted-foreground" />
-            <span>Isolar em worktree novo</span>
+            <span>{t('newSession.isolate')}</span>
           </label>
           {isolate ? (
             <div className="mt-2 flex flex-col gap-1">
               <label className="flex flex-col gap-1 text-[11px] text-muted-foreground">
-                <span className="text-[10px] uppercase tracking-wide">Nome (opcional)</span>
+                <span className="text-[10px] uppercase tracking-wide">{t('newSession.name')}</span>
                 <input
                   type="text"
                   value={worktreeName}
                   onChange={(e) => setWorktreeName(e.target.value)}
-                  placeholder="deixar em branco para nome gerado"
+                  placeholder={t('newSession.namePlaceholder')}
                   className={cn(
                     'rounded border border-border bg-background px-2 py-1.5 font-mono text-xs text-foreground focus:border-sky-500 focus:outline-none',
                     nameInvalid && 'border-rose-500',
                   )}
                 />
                 {nameInvalid ? (
-                  <span className="text-[11px] text-rose-400">
-                    use apenas letras, números, ponto, traço ou sublinhado (até 64 caracteres)
-                  </span>
+                  <span className="text-[11px] text-rose-400">{t('newSession.nameRules')}</span>
                 ) : (
                   <span className="text-[11px] text-muted-foreground/80">
-                    criado em <code className="font-mono">.claude/worktrees/&lt;nome&gt;</code> a
-                    partir de <code className="font-mono">origin/HEAD</code>
+                    {t('newSession.createdFrom', {
+                      when: '.claude/worktrees/<nome>',
+                      base: 'origin/HEAD',
+                    })}
                   </span>
                 )}
               </label>
@@ -254,27 +253,24 @@ export function NewSessionModal({
           {conflictsWithLive && !isolate ? (
             <div className="mt-2 flex items-start gap-2 rounded bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-200">
               <AlertTriangle size={12} className="mt-0.5 shrink-0" />
-              <span>
-                Já existe sessão ativa neste diretório — sessões paralelas no mesmo working tree
-                podem sobrescrever arquivos uma da outra.
-              </span>
+              <span>{t('newSession.activeWarning')}</span>
             </div>
           ) : null}
           {conflictsWithLive && isolate && !userTouchedIsolate ? (
             <div className="mt-2 flex items-start gap-2 rounded bg-sky-500/10 px-2 py-1.5 text-[11px] text-sky-200">
               <GitBranch size={12} className="mt-0.5 shrink-0" />
-              <span>Já há sessão ativa aqui — pré-marcamos para isolar em worktree.</span>
+              <span>{t('newSession.activeAutoIsolate')}</span>
             </div>
           ) : null}
         </section>
 
         <section className="border-b border-border p-4">
           <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Projetos existentes
+            {t('newSession.existingProjects')}
           </h3>
           <div className="flex max-h-44 flex-col gap-1 overflow-y-auto">
             {sortedProjects.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Nenhum projeto ainda.</p>
+              <p className="text-xs text-muted-foreground">{t('newSession.noProjects')}</p>
             ) : (
               sortedProjects.map((p) => {
                 const active = selectedCwd === p.cwd
@@ -296,7 +292,7 @@ export function NewSessionModal({
                     </span>
                     <span className="flex items-center gap-1">
                       {liveCount > 0 ? (
-                        <Tooltip content={`${liveCount} sessão(ões) ativa(s) aqui`}>
+                        <Tooltip content={t('newSession.activeCount', { count: liveCount })}>
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[10px] text-emerald-300">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                             {liveCount}
@@ -316,26 +312,26 @@ export function NewSessionModal({
 
         <section className="flex min-h-0 flex-col p-4">
           <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Ou escolher outra pasta
+            {t('newSession.chooseFolder')}
           </h3>
           <div className="mb-2 flex items-center gap-2">
-            <Tooltip content="Subir um nível">
+            <Tooltip content={t('newSession.upLevel')}>
               <Button
                 size="xs"
                 variant="ghost"
                 onClick={() => browser.data?.parent && browser.load(browser.data.parent)}
                 disabled={!browser.data?.parent}
-                aria-label="Subir um nível"
+                aria-label={t('newSession.upLevel')}
               >
                 <ArrowUp size={12} />
               </Button>
             </Tooltip>
-            <Tooltip content="Ir para HOME">
+            <Tooltip content={t('newSession.goHome')}>
               <Button
                 size="xs"
                 variant="ghost"
                 onClick={() => browser.data && browser.load(browser.data.home)}
-                aria-label="Ir para HOME"
+                aria-label={t('newSession.goHome')}
               >
                 <Home size={12} />
               </Button>
@@ -344,7 +340,7 @@ export function NewSessionModal({
               dir="rtl"
               className="flex-1 truncate rounded bg-background px-2 py-1 text-left text-[11px] text-muted-foreground"
             >
-              {browser.data?.path ?? (browser.loading ? 'carregando…' : '')}
+              {browser.data?.path ?? (browser.loading ? t('newSession.loading') : '')}
             </code>
             <Button
               size="xs"
@@ -356,11 +352,11 @@ export function NewSessionModal({
               disabled={!browser.data?.path}
               onClick={() => browser.data && setSelectedCwd(browser.data.path)}
             >
-              Selecionar
+              {t('newSession.select')}
             </Button>
             <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
               <input type="checkbox" checked={browser.showHidden} onChange={browser.toggleHidden} />
-              ocultos
+              {t('newSession.hidden')}
             </label>
           </div>
           <div className="grid max-h-56 grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-1 overflow-y-auto rounded bg-background p-2">
@@ -368,7 +364,7 @@ export function NewSessionModal({
               <p className="col-span-full px-2 py-3 text-xs text-red-400">{browser.error}</p>
             ) : browser.data && browser.data.entries.length === 0 ? (
               <p className="col-span-full px-2 py-3 text-center text-xs text-muted-foreground">
-                Pasta vazia
+                {t('newSession.empty')}
               </p>
             ) : (
               browser.data?.entries.map((e) => (

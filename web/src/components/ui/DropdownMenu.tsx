@@ -1,6 +1,7 @@
 import { Check, MoreVertical } from 'lucide-react'
 import { type ComponentType, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { cn } from '@/lib/utils'
 
@@ -24,13 +25,15 @@ type Props = {
 
 export function DropdownMenu({
   items,
-  ariaLabel = 'Abrir menu',
+  ariaLabel,
   triggerClassName,
   tooltip,
   triggerIcon: TriggerIcon = MoreVertical,
   triggerIconSize = 12,
   disabled,
 }: Props) {
+  const { t } = useTranslation()
+  const resolvedAriaLabel = ariaLabel ?? t('common.openMenu')
   const [open, setOpen] = useState(false)
   const anchorRef = useRef<HTMLButtonElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
@@ -85,7 +88,7 @@ export function DropdownMenu({
         e.stopPropagation()
         setOpen((v) => !v)
       }}
-      aria-label={ariaLabel}
+      aria-label={resolvedAriaLabel}
       aria-expanded={open}
       aria-haspopup="menu"
     >

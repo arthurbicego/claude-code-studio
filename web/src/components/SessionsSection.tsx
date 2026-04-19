@@ -9,12 +9,15 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
+import type { TFunction } from 'i18next'
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { CopyableField } from '@/components/ui/CopyableField'
 import { DropdownMenu, type DropdownMenuItem } from '@/components/ui/DropdownMenu'
 import { InfoPopover } from '@/components/ui/InfoPopover'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { useExpanded } from '@/hooks/useExpanded'
+import { useFormatDate } from '@/hooks/useFormatDate'
 import { useSectionPrefs } from '@/hooks/useSectionPrefs'
 import { cn } from '@/lib/utils'
 import type { LiveSession, Project, SessionLaunch, SessionMeta, SessionSortBy } from '@/types'
@@ -70,8 +73,10 @@ function nextSort(by: SessionSortBy): SessionSortBy {
   return by === 'lastResponse' ? 'createdAt' : 'lastResponse'
 }
 
-function sortLabel(by: SessionSortBy): string {
-  return by === 'lastResponse' ? 'Última resposta' : 'Data de criação'
+function sortLabel(t: TFunction, by: SessionSortBy): string {
+  return by === 'lastResponse'
+    ? t('sessions.sortLabel.lastResponse')
+    : t('sessions.sortLabel.createdAt')
 }
 
 export function SessionsSection({
@@ -96,6 +101,7 @@ export function SessionsSection({
   applyProjectOrder,
   onReorderProject,
 }: Props) {
+  const { t } = useTranslation()
   const { isExpanded, toggle } = useExpanded()
   const { prefs, toggleGrouping, setSortBy } = useSectionPrefs(prefsKey)
   const [sectionOpen, setSectionOpen] = useState(!defaultCollapsed)
@@ -181,7 +187,7 @@ export function SessionsSection({
             className={cn('transition-transform', sectionOpen && 'rotate-90')}
           />
           <span className="flex-1">{title}</span>
-          <Tooltip content={`${total} ${total === 1 ? 'sessão' : 'sessões'}`}>
+          <Tooltip content={t('sessions.count', { count: total })}>
             <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-medium normal-case text-muted-foreground">
               {total}
             </span>
@@ -189,20 +195,20 @@ export function SessionsSection({
         </button>
         {sectionOpen ? (
           <>
-            <Tooltip content={prefs.groupByProject ? 'Listar sem agrupar' : 'Agrupar por projeto'}>
+            <Tooltip content={prefs.groupByProject ? t('sessions.groupOn') : t('sessions.groupOff')}>
               <button
                 onClick={toggleGrouping}
                 className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"
-                aria-label="Alternar agrupamento"
+                aria-label={t('sessions.toggleGrouping')}
               >
                 {prefs.groupByProject ? <FolderTree size={12} /> : <List size={12} />}
               </button>
             </Tooltip>
-            <Tooltip content={`Ordenar por: ${sortLabel(prefs.sortBy)}`}>
+            <Tooltip content={t('sessions.sortBy', { label: sortLabel(t, prefs.sortBy) })}>
               <button
                 onClick={() => setSortBy(nextSort(prefs.sortBy))}
                 className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"
-                aria-label="Alternar ordenação"
+                aria-label={t('sessions.toggleSort')}
               >
                 <ArrowDownAZ size={12} />
               </button>
@@ -212,7 +218,7 @@ export function SessionsSection({
       </div>
 
       {!sectionOpen ? null : total === 0 ? (
-        <p className="px-2 py-2 text-xs text-muted-foreground">Vazio.</p>
+        <p className="px-2 py-2 text-xs text-muted-foreground">{t('common.empty')}</p>
       ) : prefs.groupByProject ? (
         <div className="mt-1">
           {filteredProjects.map((p) => {
@@ -277,9 +283,7 @@ export function SessionsSection({
                     )}
                   />
                   <span className="flex-1 truncate">{basename(p.cwd)}</span>
-                  <Tooltip
-                    content={`${sessions.length} ${sessions.length === 1 ? 'sessão' : 'sessões'}`}
-                  >
+                  <Tooltip content={t('sessions.count', { count: sessions.length })}>
                     <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                       {sessions.length}
                     </span>
@@ -295,24 +299,24 @@ export function SessionsSection({
                     <DropdownMenu
                       items={[
                         {
-                          label: 'Abrir no VS Code',
+                          label: t('sessions.project.openInVscode'),
                           icon: FolderCode,
                           onSelect: () => onOpenProjectInVSCode(p),
                         },
                         {
-                          label: 'Arquivar sessões',
+                          label: t('sessions.project.archiveAll'),
                           icon: Archive,
                           onSelect: () => onArchiveProject(p),
                         },
                         {
-                          label: 'Apagar sessões',
+                          label: t('sessions.project.deleteAll'),
                           icon: Trash2,
                           destructive: true,
                           onSelect: () => onDeleteProject(p),
                         },
                       ]}
-                      ariaLabel="Ações do projeto"
-                      tooltip="Ações do projeto"
+                      ariaLabel={t('sessions.project.actions')}
+                      tooltip={t('sessions.project.actions')}
                     />
                   </div>
                 </div>
@@ -397,13 +401,28 @@ function SessionRow({
   onCloseSession,
   renderState,
 }: RowProps) {
+  const { t } = useTranslation()
+  const formatDate = useFormatDate()
   const isArchived = variant === 'archived'
   const isOpen = variant === 'open'
   const menuItems: DropdownMenuItem[] = [
     isArchived
-      ? { label: 'Desarquivar', icon: ArchiveRestore, onSelect: () => onUnarchive(session.id) }
-      : { label: 'Arquivar', icon: Archive, onSelect: () => onArchive(session.id) },
-    { label: 'Apagar', icon: Trash2, destructive: true, onSelect: () => onDelete(session) },
+      ? {
+          label: t('sessions.actions.unarchive'),
+          icon: ArchiveRestore,
+          onSelect: () => onUnarchive(session.id),
+        }
+      : {
+          label: t('sessions.actions.archive'),
+          icon: Archive,
+          onSelect: () => onArchive(session.id),
+        },
+    {
+      label: t('sessions.actions.delete'),
+      icon: Trash2,
+      destructive: true,
+      onSelect: () => onDelete(session),
+    },
   ]
   return (
     <div
@@ -426,37 +445,42 @@ function SessionRow({
           </span>
         ) : null}
         <span className="mt-1 font-mono text-[10px] text-muted-foreground/60">
-          {new Date(session.mtime).toLocaleString('pt-BR')}
+          {formatDate(session.mtime)}
         </span>
       </button>
       <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
         {isOpen && onCloseSession ? (
-          <Tooltip content="Fechar sessão">
+          <Tooltip content={t('sessions.actions.close')}>
             <button
               onClick={(e) => {
                 e.stopPropagation()
                 onCloseSession(session.id)
               }}
               className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"
-              aria-label="Fechar sessão"
+              aria-label={t('sessions.actions.close')}
             >
               <X size={12} />
             </button>
           </Tooltip>
         ) : null}
-        <DropdownMenu items={menuItems} ariaLabel="Ações da sessão" tooltip="Ações da sessão" />
+        <DropdownMenu
+          items={menuItems}
+          ariaLabel={t('sessions.actions.title')}
+          tooltip={t('sessions.actions.title')}
+        />
       </div>
     </div>
   )
 }
 
 function PathPopover({ path }: { path: string }) {
+  const { t } = useTranslation()
   return (
-    <InfoPopover ariaLabel="Mostrar caminho do projeto" tooltip="Caminho do projeto">
+    <InfoPopover ariaLabel={t('sessions.project.showPath')} tooltip={t('sessions.project.path')}>
       <CopyableField
-        label="Caminho do projeto"
+        label={t('sessions.project.path')}
         value={path}
-        copyAriaLabel="Copiar caminho do projeto"
+        copyAriaLabel={t('sessions.project.copyPath')}
       />
     </InfoPopover>
   )

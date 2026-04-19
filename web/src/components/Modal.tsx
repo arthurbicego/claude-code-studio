@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { type ReactNode, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { cn } from '@/lib/utils'
 
@@ -13,6 +14,7 @@ type Props = {
 }
 
 export function Modal({ open, onClose, title, children, footer, className }: Props) {
+  const { t } = useTranslation()
   useEffect(() => {
     if (!open) return
     const handler = (e: KeyboardEvent) => {
@@ -38,11 +40,11 @@ export function Modal({ open, onClose, title, children, footer, className }: Pro
       >
         <header className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-          <Tooltip content="Fechar">
+          <Tooltip content={t('modal.close')}>
             <button
               className="text-muted-foreground hover:text-foreground cursor-pointer"
               onClick={onClose}
-              aria-label="Fechar"
+              aria-label={t('modal.close')}
             >
               <X size={18} />
             </button>

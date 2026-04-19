@@ -1,5 +1,6 @@
 import { CheckCircle2, Circle, Loader2 } from 'lucide-react'
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useSessionTasks } from '@/hooks/useSessionTasks'
 import { cn } from '@/lib/utils'
 import type { TodoItem } from '@/types'
@@ -12,10 +13,10 @@ type Props = {
 
 const GROUP_ORDER: TodoItem['status'][] = ['in_progress', 'pending', 'completed']
 
-const GROUP_LABEL: Record<TodoItem['status'], string> = {
-  in_progress: 'In progress',
-  pending: 'Pending',
-  completed: 'Completed',
+const GROUP_KEY: Record<TodoItem['status'], string> = {
+  in_progress: 'panels.tasks.status.inProgress',
+  pending: 'panels.tasks.status.pending',
+  completed: 'panels.tasks.status.completed',
 }
 
 function StatusIcon({ status }: { status: TodoItem['status'] }) {
@@ -25,6 +26,7 @@ function StatusIcon({ status }: { status: TodoItem['status'] }) {
 }
 
 export function TasksPanel({ sessionId, onClose }: Props) {
+  const { t } = useTranslation()
   const data = useSessionTasks(sessionId)
 
   const grouped = useMemo(() => {
@@ -33,9 +35,9 @@ export function TasksPanel({ sessionId, onClose }: Props) {
       pending: [],
       completed: [],
     }
-    for (const t of data?.todos ?? []) {
-      const s = (t.status in out ? t.status : 'pending') as TodoItem['status']
-      out[s].push(t)
+    for (const ti of data?.todos ?? []) {
+      const s = (ti.status in out ? ti.status : 'pending') as TodoItem['status']
+      out[s].push(ti)
     }
     return out
   }, [data])
@@ -43,10 +45,10 @@ export function TasksPanel({ sessionId, onClose }: Props) {
   const total = data?.todos.length ?? 0
 
   return (
-    <PanelContainer title="Tasks" onClose={onClose}>
+    <PanelContainer title={t('panels.tasks.title')} onClose={onClose}>
       {total === 0 ? (
         <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-          No tasks yet.
+          {t('panels.tasks.empty')}
         </div>
       ) : (
         <div className="h-full overflow-auto px-3 py-2 text-xs">
@@ -56,10 +58,10 @@ export function TasksPanel({ sessionId, onClose }: Props) {
             return (
               <div key={group} className="mb-3 last:mb-0">
                 <div className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">
-                  {GROUP_LABEL[group]}
+                  {t(GROUP_KEY[group])}
                 </div>
                 <ul className="space-y-1">
-                  {items.map((t, i) => (
+                  {items.map((ti, i) => (
                     <li
                       key={`${group}-${i}`}
                       className="flex items-start gap-2 rounded px-2 py-1 hover:bg-accent/40"
@@ -72,7 +74,7 @@ export function TasksPanel({ sessionId, onClose }: Props) {
                           group === 'completed' && 'text-muted-foreground line-through',
                         )}
                       >
-                        {group === 'in_progress' && t.activeForm ? t.activeForm : t.content}
+                        {group === 'in_progress' && ti.activeForm ? ti.activeForm : ti.content}
                       </span>
                     </li>
                   ))}

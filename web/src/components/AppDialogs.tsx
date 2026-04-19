@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { type WorktreeCloseChoice, WorktreeCloseDialog } from '@/components/WorktreeCloseDialog'
 import type { Project, SessionMeta, Worktree } from '@/types'
@@ -62,19 +63,28 @@ export function AppDialogs({
   onConfirmDelete: () => void | Promise<void>
   onCloseDelete: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <>
       <ConfirmDialog
         open={!!pendingArchive}
-        title={pendingArchive?.action === 'unarchive' ? 'Desarquivar sessão' : 'Arquivar sessão'}
+        title={
+          pendingArchive?.action === 'unarchive'
+            ? t('dialogs.archiveSession.unarchiveTitle')
+            : t('dialogs.archiveSession.archiveTitle')
+        }
         description={
           pendingArchive
             ? pendingArchive.action === 'unarchive'
-              ? `A sessão (${pendingArchive.id.slice(0, 8)}…) voltará para o histórico.`
-              : `A sessão (${pendingArchive.id.slice(0, 8)}…) será movida para Arquivadas.`
+              ? t('dialogs.archiveSession.unarchiveBody', { id: pendingArchive.id.slice(0, 8) })
+              : t('dialogs.archiveSession.archiveBody', { id: pendingArchive.id.slice(0, 8) })
             : ''
         }
-        confirmLabel={pendingArchive?.action === 'unarchive' ? 'Desarquivar' : 'Arquivar'}
+        confirmLabel={
+          pendingArchive?.action === 'unarchive'
+            ? t('dialogs.archiveSession.unarchiveConfirm')
+            : t('dialogs.archiveSession.archiveConfirm')
+        }
         onConfirm={onConfirmArchive}
         onClose={onCloseArchive}
       />
@@ -92,20 +102,18 @@ export function AppDialogs({
 
       <ConfirmDialog
         open={!!pendingVSCodeOpen}
-        title="Abrir no VS Code"
+        title={t('dialogs.openVscode.title')}
         description={
-          pendingVSCodeOpen
-            ? `O diretório "${pendingVSCodeOpen.label}" será aberto no VS Code.`
-            : ''
+          pendingVSCodeOpen ? t('dialogs.openVscode.body', { label: pendingVSCodeOpen.label }) : ''
         }
-        confirmLabel="Abrir"
+        confirmLabel={t('dialogs.openVscode.confirm')}
         onConfirm={onConfirmVSCode}
         onClose={onCloseVSCode}
       />
 
       <ConfirmDialog
         open={!!pendingProjectArchive}
-        title="Arquivar sessões do projeto"
+        title={t('dialogs.archiveProject.title')}
         description={
           pendingProjectArchive
             ? (() => {
@@ -114,19 +122,19 @@ export function AppDialogs({
                   pendingProjectArchive.cwd.split('/').filter(Boolean).pop() ||
                   pendingProjectArchive.cwd
                 return count === 0
-                  ? `Não há sessões ativas para arquivar em "${name}".`
-                  : `${count} ${count === 1 ? 'sessão ativa será movida' : 'sessões ativas serão movidas'} para Arquivadas (projeto: ${name}).`
+                  ? t('dialogs.archiveProject.empty', { name })
+                  : t('dialogs.archiveProject.body', { count, name })
               })()
             : ''
         }
-        confirmLabel="Arquivar todas"
+        confirmLabel={t('dialogs.archiveProject.confirm')}
         onConfirm={onConfirmProjectArchive}
         onClose={onCloseProjectArchive}
       />
 
       <ConfirmDialog
         open={!!pendingProjectDelete}
-        title="Apagar sessões do projeto definitivamente"
+        title={t('dialogs.deleteProject.title')}
         description={
           pendingProjectDelete
             ? (() => {
@@ -135,12 +143,12 @@ export function AppDialogs({
                   pendingProjectDelete.cwd.split('/').filter(Boolean).pop() ||
                   pendingProjectDelete.cwd
                 return count === 0
-                  ? `Não há sessões para apagar em "${name}".`
-                  : `Esta ação remove do disco ${count} ${count === 1 ? 'sessão' : 'sessões'} do projeto "${name}". Não pode ser desfeita.`
+                  ? t('dialogs.deleteProject.empty', { name })
+                  : t('dialogs.deleteProject.body', { count, name })
               })()
             : ''
         }
-        confirmLabel="Apagar todas"
+        confirmLabel={t('dialogs.deleteProject.confirm')}
         destructive
         onConfirm={onConfirmProjectDelete}
         onClose={onCloseProjectDelete}
@@ -148,13 +156,11 @@ export function AppDialogs({
 
       <ConfirmDialog
         open={!!pendingDelete}
-        title="Apagar sessão definitivamente"
+        title={t('dialogs.deleteSession.title')}
         description={
-          pendingDelete
-            ? `Esta ação remove o arquivo da sessão (${pendingDelete.id.slice(0, 8)}…) do disco. Não pode ser desfeita.`
-            : ''
+          pendingDelete ? t('dialogs.deleteSession.body', { id: pendingDelete.id.slice(0, 8) }) : ''
         }
-        confirmLabel="Apagar"
+        confirmLabel={t('dialogs.deleteSession.confirm')}
         destructive
         onConfirm={onConfirmDelete}
         onClose={onCloseDelete}
