@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
 import { Archive, GitCommit, GitMerge, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Modal } from '@/components/Modal'
 import { Button } from '@/components/ui/Button'
 import type { Worktree } from '@/types'
@@ -51,11 +51,9 @@ export function WorktreeCloseDialog({
       title="Sessão em worktree com alterações"
       className="w-[min(580px,94vw)]"
       footer={
-        <>
-          <Button variant="ghost" onClick={onCancel} disabled={pending}>
-            Cancelar
-          </Button>
-        </>
+        <Button variant="ghost" onClick={onCancel} disabled={pending}>
+          Cancelar
+        </Button>
       }
     >
       <div className="flex flex-col gap-4 p-4 text-sm text-foreground">
@@ -113,7 +111,8 @@ export function WorktreeCloseDialog({
                 <span className="text-sm font-medium">Commitar & manter</span>
               </div>
               <div className="text-[11px] text-muted-foreground">
-                <code className="font-mono">git add -A && git commit</code> no worktree, depois encerra a sessão.
+                <code className="font-mono">git add -A && git commit</code> no worktree, depois
+                encerra a sessão.
               </div>
               <textarea
                 value={commitMessage}
@@ -142,9 +141,7 @@ export function WorktreeCloseDialog({
           >
             <GitMerge size={14} className="mt-0.5 shrink-0 text-muted-foreground" />
             <div className="flex-1">
-              <div className="text-sm font-medium">
-                Mergear em {base ?? 'base'}
-              </div>
+              <div className="text-sm font-medium">Mergear em {base ?? 'base'}</div>
               <div className="text-[11px] text-muted-foreground">
                 {canMerge
                   ? 'Fast-forward merge no worktree principal. A sessão é encerrada em seguida.'
@@ -163,7 +160,8 @@ export function WorktreeCloseDialog({
             <div className="flex-1">
               <div className="text-sm font-medium text-rose-200">Descartar</div>
               <div className="text-[11px] text-rose-300/80">
-                Reseta todas as mudanças e remove o worktree. Commits não mergeados também são perdidos.
+                Reseta todas as mudanças e remove o worktree. Commits não mergeados também são
+                perdidos.
               </div>
             </div>
           </button>

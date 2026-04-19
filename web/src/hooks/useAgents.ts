@@ -43,10 +43,10 @@ export function useAgentList(projectCwd: string | null) {
   const load = useCallback(async () => {
     setState((s) => ({ ...s, loading: true, error: null }))
     try {
-      const url = projectCwd
-        ? `/api/agents?cwd=${encodeURIComponent(projectCwd)}`
-        : '/api/agents'
-      const data = await fetchJson<{ user: AgentSummary[]; project: AgentSummary[] }>(url, { cache: 'no-store' })
+      const url = projectCwd ? `/api/agents?cwd=${encodeURIComponent(projectCwd)}` : '/api/agents'
+      const data = await fetchJson<{ user: AgentSummary[]; project: AgentSummary[] }>(url, {
+        cache: 'no-store',
+      })
       setState({ user: data.user, project: data.project, loading: false, error: null })
     } catch (err) {
       setState({
@@ -66,7 +66,11 @@ export function useAgentList(projectCwd: string | null) {
   return { ...state, reload: load }
 }
 
-export async function fetchAgent(scope: AgentScope, name: string, projectCwd: string | null): Promise<AgentDetail> {
+export async function fetchAgent(
+  scope: AgentScope,
+  name: string,
+  projectCwd: string | null,
+): Promise<AgentDetail> {
   const params = new URLSearchParams({ scope, name })
   if (scope === 'project' && projectCwd) params.set('cwd', projectCwd)
   return fetchJson<AgentDetail>(`/api/agents/file?${params.toString()}`, { cache: 'no-store' })
@@ -100,7 +104,11 @@ export async function saveAgent(payload: AgentSavePayload): Promise<AgentDetail>
   })
 }
 
-export async function deleteAgent(scope: AgentScope, name: string, projectCwd: string | null): Promise<void> {
+export async function deleteAgent(
+  scope: AgentScope,
+  name: string,
+  projectCwd: string | null,
+): Promise<void> {
   const params = new URLSearchParams({ scope, name })
   if (scope === 'project' && projectCwd) params.set('cwd', projectCwd)
   await fetchJson(`/api/agents/file?${params.toString()}`, { method: 'DELETE' })
@@ -111,9 +119,13 @@ export function useKnownTools() {
   useEffect(() => {
     let cancelled = false
     fetchJson<{ tools: string[] }>('/api/known-tools', { cache: 'force-cache' })
-      .then((data) => { if (!cancelled) setTools(data.tools) })
+      .then((data) => {
+        if (!cancelled) setTools(data.tools)
+      })
       .catch(() => {})
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [])
   return tools
 }

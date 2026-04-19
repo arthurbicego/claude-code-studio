@@ -62,7 +62,11 @@ export function useGlobalMemory() {
       const data = await fetchJson<MemoryFile>('/api/memory/global', { cache: 'no-store' })
       setState({ data, loading: false, error: null })
     } catch (err) {
-      setState({ data: null, loading: false, error: err instanceof Error ? err.message : String(err) })
+      setState({
+        data: null,
+        loading: false,
+        error: err instanceof Error ? err.message : String(err),
+      })
     }
   }, [])
 
@@ -100,7 +104,11 @@ export function useProjectMemory(cwd: string | null, variant: MemoryVariant = 's
       setState({ data, loading: false, error: null })
     } catch (err) {
       if (reqId.current !== id) return
-      setState({ data: null, loading: false, error: err instanceof Error ? err.message : String(err) })
+      setState({
+        data: null,
+        loading: false,
+        error: err instanceof Error ? err.message : String(err),
+      })
     }
   }, [])
 
@@ -114,16 +122,19 @@ export function useProjectMemory(cwd: string | null, variant: MemoryVariant = 's
     load(cwd, variant)
   }, [cwd, variant, load])
 
-  const save = useCallback(async (content: string) => {
-    if (!cwd) throw new Error('Nenhum projeto selecionado.')
-    const data = await fetchJson<MemoryFile>('/api/memory/project', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cwd, content, variant }),
-    })
-    setState((s) => ({ ...s, data }))
-    return data
-  }, [cwd, variant])
+  const save = useCallback(
+    async (content: string) => {
+      if (!cwd) throw new Error('Nenhum projeto selecionado.')
+      const data = await fetchJson<MemoryFile>('/api/memory/project', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cwd, content, variant }),
+      })
+      setState((s) => ({ ...s, data }))
+      return data
+    },
+    [cwd, variant],
+  )
 
   return {
     ...state,
@@ -173,7 +184,10 @@ export function useMemoryHierarchy(cwd: string | null) {
   return { entries, loading, error, reload: () => (cwd ? load(cwd) : Promise.resolve()) }
 }
 
-export async function expandMemoryImports(content: string, basePath: string): Promise<ExpandResult> {
+export async function expandMemoryImports(
+  content: string,
+  basePath: string,
+): Promise<ExpandResult> {
   return fetchJson<ExpandResult>('/api/memory/expand', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

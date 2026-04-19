@@ -1,7 +1,7 @@
-import { useEffect, type ReactNode } from 'react'
 import { X } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { type ReactNode, useEffect } from 'react'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { cn } from '@/lib/utils'
 
 type Props = {
   open: boolean

@@ -3,7 +3,11 @@ import type { WorktreeDiffResult } from '@/types'
 
 const POLL_MS = 3000
 
-export function useWorktreeDiff(cwd: string | null, worktreePath: string | null, base?: string | null) {
+export function useWorktreeDiff(
+  cwd: string | null,
+  worktreePath: string | null,
+  base?: string | null,
+) {
   const [data, setData] = useState<WorktreeDiffResult | null>(null)
 
   useEffect(() => {

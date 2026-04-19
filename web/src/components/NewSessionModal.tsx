@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, ArrowUp, Folder, GitBranch, Home } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { Modal } from '@/components/Modal'
 import { Button } from '@/components/ui/Button'
 import { Tooltip } from '@/components/ui/Tooltip'
@@ -54,7 +54,13 @@ type FieldSelectProps<T extends string> = {
   onChange: (v: T) => void
 }
 
-function FieldSelect<T extends string>({ label, value, options, defaultValue, onChange }: FieldSelectProps<T>) {
+function FieldSelect<T extends string>({
+  label,
+  value,
+  options,
+  defaultValue,
+  onChange,
+}: FieldSelectProps<T>) {
   return (
     <label className="flex flex-col gap-1 text-xs text-muted-foreground">
       <span className="text-[10px] uppercase tracking-wide">{label}</span>
@@ -73,7 +79,15 @@ function FieldSelect<T extends string>({ label, value, options, defaultValue, on
   )
 }
 
-export function NewSessionModal({ open, defaults, projects, liveCwds, initial, onClose, onLaunch }: Props) {
+export function NewSessionModal({
+  open,
+  defaults,
+  projects,
+  liveCwds,
+  initial,
+  onClose,
+  onLaunch,
+}: Props) {
   const initialModel = (defaults.model as Model) ?? MODELS[0]
   const initialEffort = (defaults.effort as Effort) ?? EFFORTS[2]
   const initialPermission = (defaults.permissionMode as PermissionMode) ?? 'default'
@@ -170,9 +184,27 @@ export function NewSessionModal({ open, defaults, projects, liveCwds, initial, o
             Configuração
           </h3>
           <div className="grid grid-cols-3 gap-2">
-            <FieldSelect label="Modelo" value={model} options={MODELS} defaultValue={defaults.model as Model | null} onChange={setModel} />
-            <FieldSelect label="Effort" value={effort} options={EFFORTS} defaultValue={defaults.effort as Effort | null} onChange={setEffort} />
-            <FieldSelect label="Permissão" value={permissionMode} options={PERMISSION_MODES} defaultValue={defaults.permissionMode as PermissionMode} onChange={setPermissionMode} />
+            <FieldSelect
+              label="Modelo"
+              value={model}
+              options={MODELS}
+              defaultValue={defaults.model as Model | null}
+              onChange={setModel}
+            />
+            <FieldSelect
+              label="Effort"
+              value={effort}
+              options={EFFORTS}
+              defaultValue={defaults.effort as Effort | null}
+              onChange={setEffort}
+            />
+            <FieldSelect
+              label="Permissão"
+              value={permissionMode}
+              options={PERMISSION_MODES}
+              defaultValue={defaults.permissionMode as PermissionMode}
+              onChange={setPermissionMode}
+            />
           </div>
         </section>
 
@@ -212,7 +244,8 @@ export function NewSessionModal({ open, defaults, projects, liveCwds, initial, o
                   </span>
                 ) : (
                   <span className="text-[11px] text-muted-foreground/80">
-                    criado em <code className="font-mono">.claude/worktrees/&lt;nome&gt;</code> a partir de <code className="font-mono">origin/HEAD</code>
+                    criado em <code className="font-mono">.claude/worktrees/&lt;nome&gt;</code> a
+                    partir de <code className="font-mono">origin/HEAD</code>
                   </span>
                 )}
               </label>
@@ -222,7 +255,8 @@ export function NewSessionModal({ open, defaults, projects, liveCwds, initial, o
             <div className="mt-2 flex items-start gap-2 rounded bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-200">
               <AlertTriangle size={12} className="mt-0.5 shrink-0" />
               <span>
-                Já existe sessão ativa neste diretório — sessões paralelas no mesmo working tree podem sobrescrever arquivos uma da outra.
+                Já existe sessão ativa neste diretório — sessões paralelas no mesmo working tree
+                podem sobrescrever arquivos uma da outra.
               </span>
             </div>
           ) : null}
@@ -251,7 +285,9 @@ export function NewSessionModal({ open, defaults, projects, liveCwds, initial, o
                     onClick={() => setSelectedCwd(p.cwd)}
                     className={cn(
                       'flex items-center justify-between gap-2 rounded px-3 py-2 text-left text-xs cursor-pointer',
-                      active ? 'bg-sky-500/15 ring-1 ring-sky-500/50' : 'bg-accent/40 hover:bg-accent',
+                      active
+                        ? 'bg-sky-500/15 ring-1 ring-sky-500/50'
+                        : 'bg-accent/40 hover:bg-accent',
                     )}
                   >
                     <span className="flex flex-col">
@@ -312,18 +348,18 @@ export function NewSessionModal({ open, defaults, projects, liveCwds, initial, o
             </code>
             <Button
               size="xs"
-              variant={selectedCwd && browser.data && selectedCwd === browser.data.path ? 'primary' : 'ghost'}
+              variant={
+                selectedCwd && browser.data && selectedCwd === browser.data.path
+                  ? 'primary'
+                  : 'ghost'
+              }
               disabled={!browser.data?.path}
               onClick={() => browser.data && setSelectedCwd(browser.data.path)}
             >
               Selecionar
             </Button>
             <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={browser.showHidden}
-                onChange={browser.toggleHidden}
-              />
+              <input type="checkbox" checked={browser.showHidden} onChange={browser.toggleHidden} />
               ocultos
             </label>
           </div>
@@ -338,9 +374,7 @@ export function NewSessionModal({ open, defaults, projects, liveCwds, initial, o
               browser.data?.entries.map((e) => (
                 <button
                   key={e.name}
-                  onClick={() =>
-                    browser.load(`${browser.data!.path.replace(/\/$/, '')}/${e.name}`)
-                  }
+                  onClick={() => browser.load(`${browser.data!.path.replace(/\/$/, '')}/${e.name}`)}
                   className="flex items-center gap-1.5 truncate rounded px-2 py-1.5 text-left text-xs text-foreground hover:bg-accent cursor-pointer"
                 >
                   <Folder size={12} className="shrink-0 text-muted-foreground" />

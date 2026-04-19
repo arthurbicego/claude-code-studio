@@ -49,10 +49,10 @@ export function useSkillList(projectCwd: string | null) {
   const load = useCallback(async () => {
     setState((s) => ({ ...s, loading: true, error: null }))
     try {
-      const url = projectCwd
-        ? `/api/skills?cwd=${encodeURIComponent(projectCwd)}`
-        : '/api/skills'
-      const data = await fetchJson<{ user: SkillSummary[]; project: SkillSummary[] }>(url, { cache: 'no-store' })
+      const url = projectCwd ? `/api/skills?cwd=${encodeURIComponent(projectCwd)}` : '/api/skills'
+      const data = await fetchJson<{ user: SkillSummary[]; project: SkillSummary[] }>(url, {
+        cache: 'no-store',
+      })
       setState({ user: data.user, project: data.project, loading: false, error: null })
     } catch (err) {
       setState({
@@ -72,7 +72,11 @@ export function useSkillList(projectCwd: string | null) {
   return { ...state, reload: load }
 }
 
-export async function fetchSkill(scope: SkillScope, name: string, projectCwd: string | null): Promise<SkillDetail> {
+export async function fetchSkill(
+  scope: SkillScope,
+  name: string,
+  projectCwd: string | null,
+): Promise<SkillDetail> {
   const params = new URLSearchParams({ scope, name })
   if (scope === 'project' && projectCwd) params.set('cwd', projectCwd)
   return fetchJson<SkillDetail>(`/api/skills/file?${params.toString()}`, { cache: 'no-store' })
@@ -102,7 +106,11 @@ export async function saveSkill(payload: SkillSavePayload): Promise<SkillDetail>
   })
 }
 
-export async function deleteSkill(scope: SkillScope, name: string, projectCwd: string | null): Promise<void> {
+export async function deleteSkill(
+  scope: SkillScope,
+  name: string,
+  projectCwd: string | null,
+): Promise<void> {
   const params = new URLSearchParams({ scope, name })
   if (scope === 'project' && projectCwd) params.set('cwd', projectCwd)
   await fetchJson(`/api/skills/file?${params.toString()}`, { method: 'DELETE' })

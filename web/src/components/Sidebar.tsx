@@ -1,17 +1,9 @@
-import {
-  Bell,
-  Circle,
-  CircleDashed,
-  CircleDot,
-  Plus,
-  RefreshCw,
-  Settings,
-} from 'lucide-react'
+import { Bell, Circle, CircleDashed, CircleDot, Plus, RefreshCw, Settings } from 'lucide-react'
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router'
+import { SessionsSection } from '@/components/SessionsSection'
 import { Button } from '@/components/ui/Button'
 import { Tooltip } from '@/components/ui/Tooltip'
-import { SessionsSection } from '@/components/SessionsSection'
 import { useProjectOrder } from '@/hooks/useProjectOrder'
 import type { LiveSession, LiveSessionState, Project, SessionLaunch, SessionMeta } from '@/types'
 

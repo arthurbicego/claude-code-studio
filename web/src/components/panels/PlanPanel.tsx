@@ -1,6 +1,6 @@
 import { ListChecks } from 'lucide-react'
-import { PanelContainer } from './PanelContainer'
 import { useSessionPlan } from '@/hooks/useSessionPlan'
+import { PanelContainer } from './PanelContainer'
 
 type Props = {
   sessionId: string | null

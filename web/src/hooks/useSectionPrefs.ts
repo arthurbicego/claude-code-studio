@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
+import { type SectionPrefs, usePrefs } from '@/hooks/usePrefs'
 import type { SessionSortBy } from '@/types'
-import { usePrefs, type SectionPrefs } from '@/hooks/usePrefs'
 
 const DEFAULTS: SectionPrefs = { groupByProject: true, sortBy: 'lastResponse' }
 

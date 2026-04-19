@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react'
-import { Terminal as Xterm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
+import { Terminal as Xterm } from '@xterm/xterm'
+import { useEffect, useRef } from 'react'
 import { PanelContainer } from './PanelContainer'
 
 type Props = {
@@ -33,7 +33,11 @@ export function ShellPanel({ cwd, onClose }: Props) {
 
     const safeSend = (obj: unknown) => {
       if (ws.readyState === WebSocket.OPEN) {
-        try { ws.send(JSON.stringify(obj)) } catch { /* noop */ }
+        try {
+          ws.send(JSON.stringify(obj))
+        } catch {
+          /* noop */
+        }
       }
     }
 
@@ -47,13 +51,21 @@ export function ShellPanel({ cwd, onClose }: Props) {
         if (msg.type === 'data') term.write(msg.data)
         else if (msg.type === 'error') term.write(`\r\n[erro] ${msg.message}\r\n`)
         else if (msg.type === 'exit') term.write(`\r\n[shell saiu com ${msg.exitCode}]\r\n`)
-      } catch { /* noop */ }
+      } catch {
+        /* noop */
+      }
     }
 
     const dataDisp = term.onData((d) => safeSend({ type: 'input', data: d }))
     const resizeDisp = term.onResize(({ cols, rows }) => safeSend({ type: 'resize', cols, rows }))
 
-    const onResize = () => { try { fit.fit() } catch { /* noop */ } }
+    const onResize = () => {
+      try {
+        fit.fit()
+      } catch {
+        /* noop */
+      }
+    }
     const ro = new ResizeObserver(onResize)
     ro.observe(hostRef.current)
     window.addEventListener('resize', onResize)
@@ -63,8 +75,16 @@ export function ShellPanel({ cwd, onClose }: Props) {
       window.removeEventListener('resize', onResize)
       dataDisp.dispose()
       resizeDisp.dispose()
-      try { ws.close() } catch { /* noop */ }
-      try { term.dispose() } catch { /* noop */ }
+      try {
+        ws.close()
+      } catch {
+        /* noop */
+      }
+      try {
+        term.dispose()
+      } catch {
+        /* noop */
+      }
     }
   }, [cwd])
 

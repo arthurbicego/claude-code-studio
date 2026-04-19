@@ -34,7 +34,7 @@ export function SessionActions({ onSendInput, onInterrupt, disabled }: Props) {
             variant="subtle"
             className="font-mono"
             disabled={disabled}
-            onClick={() => onSendInput(cmd + '\n')}
+            onClick={() => onSendInput(`${cmd}\n`)}
           >
             <Icon size={12} />
             {cmd}

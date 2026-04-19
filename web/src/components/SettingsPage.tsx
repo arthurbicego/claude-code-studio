@@ -1,24 +1,24 @@
+import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
+import { AgentsTab } from '@/components/settings/AgentsTab'
+import { SkillsTab } from '@/components/settings/SkillsTab'
 import { Button } from '@/components/ui/Button'
 import { Tooltip } from '@/components/ui/Tooltip'
-import { useConfig } from '@/hooks/useConfig'
 import { useClaudeSettings } from '@/hooks/useClaudeSettings'
+import { useConfig } from '@/hooks/useConfig'
 import {
-  expandMemoryImports,
-  useGlobalMemory,
-  useMemoryHierarchy,
-  useProjectMemory,
   type ExpandResult,
+  expandMemoryImports,
   type MemoryFile,
   type MemoryHierarchyEntry,
   type MemoryVariant,
+  useGlobalMemory,
+  useMemoryHierarchy,
+  useProjectMemory,
 } from '@/hooks/useMemory'
-import { useSessionList } from '@/hooks/useSessionList'
-import { AgentsTab } from '@/components/settings/AgentsTab'
-import { SkillsTab } from '@/components/settings/SkillsTab'
 import { usePrefs } from '@/hooks/usePrefs'
+import { useSessionList } from '@/hooks/useSessionList'
 import type { Project, SandboxPlatform, SandboxScope, SandboxSettings } from '@/types'
 
 type TabId = 'sessions' | 'sandbox' | 'memory' | 'agents' | 'skills' | 'sidebar'
@@ -70,14 +70,19 @@ function scopeNeedsProject(scope: SandboxScope): boolean {
   return scope === 'project' || scope === 'project-local'
 }
 
-const JSON_FIELD_META: Record<JsonFieldKey, { title: string; description: string; linuxOnly?: boolean }> = {
+const JSON_FIELD_META: Record<
+  JsonFieldKey,
+  { title: string; description: string; linuxOnly?: boolean }
+> = {
   network: {
     title: 'Rede',
-    description: 'Regras de allow/deny para hosts e portas. Estrutura aceita pelo runtime do sandbox.',
+    description:
+      'Regras de allow/deny para hosts e portas. Estrutura aceita pelo runtime do sandbox.',
   },
   filesystem: {
     title: 'Sistema de arquivos',
-    description: 'Permissões de leitura/escrita em diretórios. Estrutura aceita pelo runtime do sandbox.',
+    description:
+      'Permissões de leitura/escrita em diretórios. Estrutura aceita pelo runtime do sandbox.',
   },
   ripgrep: {
     title: 'Ripgrep',
@@ -113,7 +118,10 @@ function toJsonText(value: Record<string, unknown> | null): string {
   return JSON.stringify(value, null, 2)
 }
 
-function parseJsonField(text: string): { value: Record<string, unknown> | null; error: string | null } {
+function parseJsonField(text: string): {
+  value: Record<string, unknown> | null
+  error: string | null
+} {
   const trimmed = text.trim()
   if (!trimmed) return { value: null, error: null }
   try {
@@ -230,8 +238,7 @@ export function SettingsPage() {
     [jsonState],
   )
 
-  const canSaveSandbox =
-    !scopeNeedsProject(sandboxScope) || sandboxProjectCwd != null
+  const canSaveSandbox = !scopeNeedsProject(sandboxScope) || sandboxProjectCwd != null
 
   const save = async () => {
     const n = Number(standbyValue)
@@ -416,102 +423,108 @@ export function SettingsPage() {
                 </Section>
               ) : (
                 <>
-              <Section
-                title="Geral"
-                description="Vale para novos processos do claude — sessões já abertas mantêm o estado anterior."
-              >
-                <ToggleField
-                  label="Habilitar sandbox"
-                  checked={sandbox.enabled}
-                  onChange={(v) => setSandboxField('enabled', v)}
-                />
-              </Section>
+                  <Section
+                    title="Geral"
+                    description="Vale para novos processos do claude — sessões já abertas mantêm o estado anterior."
+                  >
+                    <ToggleField
+                      label="Habilitar sandbox"
+                      checked={sandbox.enabled}
+                      onChange={(v) => setSandboxField('enabled', v)}
+                    />
+                  </Section>
 
-              <Section title="Comportamento">
-                <ToggleField
-                  label="Falhar se runtime de sandbox indisponível"
-                  hint="Sem isso, o claude roda fora do sandbox quando o runtime não está disponível."
-                  checked={sandbox.failIfUnavailable}
-                  onChange={(v) => setSandboxField('failIfUnavailable', v)}
-                  disabled={sandboxDisabled}
-                />
-                <ToggleField
-                  label="Auto-permitir Bash quando em sandbox"
-                  checked={sandbox.autoAllowBashIfSandboxed}
-                  onChange={(v) => setSandboxField('autoAllowBashIfSandboxed', v)}
-                  disabled={sandboxDisabled}
-                />
-                <ToggleField
-                  label="Apenas logar violações (não bloqueia)"
-                  checked={sandbox.ignoreViolations}
-                  onChange={(v) => setSandboxField('ignoreViolations', v)}
-                  disabled={sandboxDisabled}
-                />
-                <ToggleField
-                  label="Permitir sandbox aninhado mais fraco"
-                  checked={sandbox.enableWeakerNestedSandbox}
-                  onChange={(v) => setSandboxField('enableWeakerNestedSandbox', v)}
-                  disabled={sandboxDisabled}
-                />
-                <ToggleField
-                  label="Relaxar isolamento de rede"
-                  checked={sandbox.enableWeakerNetworkIsolation}
-                  onChange={(v) => setSandboxField('enableWeakerNetworkIsolation', v)}
-                  disabled={sandboxDisabled}
-                />
-              </Section>
-
-              <Section
-                title="Plataformas"
-                description="Plataformas onde o sandbox é ativado. Se vazio, o runtime decide."
-              >
-                <div className="flex gap-4">
-                  {PLATFORM_OPTIONS.map((p) => (
-                    <CheckboxField
-                      key={p.id}
-                      label={p.label}
-                      checked={sandbox.enabledPlatforms.includes(p.id)}
-                      onChange={(v) => togglePlatform(p.id, v)}
+                  <Section title="Comportamento">
+                    <ToggleField
+                      label="Falhar se runtime de sandbox indisponível"
+                      hint="Sem isso, o claude roda fora do sandbox quando o runtime não está disponível."
+                      checked={sandbox.failIfUnavailable}
+                      onChange={(v) => setSandboxField('failIfUnavailable', v)}
                       disabled={sandboxDisabled}
                     />
-                  ))}
-                </div>
-              </Section>
+                    <ToggleField
+                      label="Auto-permitir Bash quando em sandbox"
+                      checked={sandbox.autoAllowBashIfSandboxed}
+                      onChange={(v) => setSandboxField('autoAllowBashIfSandboxed', v)}
+                      disabled={sandboxDisabled}
+                    />
+                    <ToggleField
+                      label="Apenas logar violações (não bloqueia)"
+                      checked={sandbox.ignoreViolations}
+                      onChange={(v) => setSandboxField('ignoreViolations', v)}
+                      disabled={sandboxDisabled}
+                    />
+                    <ToggleField
+                      label="Permitir sandbox aninhado mais fraco"
+                      checked={sandbox.enableWeakerNestedSandbox}
+                      onChange={(v) => setSandboxField('enableWeakerNestedSandbox', v)}
+                      disabled={sandboxDisabled}
+                    />
+                    <ToggleField
+                      label="Relaxar isolamento de rede"
+                      checked={sandbox.enableWeakerNetworkIsolation}
+                      onChange={(v) => setSandboxField('enableWeakerNetworkIsolation', v)}
+                      disabled={sandboxDisabled}
+                    />
+                  </Section>
 
-              <Section
-                title="Comandos permitidos fora do sandbox"
-                description="Comandos listados rodam fora do sandbox (sujeitos às permissões normais)."
-              >
-                <StringListEditor
-                  values={sandbox.allowUnsandboxedCommands}
-                  onChange={(v) => setSandboxField('allowUnsandboxedCommands', v)}
-                  placeholder="ex.: npm install"
-                  disabled={sandboxDisabled}
-                />
-              </Section>
+                  <Section
+                    title="Plataformas"
+                    description="Plataformas onde o sandbox é ativado. Se vazio, o runtime decide."
+                  >
+                    <div className="flex gap-4">
+                      {PLATFORM_OPTIONS.map((p) => (
+                        <CheckboxField
+                          key={p.id}
+                          label={p.label}
+                          checked={sandbox.enabledPlatforms.includes(p.id)}
+                          onChange={(v) => togglePlatform(p.id, v)}
+                          disabled={sandboxDisabled}
+                        />
+                      ))}
+                    </div>
+                  </Section>
 
-              <Section
-                title="Comandos que bypassam o sandbox"
-                description="Comandos que não devem ser executados via sandbox (excluídos por completo)."
-              >
-                <StringListEditor
-                  values={sandbox.excludedCommands}
-                  onChange={(v) => setSandboxField('excludedCommands', v)}
-                  placeholder="ex.: docker"
-                  disabled={sandboxDisabled}
-                />
-              </Section>
+                  <Section
+                    title="Comandos permitidos fora do sandbox"
+                    description="Comandos listados rodam fora do sandbox (sujeitos às permissões normais)."
+                  >
+                    <StringListEditor
+                      values={sandbox.allowUnsandboxedCommands}
+                      onChange={(v) => setSandboxField('allowUnsandboxedCommands', v)}
+                      placeholder="ex.: npm install"
+                      disabled={sandboxDisabled}
+                    />
+                  </Section>
 
-              {JSON_FIELDS.filter((k) => !JSON_FIELD_META[k].linuxOnly || linuxEnabled).map((k) => (
-                <Section key={k} title={JSON_FIELD_META[k].title} description={JSON_FIELD_META[k].description}>
-                  <JsonEditor
-                    text={jsonState[k].text}
-                    error={jsonState[k].error}
-                    onChange={(text) => setJsonText(k, text)}
-                    disabled={sandboxDisabled}
-                  />
-                </Section>
-              ))}
+                  <Section
+                    title="Comandos que bypassam o sandbox"
+                    description="Comandos que não devem ser executados via sandbox (excluídos por completo)."
+                  >
+                    <StringListEditor
+                      values={sandbox.excludedCommands}
+                      onChange={(v) => setSandboxField('excludedCommands', v)}
+                      placeholder="ex.: docker"
+                      disabled={sandboxDisabled}
+                    />
+                  </Section>
+
+                  {JSON_FIELDS.filter((k) => !JSON_FIELD_META[k].linuxOnly || linuxEnabled).map(
+                    (k) => (
+                      <Section
+                        key={k}
+                        title={JSON_FIELD_META[k].title}
+                        description={JSON_FIELD_META[k].description}
+                      >
+                        <JsonEditor
+                          text={jsonState[k].text}
+                          error={jsonState[k].error}
+                          onChange={(text) => setJsonText(k, text)}
+                          disabled={sandboxDisabled}
+                        />
+                      </Section>
+                    ),
+                  )}
                 </>
               )}
             </>
@@ -600,7 +613,9 @@ function SandboxScopeSection({
               type="button"
               onClick={() => onScopeChange(opt.id)}
               className={`cursor-pointer px-3 py-1.5 text-xs font-medium transition-colors ${
-                isActive ? 'bg-sky-700 text-white' : 'bg-background text-muted-foreground hover:text-foreground'
+                isActive
+                  ? 'bg-sky-700 text-white'
+                  : 'bg-background text-muted-foreground hover:text-foreground'
               }`}
             >
               {opt.label}
@@ -609,9 +624,7 @@ function SandboxScopeSection({
         })}
       </div>
 
-      {active ? (
-        <p className="text-[10px] text-muted-foreground">{active.hint}</p>
-      ) : null}
+      {active ? <p className="text-[10px] text-muted-foreground">{active.hint}</p> : null}
 
       {needsProject ? (
         <Field label="Projeto">
@@ -628,7 +641,9 @@ function SandboxScopeSection({
               className="rounded border border-border bg-background px-2 py-1.5 font-mono text-xs text-foreground focus:border-sky-500 focus:outline-none"
             >
               {projects.map((p) => (
-                <option key={p.slug} value={p.cwd}>{p.cwd}</option>
+                <option key={p.slug} value={p.cwd}>
+                  {p.cwd}
+                </option>
               ))}
             </select>
           )}
@@ -650,12 +665,8 @@ function Section({
   return (
     <section className="flex flex-col gap-3 p-4">
       <header className="flex flex-col gap-1">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground">
-          {title}
-        </h3>
-        {description ? (
-          <p className="text-[11px] text-muted-foreground">{description}</p>
-        ) : null}
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground">{title}</h3>
+        {description ? <p className="text-[11px] text-muted-foreground">{description}</p> : null}
       </header>
       <div className="flex flex-col gap-3">{children}</div>
     </section>
@@ -880,14 +891,12 @@ function MemoryTab() {
         ) : sessions.error ? (
           <p className="text-xs text-red-400">Erro ao carregar projetos: {sessions.error}</p>
         ) : projects.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Nenhum projeto encontrado em ~/.claude/projects.</p>
+          <p className="text-xs text-muted-foreground">
+            Nenhum projeto encontrado em ~/.claude/projects.
+          </p>
         ) : (
           <>
-            <ProjectPicker
-              projects={projects}
-              value={selectedCwd}
-              onChange={setSelectedCwd}
-            />
+            <ProjectPicker projects={projects} value={selectedCwd} onChange={setSelectedCwd} />
             {selectedProject ? (
               <>
                 <MemoryHierarchyView cwd={selectedProject.cwd} />
@@ -991,12 +1000,7 @@ function SidebarPrefsTab() {
               ))}
             </ul>
             <div>
-              <Button
-                type="button"
-                size="xs"
-                variant="ghost"
-                onClick={() => setExpanded(() => [])}
-              >
+              <Button type="button" size="xs" variant="ghost" onClick={() => setExpanded(() => [])}>
                 Limpar ({prefs.expanded.length})
               </Button>
             </div>
@@ -1109,8 +1113,7 @@ function MemoryHierarchyView({ cwd }: { cwd: string }) {
 
 function HierarchyRow({ entry, cwd }: { entry: MemoryHierarchyEntry; cwd: string }) {
   const isProject = entry.scope === 'project'
-  const scopeLabel =
-    entry.scope === 'global' ? 'global' : isProject ? 'projeto' : 'ancestral'
+  const scopeLabel = entry.scope === 'global' ? 'global' : isProject ? 'projeto' : 'ancestral'
   const variantBadge = entry.variant === 'local' ? '.local' : ''
   const displayPath = isProject ? entry.path.replace(cwd, '.') : entry.path
   return (
@@ -1130,9 +1133,7 @@ function HierarchyRow({ entry, cwd }: { entry: MemoryHierarchyEntry; cwd: string
       <span className="truncate text-muted-foreground" title={entry.path}>
         {displayPath}
       </span>
-      <span className="ml-auto shrink-0 text-[9px] text-muted-foreground">
-        {entry.size}B
-      </span>
+      <span className="ml-auto shrink-0 text-[9px] text-muted-foreground">{entry.size}B</span>
     </li>
   )
 }
@@ -1178,13 +1179,7 @@ function GlobalMemoryEditor() {
   )
 }
 
-function ProjectMemoryEditor({
-  project,
-  variant,
-}: {
-  project: Project
-  variant: MemoryVariant
-}) {
+function ProjectMemoryEditor({ project, variant }: { project: Project; variant: MemoryVariant }) {
   const memory = useProjectMemory(project.cwd, variant)
   const placeholder =
     variant === 'local'
@@ -1192,7 +1187,9 @@ function ProjectMemoryEditor({
       : `# CLAUDE.md de ${project.cwd}\nRegras que valem só para este projeto…`
   const hintParts: string[] = []
   if (!project.cwdResolved) {
-    hintParts.push('O cwd foi inferido do slug do projeto e pode não corresponder ao diretório real.')
+    hintParts.push(
+      'O cwd foi inferido do slug do projeto e pode não corresponder ao diretório real.',
+    )
   }
   if (variant === 'local') {
     hintParts.push('Lembre de adicionar CLAUDE.local.md ao seu .gitignore.')
@@ -1322,16 +1319,10 @@ function MemoryEditor({
         >
           {showExpanded ? 'Editar' : 'Preview com imports expandidos'}
         </button>
-        {hasImports ? (
-          <span className="text-[10px] text-sky-400">contém imports @</span>
-        ) : null}
+        {hasImports ? <span className="text-[10px] text-sky-400">contém imports @</span> : null}
       </div>
       {showExpanded ? (
-        <ExpandedPreview
-          result={expand}
-          loading={expanding}
-          error={expandError}
-        />
+        <ExpandedPreview result={expand} loading={expanding} error={expandError} />
       ) : (
         <textarea
           value={text}
@@ -1377,9 +1368,7 @@ function MemoryEditor({
           </Button>
         </div>
       </div>
-      <p className="text-[10px] text-muted-foreground">
-        Salvar com texto vazio remove o arquivo.
-      </p>
+      <p className="text-[10px] text-muted-foreground">Salvar com texto vazio remove o arquivo.</p>
     </div>
   )
 }
@@ -1425,9 +1414,7 @@ function ExpandedPreview({
               <li key={`${imp.resolved}:${i}`} className="flex items-baseline gap-2">
                 <span
                   className={`w-16 shrink-0 rounded px-1 text-[9px] uppercase ${
-                    imp.error
-                      ? 'bg-red-500/20 text-red-300'
-                      : 'bg-emerald-500/20 text-emerald-300'
+                    imp.error ? 'bg-red-500/20 text-red-300' : 'bg-emerald-500/20 text-emerald-300'
                   }`}
                 >
                   {imp.error || 'ok'}

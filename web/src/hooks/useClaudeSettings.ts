@@ -31,7 +31,9 @@ export function useClaudeSettings(scope: SandboxScope, cwd: string | null) {
     }
     setState((s) => ({ ...s, loading: true, error: null }))
     try {
-      const res = await fetch(`/api/claude-settings?${buildQuery(scope, cwd)}`, { cache: 'no-store' })
+      const res = await fetch(`/api/claude-settings?${buildQuery(scope, cwd)}`, {
+        cache: 'no-store',
+      })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = (await res.json()) as ClaudeSettings
       setState({ settings: data, loading: false, error: null })

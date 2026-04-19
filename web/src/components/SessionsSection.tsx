@@ -14,9 +14,9 @@ import { CopyableField } from '@/components/ui/CopyableField'
 import { DropdownMenu, type DropdownMenuItem } from '@/components/ui/DropdownMenu'
 import { InfoPopover } from '@/components/ui/InfoPopover'
 import { Tooltip } from '@/components/ui/Tooltip'
-import { cn } from '@/lib/utils'
 import { useExpanded } from '@/hooks/useExpanded'
 import { useSectionPrefs } from '@/hooks/useSectionPrefs'
+import { cn } from '@/lib/utils'
 import type { LiveSession, Project, SessionLaunch, SessionMeta, SessionSortBy } from '@/types'
 
 type Variant = 'history' | 'archived' | 'open'
@@ -56,7 +56,7 @@ function basename(cwd: string): string {
 function formatPreview(s: SessionMeta): string {
   if (s.preview) {
     const firstLine = s.preview.split('\n')[0].trim()
-    return firstLine.length > 80 ? firstLine.slice(0, 80) + '…' : firstLine
+    return firstLine.length > 80 ? `${firstLine.slice(0, 80)}…` : firstLine
   }
   return s.id.slice(0, 8)
 }
@@ -189,9 +189,7 @@ export function SessionsSection({
         </button>
         {sectionOpen ? (
           <>
-            <Tooltip
-              content={prefs.groupByProject ? 'Listar sem agrupar' : 'Agrupar por projeto'}
-            >
+            <Tooltip content={prefs.groupByProject ? 'Listar sem agrupar' : 'Agrupar por projeto'}>
               <button
                 onClick={toggleGrouping}
                 className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"
@@ -222,10 +220,8 @@ export function SessionsSection({
             const expandKey = `${prefsKey}:${p.slug}`
             const explicit = isExpanded(expandKey)
             const expanded = groupsExpandedByDefault ? !explicit : explicit
-            const showBefore =
-              dropTarget?.slug === p.slug && dropTarget.position === 'before'
-            const showAfter =
-              dropTarget?.slug === p.slug && dropTarget.position === 'after'
+            const showBefore = dropTarget?.slug === p.slug && dropTarget.position === 'before'
+            const showAfter = dropTarget?.slug === p.slug && dropTarget.position === 'after'
             return (
               <div key={p.slug} className="relative mb-2">
                 {showBefore ? (
@@ -281,7 +277,9 @@ export function SessionsSection({
                     )}
                   />
                   <span className="flex-1 truncate">{basename(p.cwd)}</span>
-                  <Tooltip content={`${sessions.length} ${sessions.length === 1 ? 'sessão' : 'sessões'}`}>
+                  <Tooltip
+                    content={`${sessions.length} ${sessions.length === 1 ? 'sessão' : 'sessões'}`}
+                  >
                     <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                       {sessions.length}
                     </span>
@@ -319,26 +317,24 @@ export function SessionsSection({
                   </div>
                 </div>
                 {expanded ? (
-                  <>
-                    <div className="flex flex-col gap-px pl-3.5">
-                      {sessions.map((s) => (
-                        <SessionRow
-                          key={s.id}
-                          project={p}
-                          session={s}
-                          live={liveSessions.get(s.id)}
-                          active={s.id === activeSessionKey}
-                          variant={variant}
-                          onResumeSession={onResumeSession}
-                          onArchive={onArchive}
-                          onUnarchive={onUnarchive}
-                          onDelete={onDelete}
-                          onCloseSession={onCloseSession}
-                          renderState={renderState}
-                        />
-                      ))}
-                    </div>
-                  </>
+                  <div className="flex flex-col gap-px pl-3.5">
+                    {sessions.map((s) => (
+                      <SessionRow
+                        key={s.id}
+                        project={p}
+                        session={s}
+                        live={liveSessions.get(s.id)}
+                        active={s.id === activeSessionKey}
+                        variant={variant}
+                        onResumeSession={onResumeSession}
+                        onArchive={onArchive}
+                        onUnarchive={onUnarchive}
+                        onDelete={onDelete}
+                        onCloseSession={onCloseSession}
+                        renderState={renderState}
+                      />
+                    ))}
+                  </div>
                 ) : null}
                 {showAfter ? (
                   <div className="pointer-events-none absolute inset-x-0 -bottom-1 h-0.5 rounded bg-sky-500" />

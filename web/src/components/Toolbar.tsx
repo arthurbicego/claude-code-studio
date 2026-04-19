@@ -1,8 +1,8 @@
 import { FolderCode } from 'lucide-react'
+import { PanelMenu } from '@/components/panels/PanelMenu'
 import { CopyableField } from '@/components/ui/CopyableField'
 import { InfoPopover } from '@/components/ui/InfoPopover'
 import { Tooltip } from '@/components/ui/Tooltip'
-import { PanelMenu } from '@/components/panels/PanelMenu'
 import type { PanelKind } from '@/types'
 
 type Props = {

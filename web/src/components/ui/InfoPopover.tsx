@@ -1,6 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
 import { Info, X } from 'lucide-react'
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { cn } from '@/lib/utils'
 

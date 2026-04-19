@@ -1,20 +1,12 @@
+import { FileDiff, GitBranch, GitMerge, Play, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import {
-  FileDiff,
-  GitBranch,
-  GitMerge,
-  Play,
-  Plus,
-  RefreshCw,
-  Trash2,
-} from 'lucide-react'
-import { PanelContainer } from './PanelContainer'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { DropdownMenu, type DropdownMenuItem } from '@/components/ui/DropdownMenu'
 import { Tooltip } from '@/components/ui/Tooltip'
-import { cn } from '@/lib/utils'
 import { useWorktrees } from '@/hooks/useWorktrees'
+import { cn } from '@/lib/utils'
 import type { Worktree } from '@/types'
+import { PanelContainer } from './PanelContainer'
 
 type Props = {
   cwd: string | null
@@ -26,7 +18,7 @@ type Props = {
 
 function formatRelative(fullPath: string, cwd: string): string {
   if (fullPath === cwd) return '.'
-  if (fullPath.startsWith(cwd + '/')) return fullPath.slice(cwd.length + 1)
+  if (fullPath.startsWith(`${cwd}/`)) return fullPath.slice(cwd.length + 1)
   return fullPath
 }
 
@@ -150,10 +142,19 @@ export function WorktreesPanel({
       items.push({ label: 'Ver diff', icon: FileDiff, onSelect: () => onOpenDiff(wt) })
     }
     if (!mergeDisabled) {
-      items.push({ label: `Mergear em ${data?.base ?? 'base'}`, icon: GitMerge, onSelect: () => setPendingMerge(wt) })
+      items.push({
+        label: `Mergear em ${data?.base ?? 'base'}`,
+        icon: GitMerge,
+        onSelect: () => setPendingMerge(wt),
+      })
     }
     if (!removeDisabled) {
-      items.push({ label: 'Remover worktree', icon: Trash2, destructive: true, onSelect: () => setPendingRemove(wt) })
+      items.push({
+        label: 'Remover worktree',
+        icon: Trash2,
+        destructive: true,
+        onSelect: () => setPendingRemove(wt),
+      })
     }
 
     return (
@@ -204,7 +205,9 @@ export function WorktreesPanel({
             </div>
           </div>
           <div className="flex items-start gap-1">
-            <Tooltip content={`Abrir nova sessão em ${wt.isMain ? 'main' : wt.branch ?? wt.path}`}>
+            <Tooltip
+              content={`Abrir nova sessão em ${wt.isMain ? 'main' : (wt.branch ?? wt.path)}`}
+            >
               <button
                 type="button"
                 onClick={() => onLaunchInWorktree(wt.path)}
@@ -288,8 +291,8 @@ export function WorktreesPanel({
             <div className="rounded border border-dashed border-border p-4 text-[11px] text-muted-foreground">
               <p className="mb-2 font-medium text-foreground">Nenhum worktree adicional</p>
               <p>
-                Worktrees permitem trabalhar em branches paralelas sem atrapalhar o working tree principal.
-                Ideal para rodar várias sessões Claude sem conflitos de arquivos.
+                Worktrees permitem trabalhar em branches paralelas sem atrapalhar o working tree
+                principal. Ideal para rodar várias sessões Claude sem conflitos de arquivos.
               </p>
               <button
                 type="button"
@@ -302,9 +305,7 @@ export function WorktreesPanel({
             </div>
           </div>
         ) : (
-          <div className="flex-1 overflow-auto">
-            {worktrees.map(renderRow)}
-          </div>
+          <div className="flex-1 overflow-auto">{worktrees.map(renderRow)}</div>
         )}
         {data?.base ? (
           <div className="border-t border-border/60 bg-muted/20 px-3 py-1.5 text-[10px] text-muted-foreground">

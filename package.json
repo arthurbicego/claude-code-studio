@@ -6,11 +6,17 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "./start.sh",
+    "check": "biome check",
+    "format": "biome format --write",
+    "fix": "biome check --write",
     "postinstall": "node ./server/scripts/fix-pty-helper.js"
   },
   "dependencies": {
     "express": "^4.19.2",
     "express-ws": "^5.0.2",
     "node-pty": "^1.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.12"
   }
 }

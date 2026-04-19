@@ -1,9 +1,9 @@
-import { useMemo } from 'react'
 import { CheckCircle2, Circle, Loader2 } from 'lucide-react'
-import { PanelContainer } from './PanelContainer'
+import { useMemo } from 'react'
 import { useSessionTasks } from '@/hooks/useSessionTasks'
 import { cn } from '@/lib/utils'
 import type { TodoItem } from '@/types'
+import { PanelContainer } from './PanelContainer'
 
 type Props = {
   sessionId: string | null

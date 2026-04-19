@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/Modal'
+import { Button } from '@/components/ui/Button'
 
 type Props = {
   open: boolean
