@@ -1,4 +1,4 @@
-import { MoreVertical } from 'lucide-react'
+import { Check, MoreVertical } from 'lucide-react'
 import { type ComponentType, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Tooltip } from '@/components/ui/Tooltip'
@@ -8,6 +8,7 @@ export type DropdownMenuItem = {
   label: string
   onSelect: () => void
   destructive?: boolean
+  checked?: boolean
   icon?: ComponentType<{ size?: number | string; className?: string }>
 }
 
@@ -16,6 +17,9 @@ type Props = {
   ariaLabel?: string
   triggerClassName?: string
   tooltip?: string
+  triggerIcon?: ComponentType<{ size?: number | string; className?: string }>
+  triggerIconSize?: number
+  disabled?: boolean
 }
 
 export function DropdownMenu({
@@ -23,6 +27,9 @@ export function DropdownMenu({
   ariaLabel = 'Abrir menu',
   triggerClassName,
   tooltip,
+  triggerIcon: TriggerIcon = MoreVertical,
+  triggerIconSize = 12,
+  disabled,
 }: Props) {
   const [open, setOpen] = useState(false)
   const anchorRef = useRef<HTMLButtonElement | null>(null)
@@ -66,8 +73,9 @@ export function DropdownMenu({
     <button
       ref={anchorRef}
       type="button"
+      disabled={disabled}
       className={cn(
-        'rounded p-1 cursor-pointer',
+        'rounded p-1 cursor-pointer disabled:pointer-events-none disabled:opacity-50',
         open
           ? 'bg-accent text-foreground'
           : 'text-muted-foreground hover:bg-accent hover:text-foreground',
@@ -81,7 +89,7 @@ export function DropdownMenu({
       aria-expanded={open}
       aria-haspopup="menu"
     >
-      <MoreVertical size={12} />
+      <TriggerIcon size={triggerIconSize} />
     </button>
   )
 
@@ -125,6 +133,9 @@ export function DropdownMenu({
                     >
                       {Icon ? <Icon size={14} className="shrink-0 opacity-80" /> : null}
                       <span className="flex-1">{item.label}</span>
+                      {item.checked ? (
+                        <Check size={14} className="shrink-0 text-emerald-400" />
+                      ) : null}
                     </button>
                   </div>
                 )
