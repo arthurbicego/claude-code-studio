@@ -42,3 +42,66 @@ export function Field({
     </label>
   )
 }
+
+export function ToggleField({
+  label,
+  hint,
+  checked,
+  onChange,
+  disabled,
+}: {
+  label: string
+  hint?: string
+  checked: boolean
+  onChange: (v: boolean) => void
+  disabled?: boolean
+}) {
+  return (
+    <label
+      className={`flex cursor-pointer items-center justify-between gap-3 rounded border border-border bg-background/40 px-3 py-2 ${
+        disabled ? 'cursor-not-allowed opacity-50' : ''
+      }`}
+    >
+      <span className="flex flex-col gap-0.5">
+        <span className="text-xs text-foreground">{label}</span>
+        {hint ? <span className="text-[10px] text-muted-foreground">{hint}</span> : null}
+      </span>
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-4 w-4 cursor-pointer accent-sky-500"
+      />
+    </label>
+  )
+}
+
+export function CheckboxField({
+  label,
+  checked,
+  onChange,
+  disabled,
+}: {
+  label: string
+  checked: boolean
+  onChange: (v: boolean) => void
+  disabled?: boolean
+}) {
+  return (
+    <label
+      className={`flex cursor-pointer items-center gap-2 rounded border border-border bg-background/40 px-3 py-1.5 ${
+        disabled ? 'cursor-not-allowed opacity-50' : ''
+      }`}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-4 w-4 cursor-pointer accent-sky-500"
+      />
+      <span className="text-xs text-foreground">{label}</span>
+    </label>
+  )
+}

@@ -1,62 +1,52 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
-import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { AppDialogs, type PendingCloseWorktree } from '@/components/AppDialogs'
 import { NewSessionModal } from '@/components/NewSessionModal'
-import { ColumnResizer } from '@/components/panels/ColumnResizer'
-import { DiffPanel } from '@/components/panels/DiffPanel'
-import { PlanPanel } from '@/components/panels/PlanPanel'
-import { RowResizer } from '@/components/panels/RowResizer'
-import { ShellPanel } from '@/components/panels/ShellPanel'
-import { TasksPanel } from '@/components/panels/TasksPanel'
-import { WorktreesPanel } from '@/components/panels/WorktreesPanel'
+import { PanelColumns } from '@/components/PanelColumns'
 import { SessionActions } from '@/components/SessionActions'
 import { SessionFooter } from '@/components/SessionFooter'
 import { Sidebar } from '@/components/Sidebar'
 import { TerminalView } from '@/components/Terminal'
 import { Toolbar } from '@/components/Toolbar'
-import { type WorktreeCloseChoice, WorktreeCloseDialog } from '@/components/WorktreeCloseDialog'
+import type { WorktreeCloseChoice } from '@/components/WorktreeCloseDialog'
 import { useLiveSessions } from '@/hooks/useLiveSessions'
+import { usePanelLayout } from '@/hooks/usePanelLayout'
 import { useSessionDefaults } from '@/hooks/useSessionDefaults'
 import { useSessionFooter } from '@/hooks/useSessionFooter'
+import { useSessionLifecycle } from '@/hooks/useSessionLifecycle'
 import { useSessionList } from '@/hooks/useSessionList'
 import { layoutColumns } from '@/lib/panels'
 import { openInVSCode } from '@/lib/vscode'
 import type {
-  OpenPanel,
-  PanelKind,
   Project,
   SessionFooter as SessionFooterData,
   SessionLaunch,
   SessionMeta,
-  Worktree,
   WorktreesResult,
 } from '@/types'
-
-function newSessionKey(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID()
-  }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
-}
 
 export default function App() {
   const { projects, loading, error, refreshedAt, refresh } = useSessionList()
   const { defaults } = useSessionDefaults()
   const liveSessions = useLiveSessions(refresh)
 
-  const [openSessions, setOpenSessions] = useState<Map<string, SessionLaunch>>(new Map())
-  const [activeSessionKey, setActiveSessionKey] = useState<string | null>(null)
+  const {
+    openSessions,
+    activeSessionKey,
+    activeLaunch,
+    openPanels,
+    activateLaunch,
+    closeSession,
+    togglePanel,
+    closePanel,
+    removeSessions,
+    newSessionKey,
+  } = useSessionLifecycle(liveSessions)
+
   const [modalOpen, setModalOpen] = useState(false)
   const [modalInitial, setModalInitial] = useState<{ cwd?: string; isolate?: boolean } | null>(null)
-  const [pendingCloseWorktree, setPendingCloseWorktree] = useState<{
-    sessionKey: string
-    worktree: Worktree
-    base: string | null
-    projectCwd: string
-  } | null>(null)
+  const [pendingCloseWorktree, setPendingCloseWorktree] = useState<PendingCloseWorktree | null>(
+    null,
+  )
   const [closingBusy, setClosingBusy] = useState(false)
   const [closingError, setClosingError] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<SessionMeta | null>(null)
@@ -73,11 +63,7 @@ export default function App() {
   const [status, setStatus] = useState('Selecione uma sessão na barra lateral ou crie uma nova.')
   const [interruptSignal, setInterruptSignal] = useState(0)
   const [inputSignal, setInputSignal] = useState<{ seq: number; text: string } | null>(null)
-  const [openPanelsBySession, setOpenPanelsBySession] = useState<Map<string, OpenPanel[]>>(
-    new Map(),
-  )
 
-  const activeLaunch = activeSessionKey ? (openSessions.get(activeSessionKey) ?? null) : null
   const footer = useSessionFooter(activeLaunch ? activeSessionKey : null)
   const liveCwds = useMemo(() => {
     const set = new Set<string>()
@@ -86,114 +72,15 @@ export default function App() {
     })
     return set
   }, [liveSessions])
-  const openPanels = useMemo(
-    () => (activeSessionKey ? (openPanelsBySession.get(activeSessionKey) ?? []) : []),
-    [openPanelsBySession, activeSessionKey],
-  )
   const openPanelKinds = useMemo(() => new Set(openPanels.map((p) => p.kind)), [openPanels])
   const panelColumns = useMemo(() => layoutColumns(openPanels), [openPanels])
-  const [columnWidths, setColumnWidths] = useState<number[]>([])
-  const [rowRatios, setRowRatios] = useState<number[]>([])
-
-  useEffect(() => {
-    setColumnWidths((prev) => {
-      const target = panelColumns.length
-      if (prev.length === target) return prev
-      if (target < prev.length) return prev.slice(0, target)
-      const next = prev.slice()
-      while (next.length < target) next.push(352)
-      return next
-    })
-    setRowRatios((prev) => {
-      const target = panelColumns.length
-      if (prev.length === target) return prev
-      if (target < prev.length) return prev.slice(0, target)
-      const next = prev.slice()
-      while (next.length < target) next.push(0.5)
-      return next
-    })
-  }, [panelColumns.length])
-
-  const setColumnWidth = useCallback((index: number, width: number) => {
-    setColumnWidths((prev) => {
-      if (prev[index] === width) return prev
-      const next = prev.slice()
-      next[index] = width
-      return next
-    })
-  }, [])
-
-  const setRowRatio = useCallback((index: number, ratio: number) => {
-    setRowRatios((prev) => {
-      if (prev[index] === ratio) return prev
-      const next = prev.slice()
-      next[index] = ratio
-      return next
-    })
-  }, [])
-
-  const togglePanel = useCallback(
-    (kind: PanelKind) => {
-      if (!activeSessionKey) return
-      setOpenPanelsBySession((prev) => {
-        const next = new Map(prev)
-        const current = next.get(activeSessionKey) ?? []
-        const filtered = current.filter((p) => p.kind !== kind)
-        if (filtered.length === current.length) {
-          filtered.push({ kind, id: `${kind}-${Date.now()}` })
-        }
-        if (filtered.length === 0) next.delete(activeSessionKey)
-        else next.set(activeSessionKey, filtered)
-        return next
-      })
-    },
-    [activeSessionKey],
-  )
-
-  const closePanel = useCallback(
-    (kind: PanelKind, id: string) => {
-      if (!activeSessionKey) return
-      setOpenPanelsBySession((prev) => {
-        const next = new Map(prev)
-        const current = next.get(activeSessionKey) ?? []
-        const filtered = current.filter((p) => !(p.kind === kind && p.id === id))
-        if (filtered.length === 0) next.delete(activeSessionKey)
-        else next.set(activeSessionKey, filtered)
-        return next
-      })
-    },
-    [activeSessionKey],
+  const { columnWidths, rowRatios, setColumnWidth, setRowRatio } = usePanelLayout(
+    panelColumns.length,
   )
 
   const sendInput = (text: string) => {
     setInputSignal((prev) => ({ seq: (prev?.seq ?? 0) + 1, text }))
   }
-
-  const activateLaunch = useCallback(
-    async (launch: SessionLaunch) => {
-      const key = launch.sessionKey
-      const live = liveSessions.get(key)
-      const alreadyOpen = openSessions.has(key)
-      if (alreadyOpen && live) {
-        setActiveSessionKey(key)
-        return
-      }
-      if (live && live.state === 'standby') {
-        try {
-          await fetch(`/api/sessions/${encodeURIComponent(key)}/close`, { method: 'POST' })
-        } catch {
-          /* noop */
-        }
-      }
-      setOpenSessions((prev) => {
-        const next = new Map(prev)
-        next.set(key, { ...launch })
-        return next
-      })
-      setActiveSessionKey(key)
-    },
-    [openSessions, liveSessions],
-  )
 
   const onResumeSession = useCallback(
     (project: Project, session: SessionMeta) => {
@@ -213,7 +100,7 @@ export default function App() {
       setModalOpen(false)
       setModalInitial(null)
     },
-    [activateLaunch],
+    [activateLaunch, newSessionKey],
   )
 
   const launchInWorktree = useCallback(
@@ -226,7 +113,7 @@ export default function App() {
         permissionMode: (defaults.permissionMode as SessionLaunch['permissionMode']) ?? undefined,
       })
     },
-    [activateLaunch, defaults],
+    [activateLaunch, defaults, newSessionKey],
   )
 
   const openCreateWorktreeModal = useCallback((cwd: string) => {
@@ -238,33 +125,6 @@ export default function App() {
     setModalInitial(null)
     setModalOpen(true)
   }, [])
-
-  const closeSession = useCallback(
-    async (sessionKey: string) => {
-      try {
-        await fetch(`/api/sessions/${encodeURIComponent(sessionKey)}/close`, { method: 'POST' })
-      } catch {
-        /* noop */
-      }
-      setOpenSessions((prev) => {
-        const next = new Map(prev)
-        next.delete(sessionKey)
-        return next
-      })
-      setOpenPanelsBySession((prev) => {
-        if (!prev.has(sessionKey)) return prev
-        const next = new Map(prev)
-        next.delete(sessionKey)
-        return next
-      })
-      setActiveSessionKey((prev) => {
-        if (prev !== sessionKey) return prev
-        const remaining = Array.from(openSessions.keys()).filter((k) => k !== sessionKey)
-        return remaining[0] ?? null
-      })
-    },
-    [openSessions],
-  )
 
   const closeSessionWithGuard = useCallback(
     async (sessionKey: string) => {
@@ -278,8 +138,8 @@ export default function App() {
           cache: 'no-store',
         })
         if (!footerRes.ok) throw new Error('footer unavailable')
-        const footer = (await footerRes.json()) as SessionFooterData
-        if (!footer?.worktree) {
+        const footerData = (await footerRes.json()) as SessionFooterData
+        if (!footerData?.worktree) {
           await closeSession(sessionKey)
           return
         }
@@ -287,7 +147,7 @@ export default function App() {
         const wtRes = await fetch(`/api/worktrees?${params.toString()}`, { cache: 'no-store' })
         if (!wtRes.ok) throw new Error('worktrees unavailable')
         const data = (await wtRes.json()) as WorktreesResult
-        const match = data.worktrees.find((w) => w.path === footer.worktree?.path) ?? null
+        const match = data.worktrees.find((w) => w.path === footerData.worktree?.path) ?? null
         if (!match || match.isMain) {
           await closeSession(sessionKey)
           return
@@ -384,29 +244,21 @@ export default function App() {
     }
   }, [liveSessions, activeSessionKey, openSessions])
 
-  const archiveSession = useCallback(
-    async (id: string) => {
-      try {
-        await fetch(`/api/sessions/${encodeURIComponent(id)}/archive`, { method: 'POST' })
-      } catch {
-        /* noop */
-      }
-      refresh()
-    },
-    [refresh],
-  )
+  const archiveSession = useCallback(async (id: string) => {
+    try {
+      await fetch(`/api/sessions/${encodeURIComponent(id)}/archive`, { method: 'POST' })
+    } catch {
+      /* noop */
+    }
+  }, [])
 
-  const unarchiveSession = useCallback(
-    async (id: string) => {
-      try {
-        await fetch(`/api/sessions/${encodeURIComponent(id)}/unarchive`, { method: 'POST' })
-      } catch {
-        /* noop */
-      }
-      refresh()
-    },
-    [refresh],
-  )
+  const unarchiveSession = useCallback(async (id: string) => {
+    try {
+      await fetch(`/api/sessions/${encodeURIComponent(id)}/unarchive`, { method: 'POST' })
+    } catch {
+      /* noop */
+    }
+  }, [])
 
   const confirmArchive = useCallback(async () => {
     const target = pendingArchive
@@ -416,7 +268,8 @@ export default function App() {
     } else {
       await unarchiveSession(target.id)
     }
-  }, [pendingArchive, archiveSession, unarchiveSession])
+    refresh()
+  }, [pendingArchive, archiveSession, unarchiveSession, refresh])
 
   const requestOpenInVSCode = useCallback((path: string, label: string) => {
     setPendingVSCodeOpen({ path, label })
@@ -450,26 +303,9 @@ export default function App() {
         /* noop */
       }
     }
-    const idSet = new Set(ids)
-    setOpenSessions((prev) => {
-      let changed = false
-      const next = new Map(prev)
-      for (const id of idSet) {
-        if (next.delete(id)) changed = true
-      }
-      return changed ? next : prev
-    })
-    setOpenPanelsBySession((prev) => {
-      let changed = false
-      const next = new Map(prev)
-      for (const id of idSet) {
-        if (next.delete(id)) changed = true
-      }
-      return changed ? next : prev
-    })
-    setActiveSessionKey((prev) => (prev && idSet.has(prev) ? null : prev))
+    removeSessions(ids)
     refresh()
-  }, [pendingProjectDelete, openSessions, refresh])
+  }, [pendingProjectDelete, openSessions, removeSessions, refresh])
 
   const confirmDelete = useCallback(async () => {
     const target = pendingDelete
@@ -482,21 +318,9 @@ export default function App() {
     } catch {
       /* noop */
     }
-    setOpenSessions((prev) => {
-      if (!prev.has(target.id)) return prev
-      const next = new Map(prev)
-      next.delete(target.id)
-      return next
-    })
-    setOpenPanelsBySession((prev) => {
-      if (!prev.has(target.id)) return prev
-      const next = new Map(prev)
-      next.delete(target.id)
-      return next
-    })
-    setActiveSessionKey((prev) => (prev === target.id ? null : prev))
+    removeSessions([target.id])
     refresh()
-  }, [pendingDelete, openSessions, refresh])
+  }, [pendingDelete, openSessions, removeSessions, refresh])
 
   return (
     <div className="flex h-full">
@@ -556,65 +380,20 @@ export default function App() {
               </div>
             ) : null}
           </div>
-          {activeLaunch
-            ? panelColumns.map((col, colIdx) => (
-                <Fragment key={`col-${colIdx}`}>
-                  <ColumnResizer
-                    width={columnWidths[colIdx] ?? 352}
-                    onChange={(w) => setColumnWidth(colIdx, w)}
-                  />
-                  <div
-                    className="flex min-h-0 shrink-0 flex-col"
-                    style={{ width: `${columnWidths[colIdx] ?? 352}px` }}
-                  >
-                    {col.map((panel, panelIdx) => {
-                      const ratio = rowRatios[colIdx] ?? 0.5
-                      const grow = col.length > 1 ? (panelIdx === 0 ? ratio : 1 - ratio) : 1
-                      return (
-                        <Fragment key={panel.id}>
-                          {panelIdx > 0 ? (
-                            <RowResizer ratio={ratio} onChange={(r) => setRowRatio(colIdx, r)} />
-                          ) : null}
-                          <div
-                            className="flex min-h-0 min-w-0 flex-col"
-                            style={{ flex: `${grow} 1 0%` }}
-                          >
-                            {panel.kind === 'diff' ? (
-                              <DiffPanel
-                                sessionId={activeSessionKey}
-                                onClose={() => closePanel(panel.kind, panel.id)}
-                              />
-                            ) : panel.kind === 'terminal' ? (
-                              <ShellPanel
-                                cwd={activeLaunch.cwd}
-                                onClose={() => closePanel(panel.kind, panel.id)}
-                              />
-                            ) : panel.kind === 'tasks' ? (
-                              <TasksPanel
-                                sessionId={activeSessionKey}
-                                onClose={() => closePanel(panel.kind, panel.id)}
-                              />
-                            ) : panel.kind === 'plan' ? (
-                              <PlanPanel
-                                sessionId={activeSessionKey}
-                                onClose={() => closePanel(panel.kind, panel.id)}
-                              />
-                            ) : (
-                              <WorktreesPanel
-                                cwd={activeLaunch.cwd}
-                                onClose={() => closePanel(panel.kind, panel.id)}
-                                onLaunchInWorktree={launchInWorktree}
-                                onOpenCreate={openCreateWorktreeModal}
-                              />
-                            )}
-                          </div>
-                        </Fragment>
-                      )
-                    })}
-                  </div>
-                </Fragment>
-              ))
-            : null}
+          {activeLaunch ? (
+            <PanelColumns
+              columns={panelColumns}
+              widths={columnWidths}
+              ratios={rowRatios}
+              sessionId={activeSessionKey}
+              cwd={activeLaunch.cwd}
+              onSetWidth={setColumnWidth}
+              onSetRatio={setRowRatio}
+              onClose={closePanel}
+              onLaunchInWorktree={launchInWorktree}
+              onOpenCreateWorktree={openCreateWorktreeModal}
+            />
+          ) : null}
         </div>
         {activeLaunch ? (
           <>
@@ -641,105 +420,32 @@ export default function App() {
         onLaunch={onLaunchNew}
       />
 
-      <ConfirmDialog
-        open={!!pendingArchive}
-        title={pendingArchive?.action === 'unarchive' ? 'Desarquivar sessão' : 'Arquivar sessão'}
-        description={
-          pendingArchive
-            ? pendingArchive.action === 'unarchive'
-              ? `A sessão (${pendingArchive.id.slice(0, 8)}…) voltará para o histórico.`
-              : `A sessão (${pendingArchive.id.slice(0, 8)}…) será movida para Arquivadas.`
-            : ''
-        }
-        confirmLabel={pendingArchive?.action === 'unarchive' ? 'Desarquivar' : 'Arquivar'}
-        onConfirm={confirmArchive}
-        onClose={() => setPendingArchive(null)}
-      />
-
-      <WorktreeCloseDialog
-        open={!!pendingCloseWorktree}
-        worktree={pendingCloseWorktree?.worktree ?? null}
-        projectCwd={pendingCloseWorktree?.projectCwd ?? null}
-        base={pendingCloseWorktree?.base ?? null}
-        pending={closingBusy}
-        error={closingError}
-        onChoose={handleWorktreeCloseChoice}
-        onCancel={() => {
+      <AppDialogs
+        pendingArchive={pendingArchive}
+        onConfirmArchive={confirmArchive}
+        onCloseArchive={() => setPendingArchive(null)}
+        pendingCloseWorktree={pendingCloseWorktree}
+        closingBusy={closingBusy}
+        closingError={closingError}
+        onChooseWorktreeClose={handleWorktreeCloseChoice}
+        onCancelWorktreeClose={() => {
           setPendingCloseWorktree(null)
           setClosingError(null)
         }}
-      />
-
-      <ConfirmDialog
-        open={!!pendingVSCodeOpen}
-        title="Abrir no VS Code"
-        description={
-          pendingVSCodeOpen
-            ? `O diretório "${pendingVSCodeOpen.label}" será aberto no VS Code.`
-            : ''
-        }
-        confirmLabel="Abrir"
-        onConfirm={() => {
+        pendingVSCodeOpen={pendingVSCodeOpen}
+        onConfirmVSCode={() => {
           if (pendingVSCodeOpen) openInVSCode(pendingVSCodeOpen.path)
         }}
-        onClose={() => setPendingVSCodeOpen(null)}
-      />
-
-      <ConfirmDialog
-        open={!!pendingProjectArchive}
-        title="Arquivar sessões do projeto"
-        description={
-          pendingProjectArchive
-            ? (() => {
-                const count = pendingProjectArchive.sessions.filter((s) => !s.archived).length
-                const name =
-                  pendingProjectArchive.cwd.split('/').filter(Boolean).pop() ||
-                  pendingProjectArchive.cwd
-                return count === 0
-                  ? `Não há sessões ativas para arquivar em "${name}".`
-                  : `${count} ${count === 1 ? 'sessão ativa será movida' : 'sessões ativas serão movidas'} para Arquivadas (projeto: ${name}).`
-              })()
-            : ''
-        }
-        confirmLabel="Arquivar todas"
-        onConfirm={confirmProjectArchive}
-        onClose={() => setPendingProjectArchive(null)}
-      />
-
-      <ConfirmDialog
-        open={!!pendingProjectDelete}
-        title="Apagar sessões do projeto definitivamente"
-        description={
-          pendingProjectDelete
-            ? (() => {
-                const count = pendingProjectDelete.sessions.length
-                const name =
-                  pendingProjectDelete.cwd.split('/').filter(Boolean).pop() ||
-                  pendingProjectDelete.cwd
-                return count === 0
-                  ? `Não há sessões para apagar em "${name}".`
-                  : `Esta ação remove do disco ${count} ${count === 1 ? 'sessão' : 'sessões'} do projeto "${name}". Não pode ser desfeita.`
-              })()
-            : ''
-        }
-        confirmLabel="Apagar todas"
-        destructive
-        onConfirm={confirmProjectDelete}
-        onClose={() => setPendingProjectDelete(null)}
-      />
-
-      <ConfirmDialog
-        open={!!pendingDelete}
-        title="Apagar sessão definitivamente"
-        description={
-          pendingDelete
-            ? `Esta ação remove o arquivo da sessão (${pendingDelete.id.slice(0, 8)}…) do disco. Não pode ser desfeita.`
-            : ''
-        }
-        confirmLabel="Apagar"
-        destructive
-        onConfirm={confirmDelete}
-        onClose={() => setPendingDelete(null)}
+        onCloseVSCode={() => setPendingVSCodeOpen(null)}
+        pendingProjectArchive={pendingProjectArchive}
+        onConfirmProjectArchive={confirmProjectArchive}
+        onCloseProjectArchive={() => setPendingProjectArchive(null)}
+        pendingProjectDelete={pendingProjectDelete}
+        onConfirmProjectDelete={confirmProjectDelete}
+        onCloseProjectDelete={() => setPendingProjectDelete(null)}
+        pendingDelete={pendingDelete}
+        onConfirmDelete={confirmDelete}
+        onCloseDelete={() => setPendingDelete(null)}
       />
     </div>
   )
