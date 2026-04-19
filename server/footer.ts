@@ -39,7 +39,9 @@ export function removeFooterCacheFor(id: string): void {
   if (!FOOTER_ID_RE.test(id)) return;
   try {
     fs.unlinkSync(path.join(STATUSLINE_CACHE_DIR, `${id}.json`));
-  } catch {}
+  } catch {
+    // Cache file may not exist; that's the desired end state.
+  }
 }
 
 export function buildFooterPayload(id: string): SessionFooter {

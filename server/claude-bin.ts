@@ -7,7 +7,9 @@ export function resolveClaudeBin(): string | null {
   try {
     const out = execSync('which claude', { encoding: 'utf8', env: process.env }).trim();
     if (out && fs.existsSync(out)) return fs.realpathSync(out);
-  } catch {}
+  } catch {
+    // `which` exits non-zero when not found — fall through to candidate list.
+  }
   const candidates = [
     path.join(os.homedir(), '.local/bin/claude'),
     '/opt/homebrew/bin/claude',

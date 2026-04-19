@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Route, Routes } from 'react-router'
 import './index.css'
 import { SettingsPage } from '@/components/SettingsPage'
+import { ToastContainer } from '@/components/ToastContainer'
 import { PrefsProvider } from '@/hooks/usePrefs'
 import App from './App.tsx'
 
@@ -16,6 +17,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="*" element={<App />} />
         </Routes>
       </BrowserRouter>
+      <ToastContainer />
     </PrefsProvider>
   </StrictMode>,
 )

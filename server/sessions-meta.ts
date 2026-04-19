@@ -117,7 +117,9 @@ export function findLastToolUse(sessionFile: string, toolName: string): ToolUseR
         }
       }
     });
-  } catch {}
+  } catch {
+    // Session file missing or unreadable — caller treats null as "no tool use".
+  }
   return last;
 }
 

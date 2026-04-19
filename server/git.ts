@@ -105,7 +105,9 @@ export function uncommittedLineStats(cwd: string | null): UncommittedLineStats {
       const content = fs.readFileSync(p, 'utf8');
       if (content.indexOf('\0') !== -1) continue;
       added += countTextLines(content);
-    } catch {}
+    } catch {
+      // Untracked file vanished or unreadable between `ls-files` and `stat` — skip.
+    }
   }
   return { added, removed };
 }

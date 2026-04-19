@@ -152,7 +152,9 @@ export function register(app: Express): void {
     if (!entry) return res.status(404).json({ error: 'session not live' });
     try {
       entry.pty.kill();
-    } catch {}
+    } catch {
+      // PTY may have exited between the lookup and kill.
+    }
     const timeout = new Promise<void>((resolve) => setTimeout(resolve, 3000));
     await Promise.race([entry.exited, timeout]);
     res.json({ ok: true });
