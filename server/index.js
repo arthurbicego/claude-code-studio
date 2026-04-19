@@ -1,9 +1,9 @@
 const express = require('express');
 const expressWs = require('express-ws');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const { execSync, execFileSync, spawn } = require('child_process');
+const fs = require('node:fs');
+const path = require('node:path');
+const os = require('node:os');
+const { execSync, execFileSync, spawn } = require('node:child_process');
 const pty = require('node-pty');
 
 const PORT = process.env.PORT || 3000;
@@ -33,7 +33,8 @@ if (!CLAUDE_BIN) {
 }
 console.log(`Using claude binary: ${CLAUDE_BIN}`);
 
-const SYSTEM_TAG_RE = /^\s*<(command-[\w-]+|local-command-[\w-]+|system-reminder|user-prompt-submit-hook|bash-stdout|bash-stderr)\b/;
+const SYSTEM_TAG_RE =
+  /^\s*<(command-[\w-]+|local-command-[\w-]+|system-reminder|user-prompt-submit-hook|bash-stdout|bash-stderr)\b/;
 
 function isSystemText(s) {
   return !s || SYSTEM_TAG_RE.test(s);
@@ -64,17 +65,23 @@ function readSessionMeta(filePath) {
     for (const line of head.split('\n')) {
       if (!line) continue;
       let obj;
-      try { obj = JSON.parse(line); } catch { continue; }
+      try {
+        obj = JSON.parse(line);
+      } catch {
+        continue;
+      }
 
       if (!cwd && typeof obj.cwd === 'string') cwd = obj.cwd;
 
       if (!preview && obj.type === 'user' && !obj.isSidechain) {
-        const content = obj.message && obj.message.content;
+        const content = obj.message?.content;
         let text = null;
         if (typeof content === 'string') {
           text = content;
         } else if (Array.isArray(content)) {
-          const textPart = content.find(p => p && p.type === 'text' && typeof p.text === 'string');
+          const textPart = content.find(
+            (p) => p && p.type === 'text' && typeof p.text === 'string',
+          );
           if (textPart) text = textPart.text;
         }
         if (text && !isSystemText(text)) preview = text;
@@ -90,7 +97,7 @@ function readSessionMeta(filePath) {
 }
 
 function fallbackSlugToCwd(slug) {
-  return '/' + slug.replace(/^-/, '').replace(/-/g, '/');
+  return `/${slug.replace(/^-/, '').replace(/-/g, '/')}`;
 }
 
 const app = express();
@@ -106,15 +113,16 @@ app.get('/api/sessions', (_req, res) => {
   res.set('Cache-Control', 'no-store, max-age=0');
   if (!fs.existsSync(CLAUDE_PROJECTS)) return res.json({ projects: [] });
 
-  const projects = fs.readdirSync(CLAUDE_PROJECTS)
-    .map(slug => {
+  const projects = fs
+    .readdirSync(CLAUDE_PROJECTS)
+    .map((slug) => {
       const dir = path.join(CLAUDE_PROJECTS, slug);
       if (!fs.statSync(dir).isDirectory()) return null;
 
-      const sessionFiles = fs.readdirSync(dir).filter(f => f.endsWith('.jsonl'));
+      const sessionFiles = fs.readdirSync(dir).filter((f) => f.endsWith('.jsonl'));
       let projectCwd = null;
       const sessions = sessionFiles
-        .map(f => {
+        .map((f) => {
           const id = f.replace(/\.jsonl$/, '');
           const fpath = path.join(dir, f);
           const st = fs.statSync(fpath);
@@ -154,7 +162,9 @@ function broadcastInvalidate() {
   sseDebounceTimer = setTimeout(() => {
     sseDebounceTimer = null;
     for (const res of sseClients) {
-      try { res.write(`event: invalidate\ndata: ${Date.now()}\n\n`); } catch {}
+      try {
+        res.write(`event: invalidate\ndata: ${Date.now()}\n\n`);
+      } catch {}
     }
   }, 500);
 }
@@ -193,7 +203,9 @@ function ensureSseWatcher() {
     sseWatcher = fs.watch(CLAUDE_PROJECTS, { recursive: true }, () => broadcastInvalidate());
     sseWatcher.on('error', (err) => {
       console.warn(`[sse] watcher error: ${err.message}`);
-      try { sseWatcher.close(); } catch {}
+      try {
+        sseWatcher.close();
+      } catch {}
       sseWatcher = null;
     });
   } catch (err) {
@@ -216,14 +228,18 @@ app.get('/api/sessions/stream', (req, res) => {
   ensureSseWatcher();
 
   const heartbeat = setInterval(() => {
-    try { res.write(`: keepalive ${Date.now()}\n\n`); } catch {}
+    try {
+      res.write(`: keepalive ${Date.now()}\n\n`);
+    } catch {}
   }, 25000);
 
   req.on('close', () => {
     clearInterval(heartbeat);
     sseClients.delete(res);
     if (sseClients.size === 0 && sseWatcher) {
-      try { sseWatcher.close(); } catch {}
+      try {
+        sseWatcher.close();
+      } catch {}
       sseWatcher = null;
     }
   });
@@ -278,7 +294,7 @@ function loadSettingsFile(filePath) {
 
 function saveSettingsFile(filePath, obj) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, JSON.stringify(obj, null, 2) + '\n');
+  fs.writeFileSync(filePath, `${JSON.stringify(obj, null, 2)}\n`);
 }
 
 const SANDBOX_BOOL_KEYS = [
@@ -337,7 +353,7 @@ function projectSandbox(raw) {
 }
 
 function parseSandboxScope(req) {
-  const raw = (req.query?.scope ?? req.body?.scope ?? 'user-local');
+  const raw = req.query?.scope ?? req.body?.scope ?? 'user-local';
   const scope = typeof raw === 'string' ? raw : 'user-local';
   if (!SANDBOX_SCOPES.includes(scope)) {
     return { error: `scope inválido; use: ${SANDBOX_SCOPES.join(', ')}` };
@@ -374,7 +390,7 @@ app.patch('/api/claude-settings', (req, res) => {
       if (Array.isArray(incoming[key])) cur[key] = normalizeStringList(incoming[key]);
     }
     for (const key of SANDBOX_OBJECT_KEYS) {
-      if (Object.prototype.hasOwnProperty.call(incoming, key)) {
+      if (Object.hasOwn(incoming, key)) {
         const v = incoming[key];
         if (v === null) {
           delete cur[key];
@@ -385,7 +401,7 @@ app.patch('/api/claude-settings', (req, res) => {
         }
       }
     }
-    if (Object.prototype.hasOwnProperty.call(incoming, 'enabledPlatforms')) {
+    if (Object.hasOwn(incoming, 'enabledPlatforms')) {
       if (!Array.isArray(incoming.enabledPlatforms)) {
         return res.status(400).json({ error: 'sandbox.enabledPlatforms deve ser um array' });
       }
@@ -411,7 +427,11 @@ app.patch('/api/claude-settings', (req, res) => {
 const GLOBAL_CLAUDE_MD = path.join(os.homedir(), '.claude', 'CLAUDE.md');
 const HOME_DIR = os.homedir();
 const HOME_DIR_REAL = (() => {
-  try { return fs.realpathSync(HOME_DIR); } catch { return HOME_DIR; }
+  try {
+    return fs.realpathSync(HOME_DIR);
+  } catch {
+    return HOME_DIR;
+  }
 })();
 
 function readMemoryFile(filePath) {
@@ -437,7 +457,9 @@ function writeMemoryFile(filePath, content) {
 }
 
 function deleteMemoryFile(filePath) {
-  try { fs.unlinkSync(filePath); } catch (err) {
+  try {
+    fs.unlinkSync(filePath);
+  } catch (err) {
     if (!err || err.code !== 'ENOENT') throw err;
   }
   return { exists: false, content: '', mtime: null };
@@ -452,7 +474,8 @@ function isAllowedProjectCwd(rawCwd) {
   } catch {
     return null;
   }
-  const within = (resolved + path.sep).startsWith(HOME_DIR_REAL + path.sep) || resolved === HOME_DIR_REAL;
+  const within =
+    (resolved + path.sep).startsWith(HOME_DIR_REAL + path.sep) || resolved === HOME_DIR_REAL;
   if (!within) return null;
   return resolved;
 }
@@ -554,7 +577,10 @@ app.get('/api/memory/hierarchy', (req, res) => {
     if (parent === cur) break;
     cur = parent;
   }
-  if (!dirs.includes(HOME_DIR_REAL) && (HOME_DIR_REAL === cwd || cwd.startsWith(HOME_DIR_REAL + path.sep))) {
+  if (
+    !dirs.includes(HOME_DIR_REAL) &&
+    (HOME_DIR_REAL === cwd || cwd.startsWith(HOME_DIR_REAL + path.sep))
+  ) {
     dirs.unshift(HOME_DIR_REAL);
   }
 
@@ -611,10 +637,16 @@ function expandImports(content, basePath, options = {}) {
       out.push(line);
       continue;
     }
-    if (inFence) { out.push(line); continue; }
+    if (inFence) {
+      out.push(line);
+      continue;
+    }
 
     const m = IMPORT_LINE_RE.exec(line);
-    if (!m) { out.push(line); continue; }
+    if (!m) {
+      out.push(line);
+      continue;
+    }
 
     const rawPath = m[2];
     const resolved = resolveImportPath(rawPath, basePath);
@@ -627,7 +659,8 @@ function expandImports(content, basePath, options = {}) {
       continue;
     }
 
-    const withinHome = (resolved + path.sep).startsWith(HOME_DIR_REAL + path.sep) || resolved === HOME_DIR_REAL;
+    const withinHome =
+      (resolved + path.sep).startsWith(HOME_DIR_REAL + path.sep) || resolved === HOME_DIR_REAL;
     if (!withinHome) {
       entry.error = 'outside_home';
       imports.push(entry);
@@ -643,9 +676,12 @@ function expandImports(content, basePath, options = {}) {
     }
 
     let stat;
-    try { stat = fs.statSync(resolved); }
-    catch { stat = null; }
-    if (!stat || !stat.isFile()) {
+    try {
+      stat = fs.statSync(resolved);
+    } catch {
+      stat = null;
+    }
+    if (!stat?.isFile()) {
       entry.error = 'not_found';
       imports.push(entry);
       out.push(`<!-- @${rawPath} — arquivo não encontrado -->`);
@@ -654,8 +690,9 @@ function expandImports(content, basePath, options = {}) {
 
     entry.exists = true;
     let inner;
-    try { inner = fs.readFileSync(resolved, 'utf8'); }
-    catch (err) {
+    try {
+      inner = fs.readFileSync(resolved, 'utf8');
+    } catch (err) {
       entry.error = err.message;
       imports.push(entry);
       out.push(`<!-- @${rawPath} — erro: ${err.message} -->`);
@@ -677,8 +714,9 @@ app.post('/api/memory/expand', (req, res) => {
   const content = typeof req.body?.content === 'string' ? req.body.content : null;
   if (content == null) return res.status(400).json({ error: 'content obrigatório (string)' });
   const rawBase = typeof req.body?.basePath === 'string' ? req.body.basePath : '';
-  let basePath = path.resolve(rawBase || HOME_DIR_REAL);
-  const withinHome = (basePath + path.sep).startsWith(HOME_DIR_REAL + path.sep) || basePath === HOME_DIR_REAL;
+  const basePath = path.resolve(rawBase || HOME_DIR_REAL);
+  const withinHome =
+    (basePath + path.sep).startsWith(HOME_DIR_REAL + path.sep) || basePath === HOME_DIR_REAL;
   if (!withinHome) return res.status(400).json({ error: 'basePath fora do home' });
   try {
     const result = expandImports(content, basePath);
@@ -692,9 +730,24 @@ const NAME_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const USER_AGENTS_DIR = path.join(os.homedir(), '.claude', 'agents');
 const USER_SKILLS_DIR = path.join(os.homedir(), '.claude', 'skills');
 const KNOWN_TOOLS = [
-  'Bash','Edit','Glob','Grep','Read','Write','NotebookEdit',
-  'WebFetch','WebSearch','TodoWrite','Task','TaskCreate','TaskUpdate',
-  'Agent','SlashCommand','BashOutput','KillBash','ExitPlanMode',
+  'Bash',
+  'Edit',
+  'Glob',
+  'Grep',
+  'Read',
+  'Write',
+  'NotebookEdit',
+  'WebFetch',
+  'WebSearch',
+  'TodoWrite',
+  'Task',
+  'TaskCreate',
+  'TaskUpdate',
+  'Agent',
+  'SlashCommand',
+  'BashOutput',
+  'KillBash',
+  'ExitPlanMode',
 ];
 
 function isValidName(name) {
@@ -713,12 +766,20 @@ function parseFrontmatter(text) {
     const eq = line.indexOf(':');
     if (eq < 0) continue;
     const key = line.slice(0, eq).trim();
-    let value = line.slice(eq + 1).trim();
+    const value = line.slice(eq + 1).trim();
     if (!key) continue;
     if (value.startsWith('[') && value.endsWith(']')) {
       const inner = value.slice(1, -1).trim();
-      fm[key] = inner ? inner.split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean) : [];
-    } else if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      fm[key] = inner
+        ? inner
+            .split(',')
+            .map((s) => s.trim().replace(/^["']|["']$/g, ''))
+            .filter(Boolean)
+        : [];
+    } else if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
       fm[key] = value.slice(1, -1);
     } else {
       fm[key] = value;
@@ -728,7 +789,7 @@ function parseFrontmatter(text) {
 }
 
 function escapeYamlString(s) {
-  if (s === '' || /[:#\-?&*!|>'"%@`{}\[\],\n\r]/.test(s) || /^\s|\s$/.test(s)) {
+  if (s === '' || /[:#\-?&*!|>'"%@`{}[\],\n\r]/.test(s) || /^\s|\s$/.test(s)) {
     return JSON.stringify(s);
   }
   return s;
@@ -774,7 +835,11 @@ function listAgentsIn(dir) {
     if (!f.endsWith('.md')) continue;
     const fpath = path.join(dir, f);
     let stat;
-    try { stat = fs.statSync(fpath); } catch { continue; }
+    try {
+      stat = fs.statSync(fpath);
+    } catch {
+      continue;
+    }
     if (!stat.isFile()) continue;
     const name = f.replace(/\.md$/, '');
     let description = '';
@@ -794,7 +859,11 @@ function listSkillsIn(dir) {
   for (const f of fs.readdirSync(dir)) {
     const fpath = path.join(dir, f);
     let stat;
-    try { stat = fs.statSync(fpath); } catch { continue; }
+    try {
+      stat = fs.statSync(fpath);
+    } catch {
+      continue;
+    }
     if (!stat.isDirectory()) continue;
     const skillFile = path.join(fpath, 'SKILL.md');
     if (!fs.existsSync(skillFile)) continue;
@@ -818,7 +887,11 @@ function listSkillExtras(dir) {
       const fpath = path.join(cur, f);
       const relPath = rel ? `${rel}/${f}` : f;
       let stat;
-      try { stat = fs.statSync(fpath); } catch { continue; }
+      try {
+        stat = fs.statSync(fpath);
+      } catch {
+        continue;
+      }
       if (stat.isDirectory()) walk(fpath, relPath);
       else if (stat.isFile()) out.push({ relativePath: relPath, size: stat.size });
     }
@@ -839,8 +912,11 @@ function agentResponse(name, dir) {
     model: typeof frontmatter.model === 'string' ? frontmatter.model : '',
     tools: Array.isArray(frontmatter.tools)
       ? frontmatter.tools
-      : (typeof frontmatter.tools === 'string' && frontmatter.tools.trim())
-        ? frontmatter.tools.split(',').map((s) => s.trim()).filter(Boolean)
+      : typeof frontmatter.tools === 'string' && frontmatter.tools.trim()
+        ? frontmatter.tools
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
         : [],
     body,
     raw: content,
@@ -903,14 +979,21 @@ app.put('/api/agents/file', (req, res) => {
   const description = typeof body.description === 'string' ? body.description.trim() : '';
   if (!description) return res.status(400).json({ error: 'description obrigatório' });
   const model = typeof body.model === 'string' ? body.model.trim() : '';
-  const tools = Array.isArray(body.tools) ? body.tools.filter((t) => typeof t === 'string' && t.trim()) : [];
+  const tools = Array.isArray(body.tools)
+    ? body.tools.filter((t) => typeof t === 'string' && t.trim())
+    : [];
   const promptBody = typeof body.body === 'string' ? body.body : '';
-  const previousName = typeof body.previousName === 'string' && isValidName(body.previousName) ? body.previousName : null;
+  const previousName =
+    typeof body.previousName === 'string' && isValidName(body.previousName)
+      ? body.previousName
+      : null;
 
   const fm = { name, description };
   if (model) fm.model = model;
   if (tools.length > 0) fm.tools = tools;
-  const fullContent = buildFrontmatter(fm) + (promptBody.endsWith('\n') || promptBody === '' ? promptBody : promptBody + '\n');
+  const fullContent =
+    buildFrontmatter(fm) +
+    (promptBody.endsWith('\n') || promptBody === '' ? promptBody : `${promptBody}\n`);
 
   try {
     fs.mkdirSync(dir, { recursive: true });
@@ -977,9 +1060,14 @@ app.put('/api/skills/file', (req, res) => {
   const description = typeof body.description === 'string' ? body.description.trim() : '';
   if (!description) return res.status(400).json({ error: 'description obrigatório' });
   const promptBody = typeof body.body === 'string' ? body.body : '';
-  const previousName = typeof body.previousName === 'string' && isValidName(body.previousName) ? body.previousName : null;
+  const previousName =
+    typeof body.previousName === 'string' && isValidName(body.previousName)
+      ? body.previousName
+      : null;
 
-  const fullContent = buildFrontmatter({ name, description }) + (promptBody.endsWith('\n') || promptBody === '' ? promptBody : promptBody + '\n');
+  const fullContent =
+    buildFrontmatter({ name, description }) +
+    (promptBody.endsWith('\n') || promptBody === '' ? promptBody : `${promptBody}\n`);
 
   try {
     fs.mkdirSync(dir, { recursive: true });
@@ -1039,7 +1127,7 @@ app.post('/api/sessions/:id/unarchive', (req, res) => {
   res.json({ ok: true, archived: false });
 });
 
-app.get('/api/prefs', (req, res) => {
+app.get('/api/prefs', (_req, res) => {
   res.set('Cache-Control', 'no-store');
   res.json(appState.prefs);
 });
@@ -1070,7 +1158,9 @@ const FOOTER_ID_RE = /^[A-Za-z0-9._-]{1,128}$/;
 
 function removeFooterCacheFor(id) {
   if (!FOOTER_ID_RE.test(id)) return;
-  try { fs.unlinkSync(path.join(STATUSLINE_CACHE_DIR, `${id}.json`)); } catch {}
+  try {
+    fs.unlinkSync(path.join(STATUSLINE_CACHE_DIR, `${id}.json`));
+  } catch {}
 }
 
 function readJsonSafe(filePath) {
@@ -1084,11 +1174,16 @@ function readJsonSafe(filePath) {
 function gitInfo(cwd) {
   if (!cwd) return { branch: null, dirty: false };
   try {
-    const branch = execSync('git --no-optional-locks symbolic-ref --short HEAD', {
-      cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim() || null;
+    const branch =
+      execSync('git --no-optional-locks symbolic-ref --short HEAD', {
+        cwd,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }).trim() || null;
     const status = execSync('git --no-optional-locks status --porcelain', {
-      cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
     });
     return { branch, dirty: status.length > 0 };
   } catch {
@@ -1125,9 +1220,12 @@ function uncommittedLineStats(cwd) {
   if (!cwd || !fs.existsSync(cwd)) return { added: null, removed: null };
   const tracked = parseNumstat(runGit(cwd, 'diff --numstat HEAD'));
   let added = tracked.added;
-  let removed = tracked.removed;
+  const removed = tracked.removed;
   const untrackedRaw = runGit(cwd, 'ls-files --others --exclude-standard');
-  for (const rel of untrackedRaw.split('\n').map((s) => s.trim()).filter(Boolean)) {
+  for (const rel of untrackedRaw
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean)) {
     try {
       const p = path.join(cwd, rel);
       const st = fs.statSync(p);
@@ -1170,9 +1268,15 @@ function buildFooterPayload(id) {
     fiveHourResetsAt: typeof five?.resets_at === 'number' ? five.resets_at : null,
     sevenDayPct: typeof seven?.used_percentage === 'number' ? seven.used_percentage : null,
     sevenDayResetsAt: typeof seven?.resets_at === 'number' ? seven.resets_at : null,
-    cacheUpdatedAt: cache ? (() => {
-      try { return fs.statSync(path.join(STATUSLINE_CACHE_DIR, `${id}.json`)).mtimeMs; } catch { return null; }
-    })() : null,
+    cacheUpdatedAt: cache
+      ? (() => {
+          try {
+            return fs.statSync(path.join(STATUSLINE_CACHE_DIR, `${id}.json`)).mtimeMs;
+          } catch {
+            return null;
+          }
+        })()
+      : null,
     globalUpdatedAt: global?.at ? global.at * 1000 : null,
     worktree,
   };
@@ -1230,16 +1334,31 @@ function listWorktrees(cwd) {
   if (!raw) return [];
   const entries = [];
   let current = null;
-  const flush = () => { if (current) { entries.push(current); current = null; } };
+  const flush = () => {
+    if (current) {
+      entries.push(current);
+      current = null;
+    }
+  };
   for (const rawLine of raw.split('\n')) {
     const line = rawLine.replace(/\r$/, '');
-    if (!line) { flush(); continue; }
+    if (!line) {
+      flush();
+      continue;
+    }
     const sp = line.indexOf(' ');
     const key = sp === -1 ? line : line.slice(0, sp);
     const val = sp === -1 ? '' : line.slice(sp + 1);
     if (key === 'worktree') {
       flush();
-      current = { path: val, branch: null, head: null, bare: false, detached: false, prunable: false };
+      current = {
+        path: val,
+        branch: null,
+        head: null,
+        bare: false,
+        detached: false,
+        prunable: false,
+      };
     } else if (current && key === 'HEAD') current.head = val;
     else if (current && key === 'branch') current.branch = val.replace(/^refs\/heads\//, '');
     else if (current && key === 'bare') current.bare = true;
@@ -1253,7 +1372,10 @@ function listWorktrees(cwd) {
 function worktreeStatus(wtPath) {
   if (!wtPath || !fs.existsSync(wtPath)) return { clean: true, modifiedCount: 0 };
   const status = runGitArgs(wtPath, ['status', '--porcelain']);
-  const lines = status.split('\n').map((s) => s.trim()).filter(Boolean);
+  const lines = status
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean);
   return { clean: lines.length === 0, modifiedCount: lines.length };
 }
 
@@ -1311,14 +1433,20 @@ function liveSessionWorkspaces() {
     } catch {}
     if (!target) continue;
     let resolved = target;
-    try { resolved = fs.realpathSync(target); } catch {}
+    try {
+      resolved = fs.realpathSync(target);
+    } catch {}
     counts.set(resolved, (counts.get(resolved) || 0) + 1);
   }
   return counts;
 }
 
 function realpathSafe(p) {
-  try { return fs.realpathSync(p); } catch { return p; }
+  try {
+    return fs.realpathSync(p);
+  } catch {
+    return p;
+  }
 }
 
 app.get('/api/sessions/:id/diff', (req, res) => {
@@ -1333,7 +1461,10 @@ app.get('/api/sessions/:id/diff', (req, res) => {
   const unstaged = runGit(cwd, 'diff --no-color');
   const staged = runGit(cwd, 'diff --no-color --staged');
   const untrackedRaw = runGit(cwd, 'ls-files --others --exclude-standard');
-  const untracked = untrackedRaw.split('\n').map((s) => s.trim()).filter(Boolean);
+  const untracked = untrackedRaw
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean);
   res.json({ cwd, branch, unstaged, staged, untracked });
 });
 
@@ -1367,15 +1498,22 @@ app.get('/api/worktrees', (req, res) => {
     const realPath = realpathSafe(e.path);
     const isMain = realPath === mainRealPath;
     const status = worktreeStatus(e.path);
-    let ahead = 0, behind = 0, linesAdded = 0, linesRemoved = 0;
+    let ahead = 0,
+      behind = 0,
+      linesAdded = 0,
+      linesRemoved = 0;
     if (!isMain && base && !e.detached && e.branch) {
       const ab = worktreeAheadBehind(e.path, base);
-      ahead = ab.ahead; behind = ab.behind;
+      ahead = ab.ahead;
+      behind = ab.behind;
       const ns = worktreeDiffStat(e.path, base);
-      linesAdded = ns.added; linesRemoved = ns.removed;
+      linesAdded = ns.added;
+      linesRemoved = ns.removed;
     }
     let mtime = null;
-    try { mtime = fs.statSync(e.path).mtimeMs; } catch {}
+    try {
+      mtime = fs.statSync(e.path).mtimeMs;
+    } catch {}
     return {
       path: e.path,
       branch: e.branch,
@@ -1413,7 +1551,10 @@ app.get('/api/worktrees/diff', (req, res) => {
   const unstaged = runGitArgs(resolved, ['diff', '--no-color']);
   const staged = runGitArgs(resolved, ['diff', '--no-color', '--staged']);
   const untrackedRaw = runGitArgs(resolved, ['ls-files', '--others', '--exclude-standard']);
-  const untracked = untrackedRaw.split('\n').map((s) => s.trim()).filter(Boolean);
+  const untracked = untrackedRaw
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean);
   res.json({ cwd: resolved, branch, base: base || null, committed, unstaged, staged, untracked });
 });
 
@@ -1549,7 +1690,11 @@ function scanJsonlLines(filePath, onLine) {
   for (const line of content.split('\n')) {
     if (!line) continue;
     let obj;
-    try { obj = JSON.parse(line); } catch { continue; }
+    try {
+      obj = JSON.parse(line);
+    } catch {
+      continue;
+    }
     onLine(obj);
   }
 }
@@ -1603,7 +1748,9 @@ app.post('/api/sessions/:key/close', async (req, res) => {
   const key = String(req.params.key || '').trim();
   const entry = liveSessions.get(key);
   if (!entry) return res.status(404).json({ error: 'session not live' });
-  try { entry.pty.kill(); } catch {}
+  try {
+    entry.pty.kill();
+  } catch {}
   const timeout = new Promise((resolve) => setTimeout(resolve, 3000));
   await Promise.race([entry.exited, timeout]);
   res.json({ ok: true });
@@ -1639,7 +1786,8 @@ app.post('/api/open/vscode', (req, res) => {
   const bin = resolveVSCodeBin();
   if (!bin) {
     return res.status(500).json({
-      error: 'binário `code` do VS Code não encontrado — instale via "Shell Command: Install \'code\' command in PATH"',
+      error:
+        'binário `code` do VS Code não encontrado — instale via "Shell Command: Install \'code\' command in PATH"',
     });
   }
   try {
@@ -1676,9 +1824,10 @@ app.get('/api/browse', (req, res) => {
     const abs = path.resolve(requested);
     const st = fs.statSync(abs);
     if (!st.isDirectory()) return res.status(400).json({ error: 'not a directory' });
-    const entries = fs.readdirSync(abs, { withFileTypes: true })
-      .filter(e => e.isDirectory() && (showHidden || !e.name.startsWith('.')))
-      .map(e => ({ name: e.name }))
+    const entries = fs
+      .readdirSync(abs, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && (showHidden || !e.name.startsWith('.')))
+      .map((e) => ({ name: e.name }))
       .sort((a, b) => a.name.localeCompare(b.name));
     res.json({
       path: abs,
@@ -1692,7 +1841,14 @@ app.get('/api/browse', (req, res) => {
 });
 
 const VALID_EFFORT = new Set(['low', 'medium', 'high', 'xhigh', 'max']);
-const VALID_PERMISSION_MODE = new Set(['default', 'acceptEdits', 'plan', 'auto', 'dontAsk', 'bypassPermissions']);
+const VALID_PERMISSION_MODE = new Set([
+  'default',
+  'acceptEdits',
+  'plan',
+  'auto',
+  'dontAsk',
+  'bypassPermissions',
+]);
 const VALID_MODEL_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,64}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -1738,7 +1894,7 @@ function buildPtyArgs({ resume, sessionId, model, effort, permissionMode, worktr
 function buildChildEnv() {
   const env = { ...process.env };
   const claudeDir = path.dirname(CLAUDE_BIN);
-  if (!env.PATH || !env.PATH.split(':').includes(claudeDir)) {
+  if (!env.PATH?.split(':').includes(claudeDir)) {
     env.PATH = `${claudeDir}:${env.PATH || ''}`;
   }
   return env;
@@ -1758,7 +1914,9 @@ function spawnClaudePty({ cwd, args }) {
 
 function safeSend(ws, obj) {
   if (ws.readyState === ws.OPEN) {
-    try { ws.send(JSON.stringify(obj)); } catch {}
+    try {
+      ws.send(JSON.stringify(obj));
+    } catch {}
   }
 }
 
@@ -1850,10 +2008,10 @@ function sanitizePrefs(raw) {
     };
   }
   const expanded = Array.isArray(raw.expanded)
-    ? raw.expanded.filter(x => typeof x === 'string')
+    ? raw.expanded.filter((x) => typeof x === 'string')
     : [];
   const projectOrder = Array.isArray(raw.projectOrder)
-    ? raw.projectOrder.filter(x => typeof x === 'string')
+    ? raw.projectOrder.filter((x) => typeof x === 'string')
     : [];
   return { sections, expanded, projectOrder };
 }
@@ -1871,7 +2029,7 @@ function loadState() {
     const raw = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
     const migrated = migrateState(raw);
     const archived = Array.isArray(migrated.archived)
-      ? migrated.archived.filter(x => typeof x === 'string')
+      ? migrated.archived.filter((x) => typeof x === 'string')
       : [];
     return { archived: new Set(archived), prefs: sanitizePrefs(migrated.prefs) };
   } catch {
@@ -1916,8 +2074,12 @@ setInterval(() => {
   for (const [key, entry] of liveSessions) {
     if (computeState(entry) !== 'standby') continue;
     if (entry.idleSince !== null && now - entry.idleSince >= timeout) {
-      console.log(`[pty] auto-kill ${key} after ${Math.round((now - entry.idleSince) / 1000)}s standby`);
-      try { entry.pty.kill(); } catch {}
+      console.log(
+        `[pty] auto-kill ${key} after ${Math.round((now - entry.idleSince) / 1000)}s standby`,
+      );
+      try {
+        entry.pty.kill();
+      } catch {}
     }
   }
 }, IDLE_SWEEP_INTERVAL_MS).unref();
@@ -1952,7 +2114,9 @@ function getOrCreateLiveSession(sessionKey, { cwd, args }) {
 
   const term = spawnClaudePty({ cwd, args });
   let resolveExit;
-  const exited = new Promise((resolve) => { resolveExit = resolve; });
+  const exited = new Promise((resolve) => {
+    resolveExit = resolve;
+  });
   const entry = {
     sessionKey,
     pty: term,
@@ -1967,7 +2131,7 @@ function getOrCreateLiveSession(sessionKey, { cwd, args }) {
     exited,
   };
 
-  term.onData(data => {
+  term.onData((data) => {
     entry.lastOutputAt = Date.now();
     entry.tail += data;
     if (entry.tail.length > TAIL_BUFFER_SIZE) {
@@ -1982,7 +2146,9 @@ function getOrCreateLiveSession(sessionKey, { cwd, args }) {
     if (entry.standbyRecheckTimer) clearTimeout(entry.standbyRecheckTimer);
     for (const ws of entry.subscribers) {
       safeSend(ws, { type: 'exit', exitCode });
-      try { ws.close(); } catch {}
+      try {
+        ws.close();
+      } catch {}
     }
     entry.subscribers.clear();
     liveSessions.delete(sessionKey);
@@ -2000,7 +2166,9 @@ app.ws('/pty', (ws, req) => {
   const sessionKey = req.query.sessionKey ? String(req.query.sessionKey).trim() : '';
   if (!sessionKey) {
     safeSend(ws, { type: 'error', message: 'sessionKey obrigatório' });
-    try { ws.close(); } catch {}
+    try {
+      ws.close();
+    } catch {}
     return;
   }
 
@@ -2010,7 +2178,9 @@ app.ws('/pty', (ws, req) => {
     entry = getOrCreateLiveSession(sessionKey, { cwd: req.query.cwd, args });
   } catch (err) {
     safeSend(ws, { type: 'error', message: `Failed to spawn claude: ${err.message}` });
-    try { ws.close(); } catch {}
+    try {
+      ws.close();
+    } catch {}
     return;
   }
 
@@ -2018,13 +2188,21 @@ app.ws('/pty', (ws, req) => {
   entry.idleSince = null;
   maybeBroadcastStateChange(entry);
 
-  ws.on('message', raw => {
+  ws.on('message', (raw) => {
     let msg;
-    try { msg = JSON.parse(raw.toString()); } catch { return; }
+    try {
+      msg = JSON.parse(raw.toString());
+    } catch {
+      return;
+    }
     if (msg.type === 'input') {
-      try { entry.pty.write(msg.data); } catch {}
+      try {
+        entry.pty.write(msg.data);
+      } catch {}
     } else if (msg.type === 'resize') {
-      try { entry.pty.resize(msg.cols, msg.rows); } catch {}
+      try {
+        entry.pty.resize(msg.cols, msg.rows);
+      } catch {}
     } else if (msg.type === 'focus') {
       if (msg.active) entry.focusedWs.add(ws);
       else entry.focusedWs.delete(ws);
@@ -2056,28 +2234,42 @@ app.ws('/pty/shell', (ws, req) => {
     });
   } catch (err) {
     safeSend(ws, { type: 'error', message: `shell spawn falhou: ${err.message}` });
-    try { ws.close(); } catch {}
+    try {
+      ws.close();
+    } catch {}
     return;
   }
 
   term.onData((data) => safeSend(ws, { type: 'data', data }));
   term.onExit(({ exitCode }) => {
     safeSend(ws, { type: 'exit', exitCode });
-    try { ws.close(); } catch {}
+    try {
+      ws.close();
+    } catch {}
   });
 
   ws.on('message', (raw) => {
     let msg;
-    try { msg = JSON.parse(raw.toString()); } catch { return; }
+    try {
+      msg = JSON.parse(raw.toString());
+    } catch {
+      return;
+    }
     if (msg.type === 'input') {
-      try { term.write(msg.data); } catch {}
+      try {
+        term.write(msg.data);
+      } catch {}
     } else if (msg.type === 'resize') {
-      try { term.resize(msg.cols, msg.rows); } catch {}
+      try {
+        term.resize(msg.cols, msg.rows);
+      } catch {}
     }
   });
 
   ws.on('close', () => {
-    try { term.kill(); } catch {}
+    try {
+      term.kill();
+    } catch {}
   });
 });
 

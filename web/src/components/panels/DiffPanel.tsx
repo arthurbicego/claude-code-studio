@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
-import { PanelContainer } from './PanelContainer'
 import { useSessionDiff } from '@/hooks/useSessionDiff'
 import { cn } from '@/lib/utils'
+import { PanelContainer } from './PanelContainer'
 
 type Props = {
   sessionId: string | null
@@ -64,7 +64,7 @@ export function DiffPanel({ sessionId, onClose }: Props) {
   const data = useSessionDiff(sessionId)
 
   const { hunks, title } = useMemo(() => {
-    const combined = [(data?.staged ?? ''), (data?.unstaged ?? '')].filter(Boolean).join('\n')
+    const combined = [data?.staged ?? '', data?.unstaged ?? ''].filter(Boolean).join('\n')
     const parsed = parseDiff(combined)
     for (const f of data?.untracked ?? []) {
       parsed.push({ file: f, kind: 'added', lines: [{ type: 'meta', text: '(untracked)' }] })
@@ -88,7 +88,9 @@ export function DiffPanel({ sessionId, onClose }: Props) {
           {hunks.map((h, idx) => (
             <div key={`${h.file}-${idx}`} className="border-b border-border last:border-b-0">
               <div className="sticky top-0 z-10 flex items-center gap-2 bg-muted/60 px-3 py-1 backdrop-blur">
-                <span className={cn('font-semibold', KIND_COLOR[h.kind])}>{KIND_LABEL[h.kind]}</span>
+                <span className={cn('font-semibold', KIND_COLOR[h.kind])}>
+                  {KIND_LABEL[h.kind]}
+                </span>
                 <span className="truncate">{h.file}</span>
               </div>
               {h.lines.map((l, i) => (

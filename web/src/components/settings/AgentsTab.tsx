@@ -1,17 +1,17 @@
-import { useEffect, useMemo, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
-import { useSessionList } from '@/hooks/useSessionList'
 import {
+  type AgentDetail,
+  type AgentScope,
+  type AgentSummary,
   deleteAgent,
   fetchAgent,
   saveAgent,
   useAgentList,
   useKnownTools,
-  type AgentDetail,
-  type AgentScope,
-  type AgentSummary,
 } from '@/hooks/useAgents'
+import { useSessionList } from '@/hooks/useSessionList'
 import { Field, Section } from './atoms'
 
 type Selection =
@@ -67,13 +67,19 @@ export function AgentsTab() {
     setDetailLoading(true)
     setDetailError(null)
     fetchAgent(selection.scope, selection.name, selection.scope === 'project' ? projectCwd : null)
-      .then((data) => { if (!cancelled) setDetail(data) })
+      .then((data) => {
+        if (!cancelled) setDetail(data)
+      })
       .catch((err) => {
         if (cancelled) return
         setDetailError(err instanceof Error ? err.message : String(err))
       })
-      .finally(() => { if (!cancelled) setDetailLoading(false) })
-    return () => { cancelled = true }
+      .finally(() => {
+        if (!cancelled) setDetailLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [selection, projectCwd])
 
   const items: AgentSummary[] = scope === 'user' ? list.user : list.project
@@ -123,7 +129,11 @@ export function AgentsTab() {
 
       {selection ? (
         <Section
-          title={selection.mode === 'new' ? 'Novo agente' : `Editar: ${selection.mode === 'view' ? selection.name : ''}`}
+          title={
+            selection.mode === 'new'
+              ? 'Novo agente'
+              : `Editar: ${selection.mode === 'view' ? selection.name : ''}`
+          }
         >
           {selection.mode === 'view' && detailLoading ? (
             <p className="text-xs text-muted-foreground">Carregando…</p>
@@ -182,7 +192,9 @@ function ScopePicker({
               type="button"
               onClick={() => onScopeChange(s)}
               className={`cursor-pointer px-3 py-1.5 text-xs font-medium transition-colors ${
-                scope === s ? 'bg-sky-700 text-white' : 'bg-background text-muted-foreground hover:text-foreground'
+                scope === s
+                  ? 'bg-sky-700 text-white'
+                  : 'bg-background text-muted-foreground hover:text-foreground'
               }`}
             >
               {s === 'user' ? 'User (~/.claude)' : 'Projeto'}
@@ -204,7 +216,9 @@ function ScopePicker({
               className="rounded border border-border bg-background px-2 py-1.5 font-mono text-xs text-foreground focus:border-sky-500 focus:outline-none"
             >
               {projects.map((p) => (
-                <option key={p.slug} value={p.cwd}>{p.cwd}</option>
+                <option key={p.slug} value={p.cwd}>
+                  {p.cwd}
+                </option>
               ))}
             </select>
           )}
@@ -262,9 +276,13 @@ function AgentList({
                 >
                   <span className="text-xs font-medium text-foreground">{item.name}</span>
                   {item.description ? (
-                    <span className="line-clamp-2 text-[11px] text-muted-foreground">{item.description}</span>
+                    <span className="line-clamp-2 text-[11px] text-muted-foreground">
+                      {item.description}
+                    </span>
                   ) : (
-                    <span className="text-[11px] italic text-muted-foreground">sem description</span>
+                    <span className="text-[11px] italic text-muted-foreground">
+                      sem description
+                    </span>
                   )}
                 </button>
               </li>
@@ -384,7 +402,9 @@ function AgentForm({
           onChange={(e) => setState((s) => ({ ...s, name: e.target.value.trim() }))}
           placeholder="ex.: code-reviewer"
           className={`w-full rounded border bg-background px-2 py-1.5 font-mono text-xs text-foreground focus:outline-none ${
-            state.name && nameInvalid ? 'border-red-500/60 focus:border-red-500' : 'border-border focus:border-sky-500'
+            state.name && nameInvalid
+              ? 'border-red-500/60 focus:border-red-500'
+              : 'border-border focus:border-sky-500'
           }`}
         />
       </Field>
@@ -400,7 +420,9 @@ function AgentForm({
           rows={3}
           placeholder="Use este agente quando…"
           className={`w-full rounded border bg-background px-2 py-1.5 text-xs text-foreground focus:outline-none ${
-            state.description && descriptionInvalid ? 'border-red-500/60 focus:border-red-500' : 'border-border focus:border-sky-500'
+            state.description && descriptionInvalid
+              ? 'border-red-500/60 focus:border-red-500'
+              : 'border-border focus:border-sky-500'
           }`}
         />
       </Field>
@@ -412,14 +434,20 @@ function AgentForm({
           className="w-full rounded border border-border bg-background px-2 py-1.5 font-mono text-xs text-foreground focus:border-sky-500 focus:outline-none"
         >
           {MODEL_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
           ))}
         </select>
       </Field>
 
       <Field
         label="Tools"
-        hint={state.toolsAll ? 'Acesso a todas as tools (campo omitido).' : 'Restringe a apenas as tools marcadas.'}
+        hint={
+          state.toolsAll
+            ? 'Acesso a todas as tools (campo omitido).'
+            : 'Restringe a apenas as tools marcadas.'
+        }
       >
         <div className="flex flex-col gap-2">
           <label className="flex cursor-pointer items-center gap-2 rounded border border-border bg-background/40 px-3 py-1.5">
@@ -452,11 +480,7 @@ function AgentForm({
         </div>
       </Field>
 
-      <Field
-        label="System prompt"
-        required
-        hint="Corpo do agente. Pode usar markdown."
-      >
+      <Field label="System prompt" required hint="Corpo do agente. Pode usar markdown.">
         <textarea
           value={state.body}
           onChange={(e) => setState((s) => ({ ...s, body: e.target.value }))}
@@ -464,7 +488,9 @@ function AgentForm({
           rows={14}
           placeholder="Você é um agente especializado em…"
           className={`w-full rounded border bg-background px-2 py-1.5 font-mono text-xs text-foreground focus:outline-none ${
-            state.body && bodyInvalid ? 'border-red-500/60 focus:border-red-500' : 'border-border focus:border-sky-500'
+            state.body && bodyInvalid
+              ? 'border-red-500/60 focus:border-red-500'
+              : 'border-border focus:border-sky-500'
           }`}
         />
       </Field>
@@ -477,15 +503,33 @@ function AgentForm({
             confirmDelete ? (
               <div className="flex items-center gap-2">
                 <span className="text-[11px] text-amber-400">Apagar este agente?</span>
-                <Button type="button" variant="warn" size="xs" onClick={handleDelete} disabled={saving}>
+                <Button
+                  type="button"
+                  variant="warn"
+                  size="xs"
+                  onClick={handleDelete}
+                  disabled={saving}
+                >
                   Confirmar
                 </Button>
-                <Button type="button" variant="ghost" size="xs" onClick={() => setConfirmDelete(false)} disabled={saving}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={saving}
+                >
                   Cancelar
                 </Button>
               </div>
             ) : (
-              <Button type="button" variant="ghost" size="xs" onClick={() => setConfirmDelete(true)} disabled={saving}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                onClick={() => setConfirmDelete(true)}
+                disabled={saving}
+              >
                 <Trash2 size={12} /> Apagar
               </Button>
             )
@@ -495,7 +539,13 @@ function AgentForm({
           <Button type="button" variant="ghost" size="xs" onClick={onCancel} disabled={saving}>
             Cancelar
           </Button>
-          <Button type="button" variant="primary" size="xs" onClick={handleSave} disabled={!canSave}>
+          <Button
+            type="button"
+            variant="primary"
+            size="xs"
+            onClick={handleSave}
+            disabled={!canSave}
+          >
             {saving ? 'Salvando…' : isCreating ? 'Criar agente' : 'Salvar'}
           </Button>
         </div>

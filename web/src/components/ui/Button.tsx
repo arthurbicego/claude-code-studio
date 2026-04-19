@@ -1,5 +1,5 @@
-import { forwardRef, type ButtonHTMLAttributes } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
+import { type ButtonHTMLAttributes, forwardRef } from 'react'
 import { cn } from '@/lib/utils'
 
 const buttonVariants = cva(
@@ -9,7 +9,8 @@ const buttonVariants = cva(
       variant: {
         default: 'bg-primary text-primary-foreground hover:bg-primary/90',
         primary: 'bg-sky-700 text-white hover:bg-sky-600',
-        ghost: 'bg-transparent border border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+        ghost:
+          'bg-transparent border border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground',
         subtle: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
         warn: 'bg-red-900/60 text-red-100 hover:bg-red-900/80',
       },

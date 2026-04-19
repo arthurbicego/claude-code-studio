@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react'
-import { Terminal as Xterm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
+import { Terminal as Xterm } from '@xterm/xterm'
+import { useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import type { SessionLaunch } from '@/types'
 
@@ -29,10 +29,7 @@ function buildWsUrl(launch: SessionLaunch, skip?: Props['skipDefaults']) {
   } else {
     if (launch.model && launch.model !== skip?.model) params.set('model', launch.model)
     if (launch.effort && launch.effort !== skip?.effort) params.set('effort', launch.effort)
-    if (
-      launch.permissionMode &&
-      launch.permissionMode !== (skip?.permissionMode ?? 'default')
-    ) {
+    if (launch.permissionMode && launch.permissionMode !== (skip?.permissionMode ?? 'default')) {
       params.set('permissionMode', launch.permissionMode)
     }
     if (launch.worktree) params.set('worktree', launch.worktree)
@@ -89,11 +86,7 @@ export function TerminalView({
     }
 
     ws.onopen = () => {
-      onStatus?.(
-        launch.resume
-          ? launch.label ?? launch.resume
-          : `Nova sessão em ${launch.cwd}`,
-      )
+      onStatus?.(launch.resume ? (launch.label ?? launch.resume) : `Nova sessão em ${launch.cwd}`)
       safeSend({ type: 'resize', cols: term.cols, rows: term.rows })
       safeSend({ type: 'focus', active: isActiveRef.current })
     }

@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from 'react'
 import {
   Check,
   FileDiff,
@@ -8,9 +7,10 @@ import {
   PanelRight,
   TerminalSquare,
 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Tooltip } from '@/components/ui/Tooltip'
 import { PANEL_LABELS } from '@/lib/panels'
 import { cn } from '@/lib/utils'
-import { Tooltip } from '@/components/ui/Tooltip'
 import type { PanelKind } from '@/types'
 
 type Props = {

@@ -1,15 +1,15 @@
-import { useEffect, useMemo, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { useSessionList } from '@/hooks/useSessionList'
 import {
   deleteSkill,
   fetchSkill,
-  saveSkill,
-  useSkillList,
   type SkillDetail,
   type SkillScope,
   type SkillSummary,
+  saveSkill,
+  useSkillList,
 } from '@/hooks/useSkills'
 import { Field, Section } from './atoms'
 
@@ -59,13 +59,19 @@ export function SkillsTab() {
     setDetailLoading(true)
     setDetailError(null)
     fetchSkill(selection.scope, selection.name, selection.scope === 'project' ? projectCwd : null)
-      .then((data) => { if (!cancelled) setDetail(data) })
+      .then((data) => {
+        if (!cancelled) setDetail(data)
+      })
       .catch((err) => {
         if (cancelled) return
         setDetailError(err instanceof Error ? err.message : String(err))
       })
-      .finally(() => { if (!cancelled) setDetailLoading(false) })
-    return () => { cancelled = true }
+      .finally(() => {
+        if (!cancelled) setDetailLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [selection, projectCwd])
 
   const items: SkillSummary[] = scope === 'user' ? list.user : list.project
@@ -115,7 +121,11 @@ export function SkillsTab() {
 
       {selection ? (
         <Section
-          title={selection.mode === 'new' ? 'Nova skill' : `Editar: ${selection.mode === 'view' ? selection.name : ''}`}
+          title={
+            selection.mode === 'new'
+              ? 'Nova skill'
+              : `Editar: ${selection.mode === 'view' ? selection.name : ''}`
+          }
         >
           {selection.mode === 'view' && detailLoading ? (
             <p className="text-xs text-muted-foreground">Carregando…</p>
@@ -174,7 +184,9 @@ function ScopePicker({
               type="button"
               onClick={() => onScopeChange(s)}
               className={`cursor-pointer px-3 py-1.5 text-xs font-medium transition-colors ${
-                scope === s ? 'bg-sky-700 text-white' : 'bg-background text-muted-foreground hover:text-foreground'
+                scope === s
+                  ? 'bg-sky-700 text-white'
+                  : 'bg-background text-muted-foreground hover:text-foreground'
               }`}
             >
               {s === 'user' ? 'User (~/.claude)' : 'Projeto'}
@@ -196,7 +208,9 @@ function ScopePicker({
               className="rounded border border-border bg-background px-2 py-1.5 font-mono text-xs text-foreground focus:border-sky-500 focus:outline-none"
             >
               {projects.map((p) => (
-                <option key={p.slug} value={p.cwd}>{p.cwd}</option>
+                <option key={p.slug} value={p.cwd}>
+                  {p.cwd}
+                </option>
               ))}
             </select>
           )}
@@ -254,9 +268,13 @@ function SkillList({
                 >
                   <span className="text-xs font-medium text-foreground">{item.name}</span>
                   {item.description ? (
-                    <span className="line-clamp-2 text-[11px] text-muted-foreground">{item.description}</span>
+                    <span className="line-clamp-2 text-[11px] text-muted-foreground">
+                      {item.description}
+                    </span>
                   ) : (
-                    <span className="text-[11px] italic text-muted-foreground">sem description</span>
+                    <span className="text-[11px] italic text-muted-foreground">
+                      sem description
+                    </span>
                   )}
                 </button>
               </li>
@@ -351,7 +369,9 @@ function SkillForm({
           onChange={(e) => setState((s) => ({ ...s, name: e.target.value.trim() }))}
           placeholder="ex.: code-quality-check"
           className={`w-full rounded border bg-background px-2 py-1.5 font-mono text-xs text-foreground focus:outline-none ${
-            state.name && nameInvalid ? 'border-red-500/60 focus:border-red-500' : 'border-border focus:border-sky-500'
+            state.name && nameInvalid
+              ? 'border-red-500/60 focus:border-red-500'
+              : 'border-border focus:border-sky-500'
           }`}
         />
       </Field>
@@ -367,7 +387,9 @@ function SkillForm({
           rows={3}
           placeholder="Use esta skill quando…"
           className={`w-full rounded border bg-background px-2 py-1.5 text-xs text-foreground focus:outline-none ${
-            state.description && descriptionInvalid ? 'border-red-500/60 focus:border-red-500' : 'border-border focus:border-sky-500'
+            state.description && descriptionInvalid
+              ? 'border-red-500/60 focus:border-red-500'
+              : 'border-border focus:border-sky-500'
           }`}
         />
       </Field>
@@ -384,7 +406,9 @@ function SkillForm({
           rows={14}
           placeholder="## Quando usar&#10;...&#10;&#10;## Como usar&#10;..."
           className={`w-full rounded border bg-background px-2 py-1.5 font-mono text-xs text-foreground focus:outline-none ${
-            state.body && bodyInvalid ? 'border-red-500/60 focus:border-red-500' : 'border-border focus:border-sky-500'
+            state.body && bodyInvalid
+              ? 'border-red-500/60 focus:border-red-500'
+              : 'border-border focus:border-sky-500'
           }`}
         />
       </Field>
@@ -396,7 +420,10 @@ function SkillForm({
           </p>
           <ul className="flex flex-col gap-1">
             {initial.extras.map((extra) => (
-              <li key={extra.relativePath} className="flex items-center justify-between gap-2 font-mono text-[11px] text-muted-foreground">
+              <li
+                key={extra.relativePath}
+                className="flex items-center justify-between gap-2 font-mono text-[11px] text-muted-foreground"
+              >
                 <span>{extra.relativePath}</span>
                 <span>{extra.size} B</span>
               </li>
@@ -415,18 +442,34 @@ function SkillForm({
           {!isCreating ? (
             confirmDelete ? (
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-amber-400">
-                  Apagar a pasta inteira da skill?
-                </span>
-                <Button type="button" variant="warn" size="xs" onClick={handleDelete} disabled={saving}>
+                <span className="text-[11px] text-amber-400">Apagar a pasta inteira da skill?</span>
+                <Button
+                  type="button"
+                  variant="warn"
+                  size="xs"
+                  onClick={handleDelete}
+                  disabled={saving}
+                >
                   Confirmar
                 </Button>
-                <Button type="button" variant="ghost" size="xs" onClick={() => setConfirmDelete(false)} disabled={saving}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={saving}
+                >
                   Cancelar
                 </Button>
               </div>
             ) : (
-              <Button type="button" variant="ghost" size="xs" onClick={() => setConfirmDelete(true)} disabled={saving}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                onClick={() => setConfirmDelete(true)}
+                disabled={saving}
+              >
                 <Trash2 size={12} /> Apagar
               </Button>
             )
@@ -436,7 +479,13 @@ function SkillForm({
           <Button type="button" variant="ghost" size="xs" onClick={onCancel} disabled={saving}>
             Cancelar
           </Button>
-          <Button type="button" variant="primary" size="xs" onClick={handleSave} disabled={!canSave}>
+          <Button
+            type="button"
+            variant="primary"
+            size="xs"
+            onClick={handleSave}
+            disabled={!canSave}
+          >
             {saving ? 'Salvando…' : isCreating ? 'Criar skill' : 'Salvar'}
           </Button>
         </div>

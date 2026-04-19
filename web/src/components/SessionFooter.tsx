@@ -40,7 +40,8 @@ export function SessionFooter({ data }: Props) {
     )
   }
 
-  const ctx = data.contextPct != null ? `${Math.round(data.contextPct)}%` : data.exceeds200k ? '>200k' : DASH
+  const ctx =
+    data.contextPct != null ? `${Math.round(data.contextPct)}%` : data.exceeds200k ? '>200k' : DASH
   const cost = data.costUsd != null ? `$${data.costUsd.toFixed(2)}` : `$${DASH}`
   const fiveSuffix = data.fiveHourResetsAt ? ` (${fmtIn(data.fiveHourResetsAt)})` : ''
   const sevenSuffix = data.sevenDayResetsAt ? ` (${fmtIn(data.sevenDayResetsAt)})` : ''
@@ -91,9 +92,21 @@ export function SessionFooter({ data }: Props) {
       <span className="text-muted-foreground/40">·</span>
       {field('cost', <span className="text-amber-300">{cost}</span>)}
       <span className="text-muted-foreground/40">·</span>
-      {field('5h', <span className="text-violet-300">{pct(data.fiveHourPct)}{fiveSuffix}</span>)}
+      {field(
+        '5h',
+        <span className="text-violet-300">
+          {pct(data.fiveHourPct)}
+          {fiveSuffix}
+        </span>,
+      )}
       <span className="text-muted-foreground/40">·</span>
-      {field('7d', <span className="text-pink-300">{pct(data.sevenDayPct)}{sevenSuffix}</span>)}
+      {field(
+        '7d',
+        <span className="text-pink-300">
+          {pct(data.sevenDayPct)}
+          {sevenSuffix}
+        </span>,
+      )}
     </div>
   )
 }

@@ -12,12 +12,8 @@ export function Section({
   return (
     <section className="flex flex-col gap-3 p-4">
       <header className="flex flex-col gap-1">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground">
-          {title}
-        </h3>
-        {description ? (
-          <p className="text-[11px] text-muted-foreground">{description}</p>
-        ) : null}
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground">{title}</h3>
+        {description ? <p className="text-[11px] text-muted-foreground">{description}</p> : null}
       </header>
       <div className="flex flex-col gap-3">{children}</div>
     </section>

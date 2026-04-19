@@ -1,26 +1,23 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
-import { Sidebar } from '@/components/Sidebar'
-import { Toolbar } from '@/components/Toolbar'
-import { TerminalView } from '@/components/Terminal'
-import { SessionActions } from '@/components/SessionActions'
-import { SessionFooter } from '@/components/SessionFooter'
-import { NewSessionModal } from '@/components/NewSessionModal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import {
-  WorktreeCloseDialog,
-  type WorktreeCloseChoice,
-} from '@/components/WorktreeCloseDialog'
+import { NewSessionModal } from '@/components/NewSessionModal'
 import { ColumnResizer } from '@/components/panels/ColumnResizer'
-import { RowResizer } from '@/components/panels/RowResizer'
 import { DiffPanel } from '@/components/panels/DiffPanel'
+import { PlanPanel } from '@/components/panels/PlanPanel'
+import { RowResizer } from '@/components/panels/RowResizer'
 import { ShellPanel } from '@/components/panels/ShellPanel'
 import { TasksPanel } from '@/components/panels/TasksPanel'
-import { PlanPanel } from '@/components/panels/PlanPanel'
 import { WorktreesPanel } from '@/components/panels/WorktreesPanel'
-import { useSessionList } from '@/hooks/useSessionList'
-import { useSessionDefaults } from '@/hooks/useSessionDefaults'
+import { SessionActions } from '@/components/SessionActions'
+import { SessionFooter } from '@/components/SessionFooter'
+import { Sidebar } from '@/components/Sidebar'
+import { TerminalView } from '@/components/Terminal'
+import { Toolbar } from '@/components/Toolbar'
+import { type WorktreeCloseChoice, WorktreeCloseDialog } from '@/components/WorktreeCloseDialog'
 import { useLiveSessions } from '@/hooks/useLiveSessions'
+import { useSessionDefaults } from '@/hooks/useSessionDefaults'
 import { useSessionFooter } from '@/hooks/useSessionFooter'
+import { useSessionList } from '@/hooks/useSessionList'
 import { layoutColumns } from '@/lib/panels'
 import { openInVSCode } from '@/lib/vscode'
 import type {
@@ -53,9 +50,7 @@ export default function App() {
   const [openSessions, setOpenSessions] = useState<Map<string, SessionLaunch>>(new Map())
   const [activeSessionKey, setActiveSessionKey] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
-  const [modalInitial, setModalInitial] = useState<
-    { cwd?: string; isolate?: boolean } | null
-  >(null)
+  const [modalInitial, setModalInitial] = useState<{ cwd?: string; isolate?: boolean } | null>(null)
   const [pendingCloseWorktree, setPendingCloseWorktree] = useState<{
     sessionKey: string
     worktree: Worktree
@@ -65,9 +60,10 @@ export default function App() {
   const [closingBusy, setClosingBusy] = useState(false)
   const [closingError, setClosingError] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<SessionMeta | null>(null)
-  const [pendingArchive, setPendingArchive] = useState<
-    { id: string; action: 'archive' | 'unarchive' } | null
-  >(null)
+  const [pendingArchive, setPendingArchive] = useState<{
+    id: string
+    action: 'archive' | 'unarchive'
+  } | null>(null)
   const [pendingProjectArchive, setPendingProjectArchive] = useState<Project | null>(null)
   const [pendingProjectDelete, setPendingProjectDelete] = useState<Project | null>(null)
   const [pendingVSCodeOpen, setPendingVSCodeOpen] = useState<{
@@ -81,7 +77,7 @@ export default function App() {
     new Map(),
   )
 
-  const activeLaunch = activeSessionKey ? openSessions.get(activeSessionKey) ?? null : null
+  const activeLaunch = activeSessionKey ? (openSessions.get(activeSessionKey) ?? null) : null
   const footer = useSessionFooter(activeLaunch ? activeSessionKey : null)
   const liveCwds = useMemo(() => {
     const set = new Set<string>()
@@ -91,7 +87,7 @@ export default function App() {
     return set
   }, [liveSessions])
   const openPanels = useMemo(
-    () => (activeSessionKey ? openPanelsBySession.get(activeSessionKey) ?? [] : []),
+    () => (activeSessionKey ? (openPanelsBySession.get(activeSessionKey) ?? []) : []),
     [openPanelsBySession, activeSessionKey],
   )
   const openPanelKinds = useMemo(() => new Set(openPanels.map((p) => p.kind)), [openPanels])
@@ -278,10 +274,9 @@ export default function App() {
         return
       }
       try {
-        const footerRes = await fetch(
-          `/api/sessions/${encodeURIComponent(sessionKey)}/footer`,
-          { cache: 'no-store' },
-        )
+        const footerRes = await fetch(`/api/sessions/${encodeURIComponent(sessionKey)}/footer`, {
+          cache: 'no-store',
+        })
         if (!footerRes.ok) throw new Error('footer unavailable')
         const footer = (await footerRes.json()) as SessionFooterData
         if (!footer?.worktree) {
@@ -572,16 +567,13 @@ export default function App() {
                     className="flex min-h-0 shrink-0 flex-col"
                     style={{ width: `${columnWidths[colIdx] ?? 352}px` }}
                   >
-                      {col.map((panel, panelIdx) => {
+                    {col.map((panel, panelIdx) => {
                       const ratio = rowRatios[colIdx] ?? 0.5
                       const grow = col.length > 1 ? (panelIdx === 0 ? ratio : 1 - ratio) : 1
                       return (
                         <Fragment key={panel.id}>
                           {panelIdx > 0 ? (
-                            <RowResizer
-                              ratio={ratio}
-                              onChange={(r) => setRowRatio(colIdx, r)}
-                            />
+                            <RowResizer ratio={ratio} onChange={(r) => setRowRatio(colIdx, r)} />
                           ) : null}
                           <div
                             className="flex min-h-0 min-w-0 flex-col"

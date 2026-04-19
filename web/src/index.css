@@ -78,12 +78,14 @@
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
   }
-  html, body, #root {
+  html,
+  body,
+  #root {
     @apply h-full;
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
   *::-webkit-scrollbar {
     width: 8px;

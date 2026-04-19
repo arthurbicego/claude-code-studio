@@ -1,6 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ComponentType } from 'react'
-import { createPortal } from 'react-dom'
 import { MoreVertical } from 'lucide-react'
+import { type ComponentType, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { cn } from '@/lib/utils'
 
@@ -108,9 +108,7 @@ export function DropdownMenu({
                 const Icon = item.icon
                 return (
                   <div key={item.label}>
-                    {needsSeparator ? (
-                      <div role="separator" className="h-px bg-border" />
-                    ) : null}
+                    {needsSeparator ? <div role="separator" className="h-px bg-border" /> : null}
                     <button
                       type="button"
                       role="menuitem"
