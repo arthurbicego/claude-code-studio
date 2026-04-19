@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
-import { Modal } from '@/components/Modal'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router'
+import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useConfig } from '@/hooks/useConfig'
 import { useClaudeSettings } from '@/hooks/useClaudeSettings'
@@ -18,11 +18,6 @@ import { useSessionList } from '@/hooks/useSessionList'
 import { AgentsTab } from '@/components/settings/AgentsTab'
 import { SkillsTab } from '@/components/settings/SkillsTab'
 import type { Project, SandboxPlatform, SandboxScope, SandboxSettings } from '@/types'
-
-type Props = {
-  open: boolean
-  onClose: () => void
-}
 
 type TabId = 'sessions' | 'sandbox' | 'memory' | 'agents' | 'skills'
 
@@ -124,7 +119,9 @@ function parseJsonField(text: string): { value: Record<string, unknown> | null; 
   }
 }
 
-export function SettingsModal({ open, onClose }: Props) {
+export function SettingsPage() {
+  const navigate = useNavigate()
+  const goBack = useCallback(() => navigate('/'), [navigate])
   const { config, defaults, bounds, loading, error, update } = useConfig()
   const sessions = useSessionList()
   const projects = useMemo(
@@ -152,13 +149,6 @@ export function SettingsModal({ open, onClose }: Props) {
   const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!open) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset transient UI state when modal opens
-    setTab('sessions')
-    setSaveError(null)
-  }, [open])
-
-  useEffect(() => {
     if (!scopeNeedsProject(sandboxScope)) return
     if (!sandboxProjectCwd && projects.length > 0) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- pick first project when entering project scope
@@ -167,8 +157,7 @@ export function SettingsModal({ open, onClose }: Props) {
   }, [sandboxScope, sandboxProjectCwd, projects])
 
   useEffect(() => {
-    if (!open) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate form state from server data when modal opens or scope changes
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate form state from server data when it arrives or scope changes
     if (config) setStandbyMinutes(String(Math.round(config.standbyTimeoutMs / 60000)))
     if (cs.settings) {
       setSandbox(cs.settings.sandbox)
@@ -187,7 +176,7 @@ export function SettingsModal({ open, onClose }: Props) {
         seccomp: { text: '', error: null },
       })
     }
-  }, [open, config, cs.settings])
+  }, [config, cs.settings])
 
   const minMinutes = bounds ? Math.round(bounds.standbyTimeoutMs.min / 60000) : 1
   const maxMinutes = bounds ? Math.round(bounds.standbyTimeoutMs.max / 60000) : 1440
@@ -244,7 +233,7 @@ export function SettingsModal({ open, onClose }: Props) {
         }
         await cs.update({ sandbox: payload })
       }
-      onClose()
+      goBack()
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -278,26 +267,13 @@ export function SettingsModal({ open, onClose }: Props) {
   const sandboxDisabled = !sandbox.enabled
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Configurações"
-      className="h-[92vh] max-h-[92vh] w-[min(1400px,96vw)]"
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            variant="primary"
-            onClick={save}
-            disabled={saving || isLoading || !!loadError || jsonHasErrors || sandboxLoading}
-          >
-            Salvar
-          </Button>
-        </>
-      }
-    >
+    <div className="flex h-full flex-col bg-background">
+      <header className="flex items-center gap-3 border-b border-border px-4 py-3">
+        <Button variant="ghost" size="icon" onClick={goBack} aria-label="Voltar">
+          <ArrowLeft size={16} />
+        </Button>
+        <h1 className="text-sm font-semibold text-foreground">Configurações</h1>
+      </header>
       <div className="flex min-h-0 flex-1 flex-col">
         <Tabs
           tabs={[
@@ -475,7 +451,19 @@ export function SettingsModal({ open, onClose }: Props) {
           {saveError ? <p className="p-4 text-xs text-red-400">{saveError}</p> : null}
         </div>
       </div>
-    </Modal>
+      <footer className="flex justify-end gap-2 border-t border-border bg-black/30 px-4 py-3">
+        <Button variant="ghost" onClick={goBack}>
+          Cancelar
+        </Button>
+        <Button
+          variant="primary"
+          onClick={save}
+          disabled={saving || isLoading || !!loadError || jsonHasErrors || sandboxLoading}
+        >
+          Salvar
+        </Button>
+      </footer>
+    </div>
   )
 }
 
