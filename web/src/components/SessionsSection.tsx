@@ -1,4 +1,4 @@
-import { ArrowDownAZ, ChevronRight, FolderTree, List, X } from 'lucide-react'
+import { Archive, ArchiveRestore, ArrowDownAZ, ChevronRight, FolderTree, List, Trash2, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { CopyableField } from '@/components/ui/CopyableField'
 import { DropdownMenu, type DropdownMenuItem } from '@/components/ui/DropdownMenu'
@@ -359,9 +359,9 @@ function SessionRow({
   const isOpen = variant === 'open'
   const menuItems: DropdownMenuItem[] = [
     isArchived
-      ? { label: 'Desarquivar', onSelect: () => onUnarchive(session.id) }
-      : { label: 'Arquivar', onSelect: () => onArchive(session.id) },
-    { label: 'Apagar', destructive: true, onSelect: () => onDelete(session) },
+      ? { label: 'Desarquivar', icon: ArchiveRestore, onSelect: () => onUnarchive(session.id) }
+      : { label: 'Arquivar', icon: Archive, onSelect: () => onArchive(session.id) },
+    { label: 'Apagar', icon: Trash2, destructive: true, onSelect: () => onDelete(session) },
   ]
   return (
     <div
