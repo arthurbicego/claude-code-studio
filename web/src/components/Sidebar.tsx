@@ -109,7 +109,7 @@ export function Sidebar({
     <aside className="flex w-80 flex-col border-r border-border bg-card/40">
       <header className="flex flex-col gap-2 border-b border-border p-4">
         <div className="flex items-center gap-2">
-          <h1 className="flex-1 text-sm font-semibold text-foreground">Claude CLI UI</h1>
+          <h1 className="flex-1 text-sm font-semibold text-foreground">Claude Code Studio</h1>
           <Tooltip
             content={`Recarregar lista${refreshedAt ? ` · ${formatTime(refreshedAt)}` : ''}`}
           >

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
-const KEY = 'claude-cli-ui.collapsed'
+const KEY = 'claude-code-studio.collapsed'
 
 function load(): Set<string> {
   try {
