@@ -2,6 +2,11 @@ node_modules/
 dist/
 web/dist/
 
+# test artifacts
+test-results/
+playwright-report/
+coverage/
+
 # logs
 *.log
 npm-debug.log*

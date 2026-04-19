@@ -93,6 +93,10 @@ Root:
 - `npm run check` — Biome lint + format check (whole repo)
 - `npm run fix` — Biome lint + format with safe autofixes
 - `npm run format` — Biome format only (writes changes)
+- `npm run typecheck` — tsc --noEmit on server and web
+- `npm test` — Vitest unit tests (one-shot)
+- `npm run test:watch` — Vitest in watch mode
+- `npm run test:e2e` — Playwright smoke E2E (spawns dev server if needed)
 
 Inside `web/`:
 
