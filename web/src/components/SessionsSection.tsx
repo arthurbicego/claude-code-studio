@@ -45,6 +45,15 @@ type Props = {
   renderState: (live: LiveSession | undefined) => React.ReactNode
   applyProjectOrder: <T extends { slug: string }>(items: T[]) => T[]
   onReorderProject: (fromSlug: string, toSlug: string, position: 'before' | 'after') => void
+  searchQuery?: string
+}
+
+function matchesQuery(s: SessionMeta, query: string): boolean {
+  if (!query) return true
+  const q = query.toLowerCase()
+  if (s.id.toLowerCase().includes(q)) return true
+  if (s.preview && s.preview.toLowerCase().includes(q)) return true
+  return false
 }
 
 type DropTarget = { slug: string; position: 'before' | 'after' }
@@ -100,20 +109,25 @@ export function SessionsSection({
   renderState,
   applyProjectOrder,
   onReorderProject,
+  searchQuery,
 }: Props) {
   const { t } = useTranslation()
   const { isExpanded, toggle } = useExpanded()
   const { prefs, toggleGrouping, setSortBy } = useSectionPrefs(prefsKey)
   const [sectionOpen, setSectionOpen] = useState(!defaultCollapsed)
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
-  const groupsExpandedByDefault = variant === 'open'
+  const isSearching = !!searchQuery && searchQuery.length > 0
+  const groupsExpandedByDefault = variant === 'open' || isSearching
 
   const filteredProjects = useMemo(() => {
     const sessionFilter = (s: SessionMeta) => {
       const isOpen = openSessionKeys?.has(s.id) ?? false
-      if (variant === 'archived') return s.archived && !isOpen
-      if (variant === 'open') return isOpen
-      return !s.archived && !isOpen
+      if (variant === 'archived' && !s.archived) return false
+      if (variant === 'archived' && isOpen) return false
+      if (variant === 'open' && !isOpen) return false
+      if (variant === 'history' && (s.archived || isOpen)) return false
+      if (searchQuery && !matchesQuery(s, searchQuery)) return false
+      return true
     }
     const filtered = projects
       .map((p) => ({
@@ -136,6 +150,7 @@ export function SessionsSection({
           preview: launch.label ?? null,
           archived: false,
         }
+        if (searchQuery && !matchesQuery(synthSession, searchQuery)) continue
         const matchByCwd = projects.find((p) => p.cwd === launch.cwd)
         if (matchByCwd) {
           const existing = filtered.find((p) => p.slug === matchByCwd.slug)
@@ -160,7 +175,7 @@ export function SessionsSection({
     }
 
     return applyProjectOrder(filtered)
-  }, [variant, projects, openSessionKeys, openLaunches, applyProjectOrder])
+  }, [variant, projects, openSessionKeys, openLaunches, applyProjectOrder, searchQuery])
 
   const flat = useMemo(() => {
     const out: { project: Project; session: SessionMeta }[] = []
@@ -175,6 +190,10 @@ export function SessionsSection({
 
   const total = flat.length
 
+  if (isSearching && total === 0) return null
+
+  const effectiveSectionOpen = isSearching ? true : sectionOpen
+
   return (
     <section className="mb-3">
       <div className="flex items-center gap-1 px-2">
@@ -184,7 +203,7 @@ export function SessionsSection({
         >
           <ChevronRight
             size={10}
-            className={cn('transition-transform', sectionOpen && 'rotate-90')}
+            className={cn('transition-transform', effectiveSectionOpen && 'rotate-90')}
           />
           <span className="flex-1">{title}</span>
           <Tooltip content={t('sessions.count', { count: total })}>
@@ -193,7 +212,7 @@ export function SessionsSection({
             </span>
           </Tooltip>
         </button>
-        {sectionOpen ? (
+        {effectiveSectionOpen ? (
           <>
             <Tooltip content={prefs.groupByProject ? t('sessions.groupOn') : t('sessions.groupOff')}>
               <button
@@ -217,7 +236,7 @@ export function SessionsSection({
         ) : null}
       </div>
 
-      {!sectionOpen ? null : total === 0 ? (
+      {!effectiveSectionOpen ? null : total === 0 ? (
         <p className="px-2 py-2 text-xs text-muted-foreground">{t('common.empty')}</p>
       ) : prefs.groupByProject ? (
         <div className="mt-1">
