@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { type ExpandResult, expandMemoryImports, type MemoryFile } from '@/hooks/useMemory'
+import { useSaveStatus } from '@/hooks/useSaveStatus'
 
 function ExpandedPreview({
   result,
@@ -89,21 +90,20 @@ export function MemoryEditor({
   hint?: string
 }) {
   const { t } = useTranslation()
+  const { setSaving, setSaved, setError: reportSaveError } = useSaveStatus()
   const [text, setText] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [savedAt, setSavedAt] = useState<number | null>(null)
   const [showExpanded, setShowExpanded] = useState(false)
   const [expand, setExpand] = useState<ExpandResult | null>(null)
   const [expanding, setExpanding] = useState(false)
   const [expandError, setExpandError] = useState<string | null>(null)
   const expandReq = useRef(0)
+  const lastSavedTextRef = useRef<string>('')
 
   useEffect(() => {
     // biome-ignore lint/correctness/useExhaustiveDependencies: hydrate textarea when data loads
-    setText(data?.content ?? '')
-    setError(null)
-    setSavedAt(null)
+    const initial = data?.content ?? ''
+    setText(initial)
+    lastSavedTextRef.current = initial
     setShowExpanded(false)
     setExpand(null)
     setExpandError(null)
@@ -134,22 +134,25 @@ export function MemoryEditor({
     return () => clearTimeout(handle)
   }, [showExpanded, text, basePath])
 
-  const handleSave = async () => {
-    setSaving(true)
-    setError(null)
-    try {
-      await onSave(text)
-      setSavedAt(Date.now())
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setSaving(false)
-    }
-  }
+  // Auto-save (debounced) when text differs from the last saved value.
+  useEffect(() => {
+    if (!data) return
+    if (text === lastSavedTextRef.current) return
+    const handle = window.setTimeout(async () => {
+      setSaving()
+      try {
+        await onSave(text)
+        lastSavedTextRef.current = text
+        setSaved()
+      } catch (err) {
+        reportSaveError(err instanceof Error ? err.message : String(err))
+      }
+    }, 800)
+    return () => window.clearTimeout(handle)
+  }, [text, data, onSave, setSaving, setSaved, reportSaveError])
 
   const handleRevert = () => {
     setText(data?.content ?? '')
-    setError(null)
   }
 
   if (loading && !data) {
@@ -205,38 +208,17 @@ export function MemoryEditor({
       )}
       <div className="flex items-center justify-between gap-3">
         <span className="text-[10px] text-muted-foreground">
-          {error ? (
-            <span className="text-red-400">{t('settings.memory.editor.error', { error })}</span>
-          ) : dirty ? (
-            t('settings.memory.editor.unsaved')
-          ) : savedAt ? (
-            t('settings.memory.editor.saved')
-          ) : data?.exists ? (
-            ''
-          ) : (
-            t('settings.memory.editor.willCreate')
-          )}
+          {data?.exists ? '' : t('settings.memory.editor.willCreate')}
         </span>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            onClick={handleRevert}
-            disabled={!dirty || saving}
-          >
-            {t('settings.memory.editor.revert')}
-          </Button>
-          <Button
-            type="button"
-            variant="primary"
-            size="xs"
-            onClick={handleSave}
-            disabled={!dirty || saving}
-          >
-            {saving ? t('settings.memory.editor.saving') : t('settings.memory.editor.save')}
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          onClick={handleRevert}
+          disabled={!dirty}
+        >
+          {t('settings.memory.editor.revert')}
+        </Button>
       </div>
       <p className="text-[10px] text-muted-foreground">{t('settings.memory.editor.emptyHint')}</p>
     </div>

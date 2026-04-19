@@ -304,6 +304,11 @@
   "settings": {
     "title": "Configurações",
     "loading": "Carregando…",
+    "saveStatus": {
+      "saving": "Salvando…",
+      "savedAt": "Salvo às {{time}}",
+      "error": "Erro ao salvar: {{message}}"
+    },
     "tabs": {
       "geral": "Geral",
       "sessions": "Sessões",
