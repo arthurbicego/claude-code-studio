@@ -597,5 +597,46 @@
   },
   "vscode": {
     "openError": "No se pudo abrir en VS Code: {{message}}"
+  },
+  "help": {
+    "open": "Abrir guía de uso",
+    "title": "Guía de uso",
+    "subtitle": "Cómo navegar y aprovechar al máximo Claude Code Studio",
+    "tocLabel": "Sumario",
+    "close": "Cerrar guía",
+    "sections": {
+      "overview": {
+        "title": "Visión general",
+        "body": "Claude Code Studio es un panel local (escucha en 127.0.0.1, sin autenticación) que envuelve la CLI claude-code. Piensa en él como mission-control para varias sesiones de Claude corriendo en paralelo, con worktrees git first-class y paneles vivos de lo que el modelo está haciendo.\n\nLo que ganas frente a la CLI sola:\n• Múltiples sesiones abiertas con indicador de estado (esperando, activa, en espera, cerrada).\n• Workflow de worktrees integrado al ciclo de vida de la sesión.\n• Paneles Plan / Tasks / Diff junto a la terminal — ves el razonamiento y los cambios sin salir de la vista.\n• Costo de la sesión y cuota (5h/7d) siempre visibles en el footer.\n• Editores en UI para CLAUDE.md, agentes, skills y sandbox."
+      },
+      "sessions": {
+        "title": "Sesiones",
+        "body": "La sidebar a la izquierda divide las sesiones en tres bloques:\n• **Abiertas**: corriendo ahora.\n• **Historial**: ya existieron, se pueden retomar.\n• **Archivadas**: sacadas del historial por defecto (siguen en disco).\n\nCada fila muestra un ícono de estado:\n• Campana parpadeando: esperando acción del usuario.\n• Círculo verde: modelo procesando.\n• Círculo punteado naranja: en espera (abierta y ociosa).\n• Círculo gris: cerrada.\n\nClicar una fila del historial llama `claude --resume <id>` en el cwd correspondiente. \"Nueva sesión\" abre un modal donde eliges modelo, effort, permission mode, directorio destino y si quieres aislar en un worktree nuevo. Usa el buscador en la parte superior de la sidebar para filtrar por texto de la sesión o parte del ID."
+      },
+      "panels": {
+        "title": "Paneles laterales",
+        "body": "El botón de paneles en el toolbar abre un menú con 5 paneles que aparecen a la derecha de la terminal:\n• **Diff**: cambios sin commitear en el working tree actual.\n• **Plan**: el plan que Claude está armando cuando /plan está activo.\n• **Tasks**: lista de TODOs que Claude está siguiendo.\n• **Terminal**: shell extra (no Claude) con el mismo cwd, útil para correr comandos en paralelo.\n• **Worktrees**: gestión completa de los worktrees del proyecto.\n\nPuedes abrir varios paneles a la vez. Se dividen en columnas con hasta dos paneles por columna; arrastra los divisores para ajustar tamaños. El layout queda guardado entre sesiones."
+      },
+      "worktrees": {
+        "title": "Worktrees",
+        "body": "Un worktree de git es un working tree separado (otro directorio) que comparte la misma .git/. Permite trabajar en branches paralelas sin tocar el working tree principal — ideal para correr más de una sesión de Claude en el mismo repo sin conflictos de archivos.\n\nFlujo típico:\n1. En el modal de Nueva sesión, marca \"Aislar en un nuevo worktree\". El Studio crea `.claude/worktrees/<nombre>` desde `origin/HEAD` y abre la sesión allí.\n2. Trabaja normal. El panel Diff muestra tus cambios.\n3. Al cerrar, elige qué hacer: **mantener** (el worktree queda), **commitear y mantener** (commitea y cierra), **mergear** (fast-forward en la base + cierre) o **descartar** (elimina todo).\n\nEl panel Worktrees lista todos los worktrees del proyecto, con acciones para crear, abrir nueva sesión dentro, mergear o eliminar."
+      },
+      "memory": {
+        "title": "Memoria (CLAUDE.md)",
+        "body": "Claude Code carga instrucciones desde archivos `CLAUDE.md` en tres niveles:\n• **Global** (`~/.claude/CLAUDE.md`): vale para todas las sesiones de este usuario.\n• **Ancestrales**: cualquier CLAUDE.md en directorios padres hasta $HOME.\n• **Proyecto** (cwd): `CLAUDE.md` (commiteado, regla del equipo) y `CLAUDE.local.md` (gitignored, personal).\n\nLa pestaña Memoria de Configuración muestra exactamente qué archivos carga la CLI para el cwd seleccionado y permite editar cada uno desde la UI. Acuérdate de añadir `CLAUDE.local.md` a tu `.gitignore` cuando crees el primero."
+      },
+      "agentsSkills": {
+        "title": "Agentes y Skills",
+        "body": "**Agentes** son subagentes que el Claude principal puede invocar vía la Task tool. Cada agente se vuelve un `.md` con frontmatter (`name`, `description`, `model`, `tools`) más un cuerpo (system prompt). Úsalos cuando una tarea específica se beneficie de contexto aislado o un modelo distinto.\n\n**Skills** son instrucciones cargadas en el contexto bajo demanda. Cada skill es una carpeta con `SKILL.md` dentro, opcionalmente con archivos de apoyo. A diferencia de CLAUDE.md, solo se cargan cuando coincide el disparador.\n\nAmbos tienen ámbito User (en `~/.claude`) o Proyecto (en `.claude/`). Crea y edita desde las pestañas Agentes y Skills de Configuración — los cambios se guardan automáticamente."
+      },
+      "sandbox": {
+        "title": "Sandbox",
+        "body": "La pestaña Sandbox configura el aislamiento de ejecución de la CLI: reglas de red, sistema de archivos, ripgrep y seccomp (Linux).\n\nCuatro ámbitos, en el orden en que la CLI aplica (más fuerte primero): Managed > Local > Project > User. Cada ámbito escribe en un archivo distinto:\n• **User** (`~/.claude/settings.json`)\n• **User local** (`~/.claude/.local`) — personal, fuera del git\n• **Proyecto** (`.claude/settings.json`) — commiteado, regla del equipo\n• **Proyecto local** (`.claude/settings.local.json`) — personal, fuera del git\n\nLos cambios solo valen para nuevos procesos de `claude` — las sesiones ya abiertas mantienen el sandbox anterior."
+      },
+      "settings": {
+        "title": "Configuración e idioma",
+        "body": "La configuración se guarda automáticamente: el indicador en la parte superior de la página de Configuración muestra \"Guardando…\" / \"Guardado a las HH:mm\" / mensaje de error.\n\nPestañas:\n• **General**: idioma de la interfaz (pt-BR, en-US, es-ES). Tu elección queda en tus preferencias de usuario (no en localStorage).\n• **Sesiones**: timeout de standby (cuánto tiempo puede quedar inactiva una sesión antes de cerrarse).\n• **Sandbox**, **Memoria**, **Agentes**, **Skills**: ver las secciones dedicadas.\n• **Sidebar**: inspeccionar y resetear preferencias guardadas (orden de proyectos, agrupación, grupos expandidos)."
+      }
+    }
   }
 }
