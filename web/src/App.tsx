@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { Sidebar } from '@/components/Sidebar'
 import { Toolbar } from '@/components/Toolbar'
 import { TerminalView } from '@/components/Terminal'
+import { SessionActions } from '@/components/SessionActions'
 import { SessionFooter } from '@/components/SessionFooter'
 import { NewSessionModal } from '@/components/NewSessionModal'
 import { SettingsModal } from '@/components/SettingsModal'
@@ -286,8 +287,6 @@ export default function App() {
       <main className="flex min-w-0 flex-1 flex-col">
         <Toolbar
           disabled={!activeLaunch}
-          onSendInput={sendInput}
-          onInterrupt={() => setInterruptSignal((x) => x + 1)}
           openPanelKinds={openPanelKinds}
           onTogglePanel={togglePanel}
         />
@@ -372,7 +371,16 @@ export default function App() {
               ))
             : null}
         </div>
-        {activeLaunch ? <SessionFooter key={activeLaunch.sessionKey} data={footer} /> : null}
+        {activeLaunch ? (
+          <>
+            <SessionActions
+              disabled={!activeLaunch}
+              onSendInput={sendInput}
+              onInterrupt={() => setInterruptSignal((x) => x + 1)}
+            />
+            <SessionFooter key={activeLaunch.sessionKey} data={footer} />
+          </>
+        ) : null}
       </main>
 
       <NewSessionModal
