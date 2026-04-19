@@ -10,7 +10,7 @@ import {
   updateConfig,
   validateConfig,
 } from '../config';
-import { ERR, sendError, sendInternalError } from '../lib/errors';
+import { ERR, sendError, sendInternalError } from '../errors';
 import { isAllowedProjectCwd, USER_CLAUDE_DIR } from '../paths';
 
 const SANDBOX_SCOPES: SandboxScope[] = ['user', 'user-local', 'project', 'project-local'];

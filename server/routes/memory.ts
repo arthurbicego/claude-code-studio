@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { MemoryFile, MemoryHierarchyEntry, MemoryVariant } from '@shared/types';
 import type { Express, Request, Response } from 'express';
-import { ERR, sendError, sendInternalError } from '../lib/errors';
+import { ERR, sendError, sendInternalError } from '../errors';
 import { expandImports } from '../memory-expand';
 import { GLOBAL_CLAUDE_MD, HOME_DIR_REAL, isAllowedProjectCwd } from '../paths';
 
