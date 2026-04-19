@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Sidebar } from '@/components/Sidebar'
 import { Toolbar } from '@/components/Toolbar'
 import { TerminalView } from '@/components/Terminal'
@@ -6,11 +6,16 @@ import { SessionFooter } from '@/components/SessionFooter'
 import { NewSessionModal } from '@/components/NewSessionModal'
 import { SettingsModal } from '@/components/SettingsModal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { DiffPanel } from '@/components/panels/DiffPanel'
+import { ShellPanel } from '@/components/panels/ShellPanel'
+import { TasksPanel } from '@/components/panels/TasksPanel'
+import { PlanPanel } from '@/components/panels/PlanPanel'
 import { useSessionList } from '@/hooks/useSessionList'
 import { useSessionDefaults } from '@/hooks/useSessionDefaults'
 import { useLiveSessions } from '@/hooks/useLiveSessions'
 import { useSessionFooter } from '@/hooks/useSessionFooter'
-import type { Project, SessionLaunch, SessionMeta } from '@/types'
+import { layoutColumns } from '@/lib/panels'
+import type { OpenPanel, PanelKind, Project, SessionLaunch, SessionMeta } from '@/types'
 
 function newSessionKey(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -36,9 +41,51 @@ export default function App() {
   const [status, setStatus] = useState('Selecione uma sessão na barra lateral ou crie uma nova.')
   const [interruptSignal, setInterruptSignal] = useState(0)
   const [inputSignal, setInputSignal] = useState<{ seq: number; text: string } | null>(null)
+  const [openPanelsBySession, setOpenPanelsBySession] = useState<Map<string, OpenPanel[]>>(
+    new Map(),
+  )
 
   const activeLaunch = activeSessionKey ? openSessions.get(activeSessionKey) ?? null : null
   const footer = useSessionFooter(activeLaunch ? activeSessionKey : null)
+  const openPanels = useMemo(
+    () => (activeSessionKey ? openPanelsBySession.get(activeSessionKey) ?? [] : []),
+    [openPanelsBySession, activeSessionKey],
+  )
+  const openPanelKinds = useMemo(() => new Set(openPanels.map((p) => p.kind)), [openPanels])
+  const panelColumns = useMemo(() => layoutColumns(openPanels), [openPanels])
+
+  const togglePanel = useCallback(
+    (kind: PanelKind) => {
+      if (!activeSessionKey) return
+      setOpenPanelsBySession((prev) => {
+        const next = new Map(prev)
+        const current = next.get(activeSessionKey) ?? []
+        const filtered = current.filter((p) => p.kind !== kind)
+        if (filtered.length === current.length) {
+          filtered.push({ kind, id: `${kind}-${Date.now()}` })
+        }
+        if (filtered.length === 0) next.delete(activeSessionKey)
+        else next.set(activeSessionKey, filtered)
+        return next
+      })
+    },
+    [activeSessionKey],
+  )
+
+  const closePanel = useCallback(
+    (kind: PanelKind, id: string) => {
+      if (!activeSessionKey) return
+      setOpenPanelsBySession((prev) => {
+        const next = new Map(prev)
+        const current = next.get(activeSessionKey) ?? []
+        const filtered = current.filter((p) => !(p.kind === kind && p.id === id))
+        if (filtered.length === 0) next.delete(activeSessionKey)
+        else next.set(activeSessionKey, filtered)
+        return next
+      })
+    },
+    [activeSessionKey],
+  )
 
   const sendInput = (text: string) => {
     setInputSignal((prev) => ({ seq: (prev?.seq ?? 0) + 1, text }))
@@ -102,6 +149,12 @@ export default function App() {
         next.delete(sessionKey)
         return next
       })
+      setOpenPanelsBySession((prev) => {
+        if (!prev.has(sessionKey)) return prev
+        const next = new Map(prev)
+        next.delete(sessionKey)
+        return next
+      })
       setActiveSessionKey((prev) => {
         if (prev !== sessionKey) return prev
         const remaining = Array.from(openSessions.keys()).filter((k) => k !== sessionKey)
@@ -160,6 +213,12 @@ export default function App() {
       next.delete(target.id)
       return next
     })
+    setOpenPanelsBySession((prev) => {
+      if (!prev.has(target.id)) return prev
+      const next = new Map(prev)
+      next.delete(target.id)
+      return next
+    })
     setActiveSessionKey((prev) => (prev === target.id ? null : prev))
     refresh()
   }, [pendingDelete, openSessions, refresh])
@@ -188,30 +247,71 @@ export default function App() {
           disabled={!activeLaunch}
           onSendInput={sendInput}
           onInterrupt={() => setInterruptSignal((x) => x + 1)}
+          openPanelKinds={openPanelKinds}
+          onTogglePanel={togglePanel}
         />
         <div className="border-b border-border bg-muted/20 px-4 py-2 text-xs text-muted-foreground">
           {status}
         </div>
-        <div className="relative flex min-h-0 flex-1">
-          {Array.from(openSessions.values()).map((l) => {
-            const active = l.sessionKey === activeSessionKey
-            return (
-              <TerminalView
-                key={l.sessionKey}
-                launch={l}
-                skipDefaults={defaults}
-                onStatus={active ? setStatus : undefined}
-                interruptSignal={active ? interruptSignal : 0}
-                inputSignal={active ? inputSignal : null}
-                isActive={active}
-              />
-            )
-          })}
-          {!activeLaunch ? (
-            <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-              Nenhuma sessão ativa.
-            </div>
-          ) : null}
+        <div className="flex min-h-0 flex-1">
+          <div className="relative flex min-w-0 flex-1">
+            {Array.from(openSessions.values()).map((l) => {
+              const active = l.sessionKey === activeSessionKey
+              return (
+                <TerminalView
+                  key={l.sessionKey}
+                  launch={l}
+                  skipDefaults={defaults}
+                  onStatus={active ? setStatus : undefined}
+                  interruptSignal={active ? interruptSignal : 0}
+                  inputSignal={active ? inputSignal : null}
+                  isActive={active}
+                />
+              )
+            })}
+            {!activeLaunch ? (
+              <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+                Nenhuma sessão ativa.
+              </div>
+            ) : null}
+          </div>
+          {activeLaunch
+            ? panelColumns.map((col, colIdx) => (
+                <div
+                  key={`col-${colIdx}`}
+                  className="flex min-h-0 w-[22rem] shrink-0 flex-col"
+                >
+                  {col.map((panel) => (
+                    <div
+                      key={panel.id}
+                      className="flex min-h-0 min-w-0 flex-1 flex-col border-b border-border last:border-b-0"
+                    >
+                      {panel.kind === 'diff' ? (
+                        <DiffPanel
+                          sessionId={activeSessionKey}
+                          onClose={() => closePanel(panel.kind, panel.id)}
+                        />
+                      ) : panel.kind === 'terminal' ? (
+                        <ShellPanel
+                          cwd={activeLaunch.cwd}
+                          onClose={() => closePanel(panel.kind, panel.id)}
+                        />
+                      ) : panel.kind === 'tasks' ? (
+                        <TasksPanel
+                          sessionId={activeSessionKey}
+                          onClose={() => closePanel(panel.kind, panel.id)}
+                        />
+                      ) : (
+                        <PlanPanel
+                          sessionId={activeSessionKey}
+                          onClose={() => closePanel(panel.kind, panel.id)}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ))
+            : null}
         </div>
         {activeLaunch ? <SessionFooter key={activeLaunch.sessionKey} data={footer} /> : null}
       </main>

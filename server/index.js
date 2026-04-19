@@ -39,6 +39,17 @@ function isSystemText(s) {
   return !s || SYSTEM_TAG_RE.test(s);
 }
 
+function resolveUserShell() {
+  const envShell = process.env.SHELL;
+  if (envShell && fs.existsSync(envShell)) return envShell;
+  for (const c of ['/bin/zsh', '/bin/bash', '/bin/sh']) {
+    if (fs.existsSync(c)) return c;
+  }
+  return '/bin/sh';
+}
+
+const USER_SHELL = resolveUserShell();
+
 function readSessionMeta(filePath) {
   try {
     const fd = fs.openSync(filePath, 'r');
@@ -1077,6 +1088,92 @@ function buildFooterPayload(id) {
   };
 }
 
+function resolveSessionCwd(id) {
+  const fpath = findSessionFile(id);
+  if (!fpath) return null;
+  const meta = readSessionMeta(fpath);
+  if (meta.cwd) return meta.cwd;
+  const slug = path.basename(path.dirname(fpath));
+  return fallbackSlugToCwd(slug);
+}
+
+function runGit(cwd, args) {
+  try {
+    return execSync(`git --no-optional-locks ${args}`, {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      maxBuffer: 16 * 1024 * 1024,
+    });
+  } catch {
+    return '';
+  }
+}
+
+app.get('/api/sessions/:id/diff', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const id = String(req.params.id || '').trim();
+  if (!FOOTER_ID_RE.test(id)) return res.status(400).json({ error: 'id inválido' });
+  const cwd = resolveSessionCwd(id);
+  if (!cwd || !fs.existsSync(cwd)) {
+    return res.json({ cwd: null, branch: null, unstaged: '', staged: '', untracked: [] });
+  }
+  const branch = runGit(cwd, 'symbolic-ref --short HEAD').trim() || null;
+  const unstaged = runGit(cwd, 'diff --no-color');
+  const staged = runGit(cwd, 'diff --no-color --staged');
+  const untrackedRaw = runGit(cwd, 'ls-files --others --exclude-standard');
+  const untracked = untrackedRaw.split('\n').map((s) => s.trim()).filter(Boolean);
+  res.json({ cwd, branch, unstaged, staged, untracked });
+});
+
+function scanJsonlLines(filePath, onLine) {
+  const content = fs.readFileSync(filePath, 'utf8');
+  for (const line of content.split('\n')) {
+    if (!line) continue;
+    let obj;
+    try { obj = JSON.parse(line); } catch { continue; }
+    onLine(obj);
+  }
+}
+
+function findLastToolUse(sessionFile, toolName) {
+  let last = null;
+  try {
+    scanJsonlLines(sessionFile, (obj) => {
+      const content = obj?.message?.content;
+      if (!Array.isArray(content)) return;
+      for (const part of content) {
+        if (part && part.type === 'tool_use' && part.name === toolName) {
+          last = { input: part.input, timestamp: obj.timestamp || null };
+        }
+      }
+    });
+  } catch {}
+  return last;
+}
+
+app.get('/api/sessions/:id/tasks', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const id = String(req.params.id || '').trim();
+  if (!FOOTER_ID_RE.test(id)) return res.status(400).json({ error: 'id inválido' });
+  const fpath = findSessionFile(id);
+  if (!fpath) return res.json({ todos: [], updatedAt: null });
+  const last = findLastToolUse(fpath, 'TodoWrite');
+  const todos = Array.isArray(last?.input?.todos) ? last.input.todos : [];
+  res.json({ todos, updatedAt: last?.timestamp || null });
+});
+
+app.get('/api/sessions/:id/plan', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const id = String(req.params.id || '').trim();
+  if (!FOOTER_ID_RE.test(id)) return res.status(400).json({ error: 'id inválido' });
+  const fpath = findSessionFile(id);
+  if (!fpath) return res.json({ plan: null, updatedAt: null });
+  const last = findLastToolUse(fpath, 'ExitPlanMode');
+  const plan = typeof last?.input?.plan === 'string' ? last.input.plan : null;
+  res.json({ plan, updatedAt: last?.timestamp || null });
+});
+
 app.get('/api/sessions/:id/footer', (req, res) => {
   res.set('Cache-Control', 'no-store');
   const id = String(req.params.id || '').trim();
@@ -1429,6 +1526,45 @@ app.ws('/pty', (ws, req) => {
       entry.idleSince = Date.now();
     }
     maybeBroadcastStateChange(entry);
+  });
+});
+
+app.ws('/pty/shell', (ws, req) => {
+  const rawCwd = req.query.cwd ? String(req.query.cwd) : '';
+  const targetCwd = rawCwd && fs.existsSync(rawCwd) ? rawCwd : os.homedir();
+  let term;
+  try {
+    term = pty.spawn(USER_SHELL, ['-l'], {
+      name: 'xterm-256color',
+      cols: 80,
+      rows: 24,
+      cwd: targetCwd,
+      env: { ...process.env, TERM: 'xterm-256color' },
+    });
+  } catch (err) {
+    safeSend(ws, { type: 'error', message: `shell spawn falhou: ${err.message}` });
+    try { ws.close(); } catch {}
+    return;
+  }
+
+  term.onData((data) => safeSend(ws, { type: 'data', data }));
+  term.onExit(({ exitCode }) => {
+    safeSend(ws, { type: 'exit', exitCode });
+    try { ws.close(); } catch {}
+  });
+
+  ws.on('message', (raw) => {
+    let msg;
+    try { msg = JSON.parse(raw.toString()); } catch { return; }
+    if (msg.type === 'input') {
+      try { term.write(msg.data); } catch {}
+    } else if (msg.type === 'resize') {
+      try { term.resize(msg.cols, msg.rows); } catch {}
+    }
+  });
+
+  ws.on('close', () => {
+    try { term.kill(); } catch {}
   });
 });
 
