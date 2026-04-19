@@ -103,3 +103,23 @@ export type SandboxSettings = {
 export type ClaudeSettings = {
   sandbox: SandboxSettings
 }
+
+export type SessionFooter = {
+  hasCache: boolean
+  cwd: string | null
+  dirLabel: string | null
+  branch: string | null
+  dirty: boolean
+  model: string | null
+  contextPct: number | null
+  exceeds200k: boolean
+  linesAdded: number | null
+  linesRemoved: number | null
+  costUsd: number | null
+  fiveHourPct: number | null
+  fiveHourResetsAt: number | null
+  sevenDayPct: number | null
+  sevenDayResetsAt: number | null
+  cacheUpdatedAt: number | null
+  globalUpdatedAt: number | null
+}

@@ -1006,9 +1006,82 @@ app.delete('/api/sessions/:id', (req, res) => {
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
+  removeFooterCacheFor(id);
   if (appState.archived.delete(id)) saveState(appState);
   broadcastInvalidate();
   res.json({ ok: true, deleted: true });
+});
+
+const FOOTER_ID_RE = /^[A-Za-z0-9._-]{1,128}$/;
+
+function removeFooterCacheFor(id) {
+  if (!FOOTER_ID_RE.test(id)) return;
+  try { fs.unlinkSync(path.join(STATUSLINE_CACHE_DIR, `${id}.json`)); } catch {}
+}
+
+function readJsonSafe(filePath) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function gitInfo(cwd) {
+  if (!cwd) return { branch: null, dirty: false };
+  try {
+    const branch = execSync('git --no-optional-locks symbolic-ref --short HEAD', {
+      cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim() || null;
+    const status = execSync('git --no-optional-locks status --porcelain', {
+      cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    return { branch, dirty: status.length > 0 };
+  } catch {
+    return { branch: null, dirty: false };
+  }
+}
+
+function buildFooterPayload(id) {
+  const cache = readJsonSafe(path.join(STATUSLINE_CACHE_DIR, `${id}.json`));
+  const global = readJsonSafe(STATUSLINE_GLOBAL_META);
+  const cwd = cache?.workspace?.current_dir || cache?.cwd || null;
+  const { branch, dirty } = gitInfo(cwd);
+
+  const ctxPct = cache?.context_window?.used_percentage;
+  const exceeds200k = cache?.exceeds_200k_tokens === true;
+
+  const five = cache?.rate_limits?.five_hour || global?.rate_limits?.five_hour || null;
+  const seven = cache?.rate_limits?.seven_day || global?.rate_limits?.seven_day || null;
+
+  return {
+    hasCache: !!cache,
+    cwd,
+    dirLabel: cwd ? (cwd === os.homedir() ? '~' : path.basename(cwd)) : null,
+    branch,
+    dirty,
+    model: cache?.model?.display_name || null,
+    contextPct: typeof ctxPct === 'number' ? ctxPct : null,
+    exceeds200k,
+    linesAdded: cache?.cost?.total_lines_added ?? null,
+    linesRemoved: cache?.cost?.total_lines_removed ?? null,
+    costUsd: cache?.cost?.total_cost_usd ?? null,
+    fiveHourPct: typeof five?.used_percentage === 'number' ? five.used_percentage : null,
+    fiveHourResetsAt: typeof five?.resets_at === 'number' ? five.resets_at : null,
+    sevenDayPct: typeof seven?.used_percentage === 'number' ? seven.used_percentage : null,
+    sevenDayResetsAt: typeof seven?.resets_at === 'number' ? seven.resets_at : null,
+    cacheUpdatedAt: cache ? (() => {
+      try { return fs.statSync(path.join(STATUSLINE_CACHE_DIR, `${id}.json`)).mtimeMs; } catch { return null; }
+    })() : null,
+    globalUpdatedAt: global?.at ? global.at * 1000 : null,
+  };
+}
+
+app.get('/api/sessions/:id/footer', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const id = String(req.params.id || '').trim();
+  if (!FOOTER_ID_RE.test(id)) return res.status(400).json({ error: 'id inválido' });
+  res.json(buildFooterPayload(id));
 });
 
 app.post('/api/sessions/:key/close', async (req, res) => {
@@ -1065,8 +1138,25 @@ const VALID_PERMISSION_MODE = new Set(['default', 'acceptEdits', 'plan', 'auto',
 const VALID_MODEL_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,64}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const STATUSLINE_TAP = path.join(__dirname, 'scripts', 'statusline-tap.sh');
+const STATUSLINE_CACHE_DIR = path.join(os.homedir(), '.claude-code-studio', 'statusline-cache');
+const STATUSLINE_GLOBAL_META = path.join(os.homedir(), '.claude-code-studio', 'global-meta.json');
+
+function buildStatusLineSettingsArg() {
+  try {
+    if (!fs.existsSync(STATUSLINE_TAP)) return null;
+  } catch {
+    return null;
+  }
+  return JSON.stringify({
+    statusLine: { type: 'command', command: STATUSLINE_TAP },
+  });
+}
+
 function buildPtyArgs({ resume, sessionId, model, effort, permissionMode }) {
   const args = [];
+  const tapSettings = buildStatusLineSettingsArg();
+  if (tapSettings) args.push('--settings', tapSettings);
   if (resume) {
     args.push('--resume', resume);
   } else {

@@ -2,12 +2,14 @@ import { useCallback, useEffect, useState } from 'react'
 import { Sidebar } from '@/components/Sidebar'
 import { Toolbar } from '@/components/Toolbar'
 import { TerminalView } from '@/components/Terminal'
+import { SessionFooter } from '@/components/SessionFooter'
 import { NewSessionModal } from '@/components/NewSessionModal'
 import { SettingsModal } from '@/components/SettingsModal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { useSessionList } from '@/hooks/useSessionList'
 import { useSessionDefaults } from '@/hooks/useSessionDefaults'
 import { useLiveSessions } from '@/hooks/useLiveSessions'
+import { useSessionFooter } from '@/hooks/useSessionFooter'
 import type { Project, SessionLaunch, SessionMeta } from '@/types'
 
 function newSessionKey(): string {
@@ -36,6 +38,7 @@ export default function App() {
   const [inputSignal, setInputSignal] = useState<{ seq: number; text: string } | null>(null)
 
   const activeLaunch = activeSessionKey ? openSessions.get(activeSessionKey) ?? null : null
+  const footer = useSessionFooter(activeLaunch ? activeSessionKey : null)
 
   const sendInput = (text: string) => {
     setInputSignal((prev) => ({ seq: (prev?.seq ?? 0) + 1, text }))
@@ -210,6 +213,7 @@ export default function App() {
             </div>
           ) : null}
         </div>
+        {activeLaunch ? <SessionFooter key={activeLaunch.sessionKey} data={footer} /> : null}
       </main>
 
       <NewSessionModal
