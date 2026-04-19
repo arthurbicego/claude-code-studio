@@ -9,7 +9,9 @@ function resolveVSCodeBin(): string | null {
   try {
     const out = execSync('which code', { encoding: 'utf8', env: process.env }).trim();
     if (out && fs.existsSync(out)) return fs.realpathSync(out);
-  } catch {}
+  } catch {
+    // `which` exits non-zero when `code` is not on PATH — fall through.
+  }
   const candidates = [
     '/opt/homebrew/bin/code',
     '/usr/local/bin/code',
@@ -65,7 +67,13 @@ export function register(app: Express): void {
         if (typeof s.model === 'string') defaults.model = s.model;
         if (typeof s.effortLevel === 'string') defaults.effort = s.effortLevel;
         if (typeof s.permissionMode === 'string') defaults.permissionMode = s.permissionMode;
-      } catch {}
+      } catch (err) {
+        const e = err as NodeJS.ErrnoException;
+        // ENOENT is the normal case when either settings file is missing.
+        if (e.code !== 'ENOENT') {
+          console.warn(`[defaults] failed to parse ${p}: ${e.message}`);
+        }
+      }
     }
     res.json(defaults);
   });

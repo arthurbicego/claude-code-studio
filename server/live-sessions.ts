@@ -117,7 +117,9 @@ export function safeSend(ws: WebSocket, obj: unknown): void {
   if (ws.readyState === (ws as any).OPEN) {
     try {
       ws.send(JSON.stringify(obj));
-    } catch {}
+    } catch {
+      // Socket transitioned to closing/closed between the readyState check and send.
+    }
   }
 }
 
@@ -206,7 +208,9 @@ export function getOrCreateLiveSession(
       safeSend(ws, { type: 'exit', exitCode });
       try {
         ws.close();
-      } catch {}
+      } catch {
+        // Socket may already be closed.
+      }
     }
     entry.subscribers.clear();
     liveSessions.delete(sessionKey);
@@ -232,12 +236,16 @@ export function liveSessionWorkspaces(): Map<string, number> {
       };
       const wd = cache?.workspace?.current_dir || cache?.cwd;
       if (wd) target = wd;
-    } catch {}
+    } catch {
+      // Statusline cache may be missing or mid-write — fall back to entry.cwd.
+    }
     if (!target) continue;
     let resolved = target;
     try {
       resolved = fs.realpathSync(target);
-    } catch {}
+    } catch {
+      // Path no longer exists — use the raw target as the key.
+    }
     counts.set(resolved, (counts.get(resolved) || 0) + 1);
   }
   return counts;
@@ -255,7 +263,9 @@ export function startIdleSweep(): NodeJS.Timeout {
         );
         try {
           entry.pty.kill();
-        } catch {}
+        } catch {
+          // PTY may have exited between the state check and kill.
+        }
       }
     }
   }, IDLE_SWEEP_INTERVAL_MS).unref();

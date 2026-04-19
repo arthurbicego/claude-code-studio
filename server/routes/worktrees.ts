@@ -47,7 +47,9 @@ export function register(app: Express): void {
       let mtime: number | null = null;
       try {
         mtime = fs.statSync(e.path).mtimeMs;
-      } catch {}
+      } catch {
+        // Worktree directory may have been removed externally.
+      }
       return {
         path: e.path,
         branch: e.branch,

@@ -16,7 +16,9 @@ export function broadcastInvalidate(): void {
     for (const res of clients) {
       try {
         res.write(`event: invalidate\ndata: ${Date.now()}\n\n`);
-      } catch {}
+      } catch {
+        // Client disconnected; the `close` listener will remove it from `clients`.
+      }
     }
   }, 500);
 }
@@ -38,7 +40,9 @@ export function liveSessionsSnapshot(): LiveSessionsSnapshot {
 export function writeActivityTo(res: Response): void {
   try {
     res.write(`event: activity\ndata: ${JSON.stringify(liveSessionsSnapshot())}\n\n`);
-  } catch {}
+  } catch {
+    // Client disconnected mid-write; the `close` listener cleans up.
+  }
 }
 
 export function broadcastActivity(): void {
@@ -57,7 +61,9 @@ export function ensureWatcher(): void {
       console.warn(`[sse] watcher error: ${err.message}`);
       try {
         watcher?.close();
-      } catch {}
+      } catch {
+        // Watcher already closed.
+      }
       watcher = null;
     });
   } catch (err) {
@@ -83,7 +89,9 @@ export function register(app: Express): void {
     const heartbeat = setInterval(() => {
       try {
         res.write(`: keepalive ${Date.now()}\n\n`);
-      } catch {}
+      } catch {
+        // Client disconnected; the `close` listener removes it from `clients`.
+      }
     }, 25000);
 
     req.on('close', () => {
@@ -92,7 +100,9 @@ export function register(app: Express): void {
       if (clients.size === 0 && watcher) {
         try {
           watcher.close();
-        } catch {}
+        } catch {
+          // Watcher already closed.
+        }
         watcher = null;
       }
     });

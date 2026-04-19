@@ -14,6 +14,14 @@ import {
 type WsHandler = (ws: WebSocket, req: Request) => void;
 type AppWithWs = Express & { ws: (path: string, handler: WsHandler) => void };
 
+function closeSilently(ws: WebSocket): void {
+  try {
+    ws.close();
+  } catch {
+    // Socket may already be closed.
+  }
+}
+
 export function register(app: Express): void {
   const wsApp = app as AppWithWs;
 
@@ -21,9 +29,7 @@ export function register(app: Express): void {
     const sessionKey = req.query.sessionKey ? String(req.query.sessionKey).trim() : '';
     if (!sessionKey) {
       safeSend(ws, { type: 'error', message: 'sessionKey obrigatório' });
-      try {
-        ws.close();
-      } catch {}
+      closeSilently(ws);
       return;
     }
 
@@ -36,9 +42,7 @@ export function register(app: Express): void {
       });
     } catch (err) {
       safeSend(ws, { type: 'error', message: `Failed to spawn claude: ${(err as Error).message}` });
-      try {
-        ws.close();
-      } catch {}
+      closeSilently(ws);
       return;
     }
 
@@ -51,17 +55,22 @@ export function register(app: Express): void {
       try {
         msg = JSON.parse(raw.toString());
       } catch {
+        // Non-JSON frame; ignore.
         return;
       }
       if (msg.type === 'input') {
         try {
           if (typeof msg.data === 'string') entry.pty.write(msg.data);
-        } catch {}
+        } catch {
+          // PTY exited between receiving the frame and writing.
+        }
       } else if (msg.type === 'resize') {
         try {
           if (typeof msg.cols === 'number' && typeof msg.rows === 'number')
             entry.pty.resize(msg.cols, msg.rows);
-        } catch {}
+        } catch {
+          // PTY exited between receiving the frame and resizing.
+        }
       } else if (msg.type === 'focus') {
         if (msg.active) entry.focusedWs.add(ws);
         else entry.focusedWs.delete(ws);
@@ -93,18 +102,14 @@ export function register(app: Express): void {
       });
     } catch (err) {
       safeSend(ws, { type: 'error', message: `shell spawn falhou: ${(err as Error).message}` });
-      try {
-        ws.close();
-      } catch {}
+      closeSilently(ws);
       return;
     }
 
     term.onData((data: string) => safeSend(ws, { type: 'data', data }));
     term.onExit(({ exitCode }: { exitCode: number }) => {
       safeSend(ws, { type: 'exit', exitCode });
-      try {
-        ws.close();
-      } catch {}
+      closeSilently(ws);
     });
 
     ws.on('message', (raw: Buffer) => {
@@ -112,24 +117,31 @@ export function register(app: Express): void {
       try {
         msg = JSON.parse(raw.toString());
       } catch {
+        // Non-JSON frame; ignore.
         return;
       }
       if (msg.type === 'input') {
         try {
           if (typeof msg.data === 'string') term.write(msg.data);
-        } catch {}
+        } catch {
+          // Shell exited between receiving the frame and writing.
+        }
       } else if (msg.type === 'resize') {
         try {
           if (typeof msg.cols === 'number' && typeof msg.rows === 'number')
             term.resize(msg.cols, msg.rows);
-        } catch {}
+        } catch {
+          // Shell exited between receiving the frame and resizing.
+        }
       }
     });
 
     ws.on('close', () => {
       try {
         term.kill();
-      } catch {}
+      } catch {
+        // Shell already exited.
+      }
     });
   });
 }

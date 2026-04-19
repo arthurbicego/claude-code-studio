@@ -1,3 +1,5 @@
+import { toast } from '@/lib/toast'
+
 export async function openInVSCode(path: string): Promise<void> {
   try {
     const res = await fetch('/api/open/vscode', {
@@ -8,10 +10,10 @@ export async function openInVSCode(path: string): Promise<void> {
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as { error?: string }
       const msg = body.error || `HTTP ${res.status}`
-      window.alert(`Não foi possível abrir no VS Code: ${msg}`)
+      toast.error(`Não foi possível abrir no VS Code: ${msg}`)
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    window.alert(`Não foi possível abrir no VS Code: ${msg}`)
+    toast.error(`Não foi possível abrir no VS Code: ${msg}`)
   }
 }

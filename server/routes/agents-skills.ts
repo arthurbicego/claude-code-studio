@@ -69,7 +69,9 @@ function listAgentsIn(dir: string): AgentSummary[] {
       const head = fs.readFileSync(fpath, 'utf8').slice(0, 4096);
       const { frontmatter } = parseFrontmatter(head);
       description = typeof frontmatter.description === 'string' ? frontmatter.description : '';
-    } catch {}
+    } catch {
+      // Unreadable or malformed frontmatter — list the agent without description.
+    }
     entries.push({ name, description, path: fpath, mtime: stat.mtimeMs });
   }
   return entries.sort((a, b) => a.name.localeCompare(b.name));
@@ -94,7 +96,9 @@ function listSkillsIn(dir: string): SkillSummary[] {
       const head = fs.readFileSync(skillFile, 'utf8').slice(0, 4096);
       const { frontmatter } = parseFrontmatter(head);
       description = typeof frontmatter.description === 'string' ? frontmatter.description : '';
-    } catch {}
+    } catch {
+      // Unreadable or malformed frontmatter — list the skill without description.
+    }
     entries.push({ name: f, description, path: skillFile, dir: fpath, mtime: stat.mtimeMs });
   }
   return entries.sort((a, b) => a.name.localeCompare(b.name));
