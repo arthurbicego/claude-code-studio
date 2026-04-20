@@ -100,7 +100,6 @@ export function MemoryEditor({
   const lastSavedTextRef = useRef<string>('')
 
   useEffect(() => {
-    // biome-ignore lint/correctness/useExhaustiveDependencies: hydrate textarea when data loads
     const initial = data?.content ?? ''
     setText(initial)
     lastSavedTextRef.current = initial

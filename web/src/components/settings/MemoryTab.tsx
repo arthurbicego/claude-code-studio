@@ -211,7 +211,6 @@ export function MemoryTab() {
   useEffect(() => {
     if (selectedCwd) {
       if (!projects.some((p) => p.cwd === selectedCwd)) {
-        // biome-ignore lint/correctness/useExhaustiveDependencies: sync selection with available projects
         setSelectedCwd(null)
       }
       return

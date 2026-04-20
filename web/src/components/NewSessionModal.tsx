@@ -302,6 +302,7 @@ export function NewSessionModal({
                 const liveCount = liveCountFor(p.cwd)
                 return (
                   <button
+                    type="button"
                     key={p.slug}
                     onClick={() => setSelectedCwd(p.cwd)}
                     className={cn(
@@ -394,6 +395,7 @@ export function NewSessionModal({
             ) : (
               browser.data?.entries.map((e) => (
                 <button
+                  type="button"
                   key={e.name}
                   onClick={() => browser.load(`${browser.data!.path.replace(/\/$/, '')}/${e.name}`)}
                   className="flex items-center gap-1.5 truncate rounded px-2 py-1.5 text-left text-xs text-foreground hover:bg-accent cursor-pointer"
