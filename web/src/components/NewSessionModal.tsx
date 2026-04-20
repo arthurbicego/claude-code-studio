@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowUp, Folder, GitBranch, Home } from 'lucide-react'
+import { AlertTriangle, ArrowUp, ChevronRight, Folder, GitBranch, Home } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/Modal'
@@ -99,6 +99,7 @@ export function NewSessionModal({
   const [isolate, setIsolate] = useState(false)
   const [userTouchedIsolate, setUserTouchedIsolate] = useState(false)
   const [worktreeName, setWorktreeName] = useState('')
+  const [existingProjectsOpen, setExistingProjectsOpen] = useState(false)
 
   const browser = useBrowser()
 
@@ -109,6 +110,7 @@ export function NewSessionModal({
       setUserTouchedIsolate(false)
       setWorktreeName('')
       setDangerouslySkipPermissions(false)
+      setExistingProjectsOpen(false)
       return
     }
     if (initial?.cwd) setSelectedCwd(initial.cwd)
@@ -170,7 +172,7 @@ export function NewSessionModal({
       open={open}
       onClose={onClose}
       title={t('newSession.title')}
-      className="w-[min(720px,94vw)]"
+      className="h-[86vh] w-[min(720px,94vw)]"
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
@@ -290,50 +292,64 @@ export function NewSessionModal({
         </section>
 
         <section className="border-b border-border p-4">
-          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            {t('newSession.existingProjects')}
-          </h3>
-          <div className="flex max-h-44 flex-col gap-1 overflow-y-auto">
-            {sortedProjects.length === 0 ? (
-              <p className="text-xs text-muted-foreground">{t('newSession.noProjects')}</p>
-            ) : (
-              sortedProjects.map((p) => {
-                const active = selectedCwd === p.cwd
-                const liveCount = liveCountFor(p.cwd)
-                return (
-                  <button
-                    type="button"
-                    key={p.slug}
-                    onClick={() => setSelectedCwd(p.cwd)}
-                    className={cn(
-                      'flex items-center justify-between gap-2 rounded px-3 py-2 text-left text-xs cursor-pointer',
-                      active
-                        ? 'bg-sky-500/15 ring-1 ring-sky-500/50'
-                        : 'bg-accent/40 hover:bg-accent',
-                    )}
-                  >
-                    <span className="flex flex-col">
-                      <span className="font-medium text-foreground">{basename(p.cwd)}</span>
-                      <span className="font-mono text-[10px] text-muted-foreground">{p.cwd}</span>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      {liveCount > 0 ? (
-                        <Tooltip content={t('newSession.activeCount', { count: liveCount })}>
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[10px] text-emerald-300">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                            {liveCount}
-                          </span>
-                        </Tooltip>
-                      ) : null}
-                      <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                        {p.sessions.length}
+          <button
+            type="button"
+            className="flex w-full items-center gap-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground cursor-pointer"
+            onClick={() => setExistingProjectsOpen((v) => !v)}
+            aria-expanded={existingProjectsOpen}
+          >
+            <ChevronRight
+              size={10}
+              className={cn('transition-transform', existingProjectsOpen && 'rotate-90')}
+            />
+            <span className="flex-1">{t('newSession.existingProjects')}</span>
+            <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] normal-case tracking-normal text-muted-foreground">
+              {sortedProjects.length}
+            </span>
+          </button>
+          {existingProjectsOpen ? (
+            <div className="mt-2 flex max-h-44 flex-col gap-1 overflow-y-auto">
+              {sortedProjects.length === 0 ? (
+                <p className="text-xs text-muted-foreground">{t('newSession.noProjects')}</p>
+              ) : (
+                sortedProjects.map((p) => {
+                  const active = selectedCwd === p.cwd
+                  const liveCount = liveCountFor(p.cwd)
+                  return (
+                    <button
+                      type="button"
+                      key={p.slug}
+                      onClick={() => setSelectedCwd(p.cwd)}
+                      className={cn(
+                        'flex items-center justify-between gap-2 rounded px-3 py-2 text-left text-xs cursor-pointer',
+                        active
+                          ? 'bg-sky-500/15 ring-1 ring-sky-500/50'
+                          : 'bg-accent/40 hover:bg-accent',
+                      )}
+                    >
+                      <span className="flex flex-col">
+                        <span className="font-medium text-foreground">{basename(p.cwd)}</span>
+                        <span className="font-mono text-[10px] text-muted-foreground">{p.cwd}</span>
                       </span>
-                    </span>
-                  </button>
-                )
-              })
-            )}
-          </div>
+                      <span className="flex items-center gap-1">
+                        {liveCount > 0 ? (
+                          <Tooltip content={t('newSession.activeCount', { count: liveCount })}>
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[10px] text-emerald-300">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                              {liveCount}
+                            </span>
+                          </Tooltip>
+                        ) : null}
+                        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                          {p.sessions.length}
+                        </span>
+                      </span>
+                    </button>
+                  )
+                })
+              )}
+            </div>
+          ) : null}
         </section>
 
         <section className="flex min-h-0 flex-col p-4">
