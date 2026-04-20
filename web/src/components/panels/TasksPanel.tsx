@@ -61,9 +61,9 @@ export function TasksPanel({ sessionId, onClose }: Props) {
                   {t(GROUP_KEY[group])}
                 </div>
                 <ul className="space-y-1">
-                  {items.map((ti, i) => (
+                  {items.map((ti) => (
                     <li
-                      key={`${group}-${i}`}
+                      key={`${group}-${ti.content}`}
                       className="flex items-start gap-2 rounded px-2 py-1 hover:bg-accent/40"
                     >
                       <div className="pt-0.5">

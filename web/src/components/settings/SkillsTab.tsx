@@ -45,6 +45,7 @@ export function SkillsTab() {
     }
   }, [scope, projectCwd, projects])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset selection state whenever scope/projectCwd changes; the effect body uses only setters (stable), so Biome sees the deps as "unused" but they are the trigger
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reset selection when scope/project changes
     setSelection(null)

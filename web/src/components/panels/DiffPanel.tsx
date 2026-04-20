@@ -89,8 +89,8 @@ export function DiffPanel({ sessionId, onClose }: Props) {
         </div>
       ) : (
         <div className="h-full overflow-auto font-mono text-[11px]">
-          {hunks.map((h, idx) => (
-            <div key={`${h.file}-${idx}`} className="border-b border-border last:border-b-0">
+          {hunks.map((h) => (
+            <div key={`${h.file}-${h.kind}`} className="border-b border-border last:border-b-0">
               <div className="sticky top-0 z-10 flex items-center gap-2 bg-muted/60 px-3 py-1 backdrop-blur">
                 <span className={cn('font-semibold', KIND_COLOR[h.kind])}>
                   {KIND_LABEL[h.kind]}
@@ -99,6 +99,7 @@ export function DiffPanel({ sessionId, onClose }: Props) {
               </div>
               {h.lines.map((l, i) => (
                 <div
+                  // biome-ignore lint/suspicious/noArrayIndexKey: diff lines have no stable id and can repeat (empty lines, closing braces); list is static per hunk and never reorders
                   key={i}
                   className={cn(
                     'whitespace-pre px-3',

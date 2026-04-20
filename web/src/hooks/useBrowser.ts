@@ -34,9 +34,9 @@ export function useBrowser(initialPath?: string) {
     [showHidden],
   )
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: run once on mount with the initial path; `load` identity would cause a reload loop
   useEffect(() => {
     load(initialPath)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const toggleHidden = useCallback(() => {

@@ -57,6 +57,7 @@ export function TerminalView({
   const isActiveRef = useRef(isActive)
   isActiveRef.current = isActive
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reconnect the WS only when the session changes; adding callbacks/translations as deps would tear down and rebuild the PTY socket on every parent rerender
   useEffect(() => {
     if (!launch || !hostRef.current) return
 
@@ -153,7 +154,6 @@ export function TerminalView({
       wsRef.current = null
       fitRef.current = null
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [launch])
 
   useEffect(() => {

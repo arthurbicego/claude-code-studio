@@ -101,6 +101,7 @@ export function DropdownMenu({
       {tooltip && !open ? <Tooltip content={tooltip}>{triggerButton}</Tooltip> : triggerButton}
       {open && typeof document !== 'undefined'
         ? createPortal(
+            // biome-ignore lint/a11y/useKeyWithClickEvents: portal popup stops click/mousedown bubbling so the document-level click-outside handler doesn't close on menu clicks; keyboard is handled per-item (role=menuitem buttons) and by the document-level Escape listener
             <div
               ref={menuRef}
               role="menu"
@@ -119,7 +120,7 @@ export function DropdownMenu({
                 const Icon = item.icon
                 return (
                   <div key={item.label}>
-                    {needsSeparator ? <div role="separator" className="h-px bg-border" /> : null}
+                    {needsSeparator ? <hr className="h-px border-0 bg-border" /> : null}
                     <button
                       type="button"
                       role="menuitem"

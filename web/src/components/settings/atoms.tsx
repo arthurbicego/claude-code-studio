@@ -32,6 +32,7 @@ export function Field({
   children: ReactNode
 }) {
   return (
+    // biome-ignore lint/a11y/noLabelWithoutControl: Field is a helper that expects callers to pass the form control as `children` — the implicit <label> wrap associates it; Biome can't verify this statically
     <label className="flex flex-col gap-1">
       <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
         {label}

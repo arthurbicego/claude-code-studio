@@ -13,6 +13,7 @@ export function ShellPanel({ cwd, onClose }: Props) {
   const { t } = useTranslation()
   const hostRef = useRef<HTMLDivElement | null>(null)
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reconnect the shell WS only when cwd changes; adding translations/onClose would tear down the shell on every parent rerender
   useEffect(() => {
     if (!hostRef.current) return
 
@@ -90,7 +91,6 @@ export function ShellPanel({ cwd, onClose }: Props) {
         /* noop */
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cwd])
 
   return (
