@@ -35,13 +35,9 @@ export type SessionDefaults = {
   permissionMode: string;
 };
 
-export type BrowseEntry = { name: string };
-
-export type BrowseResult = {
-  path: string;
-  parent: string | null;
-  home: string;
-  entries: BrowseEntry[];
+export type PickFolderResponse = {
+  path: string | null;
+  canceled: boolean;
 };
 
 export type PermissionMode =
