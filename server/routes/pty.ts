@@ -28,6 +28,9 @@ export function register(app: Express): void {
 
   wsApp.ws('/pty', (ws, req) => {
     if (!isWsUpgradeAllowed(req)) {
+      console.warn(
+        `[pty] ws upgrade rejected · host=${String(req.headers.host ?? '')} origin=${String(req.headers.origin ?? '')}`,
+      );
       closeSilently(ws);
       return;
     }
