@@ -107,7 +107,33 @@
     "picking": "Abrindo…",
     "noFolderSelected": "Nenhuma pasta selecionada",
     "defaultSuffix": "{{value}} (padrão)",
-    "bypassPermissionsWarning": "bypassPermissions pula todas as verificações de permissão — a sessão executará qualquer ferramenta sem pedir autorização. Use apenas em ambientes confiáveis."
+    "bypassPermissionsWarning": "bypassPermissions pula todas as verificações de permissão — a sessão executará qualquer ferramenta sem pedir autorização. Use apenas em ambientes confiáveis.",
+    "modelInfoTooltip": "Sobre os modelos disponíveis",
+    "modelInfoAria": "Ver detalhes dos modelos",
+    "modelInfo": {
+      "opus": "Opus 4.7 — máxima capacidade para raciocínio complexo e coding agêntico. Custo mais alto.",
+      "sonnet": "Sonnet 4.6 — melhor equilíbrio velocidade/inteligência para coding diário. Rápido, custo médio.",
+      "haiku": "Haiku 4.5 — o mais rápido e barato; inteligência quase-frontier em tarefas simples."
+    },
+    "effortInfoTooltip": "Sobre os níveis de effort",
+    "effortInfoAria": "Ver detalhes dos níveis de effort",
+    "effortInfo": {
+      "low": "Raciocínio mínimo. Tarefas curtas sensíveis à latência, não à inteligência.",
+      "medium": "Reduz uso de tokens trocando alguma inteligência. Bom quando custo importa.",
+      "high": "Equilibra tokens e inteligência. Mínimo recomendado para trabalho que exige profundidade.",
+      "xhigh": "Melhor resultado para coding/agêntico. Padrão do Opus 4.7 (apenas nele).",
+      "max": "Raciocínio mais profundo, sem limite de tokens. Só dura na sessão atual; pode overthink."
+    },
+    "permissionInfoTooltip": "Sobre os modos de permissão",
+    "permissionInfoAria": "Ver detalhes dos modos de permissão",
+    "permissionMode": {
+      "default": "Apenas leitura. Ideal para começar ou em trabalho sensível.",
+      "acceptEdits": "Leituras, edições de arquivo e comandos comuns de FS (mkdir, touch, mv, cp, etc.).",
+      "plan": "Apenas leitura; Claude pesquisa e propõe mudanças sem aplicar.",
+      "auto": "Tudo, com verificações de segurança em background (classificador). Requer v2.1.83+.",
+      "dontAsk": "Apenas ferramentas pré-aprovadas; nega automaticamente o resto. Indicado para CI.",
+      "bypassPermissions": "Tudo, exceto caminhos protegidos. Apenas em containers isolados e VMs."
+    }
   },
   "dialogs": {
     "archiveSession": {
