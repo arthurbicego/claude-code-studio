@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 import type { SessionsListResponse } from '@shared/types';
 import type { Express, Request, Response } from 'express';
 import { ERR, sendError, sendInternalError } from '../errors';
@@ -8,10 +7,9 @@ import { runGitArgs } from '../git';
 import { liveSessions } from '../live-sessions';
 import { CLAUDE_PROJECTS } from '../paths';
 import {
-  fallbackSlugToCwd,
   findLastToolUse,
   findSessionFile,
-  readSessionMeta,
+  listProjectsWithSessions,
   resolveSessionCwd,
 } from '../sessions-meta';
 import { broadcastInvalidate } from '../sse';
@@ -21,47 +19,7 @@ import { FOOTER_ID_RE } from '../validators';
 export function register(app: Express): void {
   app.get('/api/sessions', (_req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store, max-age=0');
-    if (!fs.existsSync(CLAUDE_PROJECTS)) {
-      const empty: SessionsListResponse = { projects: [] };
-      return res.json(empty);
-    }
-
-    const projects = fs
-      .readdirSync(CLAUDE_PROJECTS)
-      .map((slug) => {
-        const dir = path.join(CLAUDE_PROJECTS, slug);
-        if (!fs.statSync(dir).isDirectory()) return null;
-
-        const sessionFiles = fs.readdirSync(dir).filter((f) => f.endsWith('.jsonl'));
-        let projectCwd: string | null = null;
-        const sessions = sessionFiles
-          .map((f) => {
-            const id = f.replace(/\.jsonl$/, '');
-            const fpath = path.join(dir, f);
-            const st = fs.statSync(fpath);
-            const { cwd, preview } = readSessionMeta(fpath);
-            if (cwd && !projectCwd) projectCwd = cwd;
-            return {
-              id,
-              mtime: st.mtimeMs,
-              createdAt: st.birthtimeMs || st.ctimeMs,
-              size: st.size,
-              preview: preview || null,
-              archived: appState.archived.has(id),
-            };
-          })
-          .sort((a, b) => b.mtime - a.mtime);
-
-        return {
-          slug,
-          cwd: projectCwd || fallbackSlugToCwd(slug),
-          cwdResolved: !!projectCwd,
-          sessions,
-        };
-      })
-      .filter((p): p is NonNullable<typeof p> => p !== null)
-      .sort((a, b) => (b.sessions[0]?.mtime || 0) - (a.sessions[0]?.mtime || 0));
-
+    const projects = listProjectsWithSessions(CLAUDE_PROJECTS, appState.archived);
     res.json({ projects } satisfies SessionsListResponse);
   });
 

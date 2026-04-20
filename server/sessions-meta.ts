@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import type { Project } from '../shared/types';
 import { CLAUDE_PROJECTS } from './paths';
 
 export const SYSTEM_TAG_RE =
@@ -7,10 +8,6 @@ export const SYSTEM_TAG_RE =
 
 export function isSystemText(s: string | null | undefined): boolean {
   return !s || SYSTEM_TAG_RE.test(s);
-}
-
-export function fallbackSlugToCwd(slug: string): string {
-  return `/${slug.replace(/^-/, '').replace(/-/g, '/')}`;
 }
 
 export type SessionMetaResult = { cwd: string | null; preview: string | null };
@@ -127,7 +124,67 @@ export function resolveSessionCwd(id: string): string | null {
   const fpath = findSessionFile(id);
   if (!fpath) return null;
   const meta = readSessionMeta(fpath);
-  if (meta.cwd) return meta.cwd;
-  const slug = path.basename(path.dirname(fpath));
-  return fallbackSlugToCwd(slug);
+  return meta.cwd;
+}
+
+/**
+ * Scans a Claude projects root directory and returns only projects that have at least one
+ * `.jsonl` session file with a resolvable `cwd`. Projects whose slug exists on disk but carry
+ * no sessions (or only legacy UUID subdirectories) are skipped — their cwd can't be inferred
+ * reliably from the slug alone, and listing them produces misleading entries in the UI.
+ */
+export function listProjectsWithSessions(
+  projectsRoot: string,
+  archived: ReadonlySet<string>,
+): Project[] {
+  if (!fs.existsSync(projectsRoot)) return [];
+  const projects: Project[] = [];
+  for (const slug of fs.readdirSync(projectsRoot)) {
+    const dir = path.join(projectsRoot, slug);
+    let st: fs.Stats;
+    try {
+      st = fs.statSync(dir);
+    } catch {
+      continue;
+    }
+    if (!st.isDirectory()) continue;
+
+    let entries: string[];
+    try {
+      entries = fs.readdirSync(dir);
+    } catch {
+      continue;
+    }
+    const sessionFiles = entries.filter((f) => f.endsWith('.jsonl'));
+    if (sessionFiles.length === 0) continue;
+
+    let projectCwd: string | null = null;
+    const sessions = sessionFiles
+      .map((f) => {
+        const id = f.replace(/\.jsonl$/, '');
+        const fpath = path.join(dir, f);
+        const fst = fs.statSync(fpath);
+        const { cwd, preview } = readSessionMeta(fpath);
+        if (cwd && !projectCwd) projectCwd = cwd;
+        return {
+          id,
+          mtime: fst.mtimeMs,
+          createdAt: fst.birthtimeMs || fst.ctimeMs,
+          size: fst.size,
+          preview: preview || null,
+          archived: archived.has(id),
+        };
+      })
+      .sort((a, b) => b.mtime - a.mtime);
+
+    if (!projectCwd) continue;
+
+    projects.push({
+      slug,
+      cwd: projectCwd,
+      cwdResolved: true,
+      sessions,
+    });
+  }
+  return projects.sort((a, b) => (b.sessions[0]?.mtime || 0) - (a.sessions[0]?.mtime || 0));
 }
