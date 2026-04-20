@@ -89,13 +89,12 @@ export function NewSessionModal({
   onLaunch,
 }: Props) {
   const { t } = useTranslation()
-  const initialModel = (defaults.model as Model) ?? MODELS[0]
-  const initialEffort = (defaults.effort as Effort) ?? EFFORTS[2]
-  const initialPermission = (defaults.permissionMode as PermissionMode) ?? 'default'
 
-  const [model, setModel] = useState<Model>(initialModel)
-  const [effort, setEffort] = useState<Effort>(initialEffort)
-  const [permissionMode, setPermissionMode] = useState<PermissionMode>(initialPermission)
+  const [model, setModel] = useState<Model>((defaults.model as Model) ?? MODELS[0])
+  const [effort, setEffort] = useState<Effort>((defaults.effort as Effort) ?? EFFORTS[2])
+  const [permissionMode, setPermissionMode] = useState<PermissionMode>(
+    (defaults.permissionMode as PermissionMode) ?? 'default',
+  )
   const [selectedCwd, setSelectedCwd] = useState<string | null>(null)
   const [isolate, setIsolate] = useState(false)
   const [userTouchedIsolate, setUserTouchedIsolate] = useState(false)
@@ -105,6 +104,14 @@ export function NewSessionModal({
   const [pickError, setPickError] = useState<string | null>(null)
 
   const translateApiError = useApiErrorTranslator()
+
+  // Server defaults load asynchronously — mirror them into local state once they arrive so the
+  // select's selected value matches the "(padrão)" marker instead of staying on the fallback.
+  useEffect(() => {
+    if (defaults.model) setModel(defaults.model as Model)
+    if (defaults.effort) setEffort(defaults.effort as Effort)
+    if (defaults.permissionMode) setPermissionMode(defaults.permissionMode as PermissionMode)
+  }, [defaults])
 
   useEffect(() => {
     if (!open) {
