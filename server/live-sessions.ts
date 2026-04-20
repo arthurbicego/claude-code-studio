@@ -55,7 +55,6 @@ export type PtyArgs = {
   effort?: unknown;
   permissionMode?: unknown;
   worktree?: unknown;
-  dangerouslySkipPermissions?: unknown;
 };
 
 export function buildPtyArgs({
@@ -65,7 +64,6 @@ export function buildPtyArgs({
   effort,
   permissionMode,
   worktree,
-  dangerouslySkipPermissions,
 }: PtyArgs): string[] {
   const args: string[] = [];
   const tapSettings = buildStatusLineSettingsArg();
@@ -79,9 +77,6 @@ export function buildPtyArgs({
     if (typeof effort === 'string' && VALID_EFFORT.has(effort)) args.push('--effort', effort);
     if (typeof permissionMode === 'string' && VALID_PERMISSION_MODE.has(permissionMode)) {
       args.push('--permission-mode', permissionMode);
-    }
-    if (dangerouslySkipPermissions === '1' || dangerouslySkipPermissions === 'true') {
-      args.push('--dangerously-skip-permissions');
     }
     if (typeof worktree === 'string' && worktree.length > 0) {
       if (worktree === '1' || worktree === 'true') {

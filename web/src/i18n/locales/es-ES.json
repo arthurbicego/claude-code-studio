@@ -107,10 +107,7 @@
     "picking": "Abriendo…",
     "noFolderSelected": "Ninguna carpeta seleccionada",
     "defaultSuffix": "{{value}} (por defecto)",
-    "dangerouslySkipPermissions": "Saltar los prompts de permiso",
-    "dangerouslySkipPermissionsHint": "La sesión ejecutará todo sin pedir autorización (--dangerously-skip-permissions). Úsalo solo en entornos confiables.",
-    "dangerouslySkipInfoTooltip": "Sobre saltar los prompts de permiso",
-    "dangerouslySkipInfoAria": "Ver detalles sobre saltar los prompts de permiso"
+    "bypassPermissionsWarning": "bypassPermissions omite todas las comprobaciones de permiso — la sesión ejecutará cualquier herramienta sin pedir autorización. Úsalo solo en entornos confiables."
   },
   "dialogs": {
     "archiveSession": {

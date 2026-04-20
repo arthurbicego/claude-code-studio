@@ -70,7 +70,6 @@ function buildWsUrl(launch: SessionLaunch, skip?: Props['skipDefaults']) {
     if (launch.permissionMode && launch.permissionMode !== (skip?.permissionMode ?? 'default')) {
       params.set('permissionMode', launch.permissionMode)
     }
-    if (launch.dangerouslySkipPermissions) params.set('dangerouslySkipPermissions', '1')
     if (launch.worktree) params.set('worktree', launch.worktree)
   }
   const proto = location.protocol === 'https:' ? 'wss' : 'ws'
