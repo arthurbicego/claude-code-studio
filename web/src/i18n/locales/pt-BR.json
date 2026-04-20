@@ -371,7 +371,6 @@
         "description": "Identifique e remova sujeiras acumuladas pelo Claude Code e por este studio. Cada categoria lista itens antes de apagar; a ação é irreversível.",
         "loading": "Analisando…",
         "error": "Falha ao analisar: {{message}}",
-        "refresh": "Reanalisar",
         "empty": "Nada a limpar nesta categoria.",
         "details": "Ver detalhes",
         "hide": "Ocultar",

@@ -35,6 +35,14 @@ export function useMaintenance() {
     scan()
   }, [scan])
 
+  useEffect(() => {
+    const handler = () => {
+      if (document.visibilityState === 'visible') scan()
+    }
+    document.addEventListener('visibilitychange', handler)
+    return () => document.removeEventListener('visibilitychange', handler)
+  }, [scan])
+
   const cleanup = useCallback(
     async (
       category: MaintenanceCategoryKey,
