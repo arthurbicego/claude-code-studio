@@ -18,7 +18,6 @@ export default defineConfig({
       '/pty': {
         target: 'ws://127.0.0.1:3000',
         ws: true,
-        rewriteWsOrigin: true,
       },
     },
   },
