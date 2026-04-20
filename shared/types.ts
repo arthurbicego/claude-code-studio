@@ -65,6 +65,7 @@ export type SessionLaunch = {
   effort?: Effort;
   permissionMode?: PermissionMode;
   worktree?: string;
+  dangerouslySkipPermissions?: boolean;
 };
 
 export type LiveSessionState = 'ativo' | 'aguardando' | 'standby' | 'finalizado';
