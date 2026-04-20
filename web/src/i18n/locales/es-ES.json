@@ -107,7 +107,33 @@
     "picking": "Abriendo…",
     "noFolderSelected": "Ninguna carpeta seleccionada",
     "defaultSuffix": "{{value}} (por defecto)",
-    "bypassPermissionsWarning": "bypassPermissions omite todas las comprobaciones de permiso — la sesión ejecutará cualquier herramienta sin pedir autorización. Úsalo solo en entornos confiables."
+    "bypassPermissionsWarning": "bypassPermissions omite todas las comprobaciones de permiso — la sesión ejecutará cualquier herramienta sin pedir autorización. Úsalo solo en entornos confiables.",
+    "modelInfoTooltip": "Sobre los modelos disponibles",
+    "modelInfoAria": "Ver detalles de los modelos",
+    "modelInfo": {
+      "opus": "Opus 4.7 — máxima capacidad para razonamiento complejo y coding agéntico. Coste alto.",
+      "sonnet": "Sonnet 4.6 — mejor equilibrio velocidad/inteligencia para coding diario. Rápido, coste medio.",
+      "haiku": "Haiku 4.5 — el más rápido y barato; inteligencia casi-frontera en tareas simples."
+    },
+    "effortInfoTooltip": "Sobre los niveles de effort",
+    "effortInfoAria": "Ver detalles de los niveles de effort",
+    "effortInfo": {
+      "low": "Razonamiento mínimo. Tareas cortas sensibles a la latencia, no a la inteligencia.",
+      "medium": "Reduce el uso de tokens a cambio de algo de inteligencia. Útil cuando el coste importa.",
+      "high": "Equilibra tokens e inteligencia. Mínimo recomendado para trabajo que exige profundidad.",
+      "xhigh": "Mejor resultado para coding/agéntico. Predeterminado en Opus 4.7 (solo Opus 4.7).",
+      "max": "Razonamiento más profundo, sin límite de tokens. Solo en la sesión actual; puede overthink."
+    },
+    "permissionInfoTooltip": "Sobre los modos de permiso",
+    "permissionInfoAria": "Ver detalles de los modos de permiso",
+    "permissionMode": {
+      "default": "Solo lectura. Ideal para empezar o trabajo sensible.",
+      "acceptEdits": "Lecturas, ediciones de archivo y comandos comunes de FS (mkdir, touch, mv, cp, etc.).",
+      "plan": "Solo lectura; Claude investiga y propone cambios sin aplicarlos.",
+      "auto": "Todo, con comprobaciones de seguridad en segundo plano (clasificador). Requiere v2.1.83+.",
+      "dontAsk": "Solo herramientas preaprobadas; deniega automáticamente el resto. Para CI restringido.",
+      "bypassPermissions": "Todo, excepto rutas protegidas. Solo en contenedores aislados y VMs."
+    }
   },
   "dialogs": {
     "archiveSession": {

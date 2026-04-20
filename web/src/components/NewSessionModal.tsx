@@ -1,6 +1,6 @@
 import type { PickFolderResponse } from '@shared/types'
 import { AlertTriangle, ChevronRight, Folder, GitBranch } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useEffect, useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/Modal'
 import { Button } from '@/components/ui/Button'
@@ -51,6 +51,33 @@ type FieldSelectProps<T extends string> = {
   options: readonly T[]
   defaultValue: T | null | undefined
   onChange: (v: T) => void
+  info?: ReactNode
+}
+
+function OptionsInfo({
+  options,
+  prefix,
+  tooltipKey,
+  ariaKey,
+}: {
+  options: readonly string[]
+  prefix: string
+  tooltipKey: string
+  ariaKey: string
+}) {
+  const { t } = useTranslation()
+  return (
+    <InfoPopover ariaLabel={t(ariaKey)} tooltip={t(tooltipKey)}>
+      <dl className="flex flex-col gap-1.5">
+        {options.map((opt) => (
+          <div key={opt} className="flex flex-col">
+            <dt className="font-mono font-semibold text-foreground">{opt}</dt>
+            <dd>{t(`${prefix}.${opt}`)}</dd>
+          </div>
+        ))}
+      </dl>
+    </InfoPopover>
+  )
 }
 
 function FieldSelect<T extends string>({
@@ -59,12 +86,18 @@ function FieldSelect<T extends string>({
   options,
   defaultValue,
   onChange,
+  info,
 }: FieldSelectProps<T>) {
   const { t } = useTranslation()
+  const labelId = useId()
   return (
-    <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-      <span className="text-[10px] uppercase tracking-wide">{label}</span>
+    <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+      <span id={labelId} className="flex items-center gap-1 text-[10px] uppercase tracking-wide">
+        {label}
+        {info}
+      </span>
       <select
+        aria-labelledby={labelId}
         className="rounded border border-border bg-background px-2 py-1.5 font-mono text-xs text-foreground focus:border-sky-500 focus:outline-none"
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
@@ -75,7 +108,7 @@ function FieldSelect<T extends string>({
           </option>
         ))}
       </select>
-    </label>
+    </div>
   )
 }
 
@@ -300,6 +333,14 @@ export function NewSessionModal({
               options={MODELS}
               defaultValue={defaults.model as Model | null}
               onChange={setModel}
+              info={
+                <OptionsInfo
+                  options={MODELS}
+                  prefix="newSession.modelInfo"
+                  tooltipKey="newSession.modelInfoTooltip"
+                  ariaKey="newSession.modelInfoAria"
+                />
+              }
             />
             <FieldSelect
               label={t('newSession.effort')}
@@ -307,6 +348,14 @@ export function NewSessionModal({
               options={EFFORTS}
               defaultValue={defaults.effort as Effort | null}
               onChange={setEffort}
+              info={
+                <OptionsInfo
+                  options={EFFORTS}
+                  prefix="newSession.effortInfo"
+                  tooltipKey="newSession.effortInfoTooltip"
+                  ariaKey="newSession.effortInfoAria"
+                />
+              }
             />
             <FieldSelect
               label={t('newSession.permission')}
@@ -314,6 +363,14 @@ export function NewSessionModal({
               options={PERMISSION_MODES}
               defaultValue={defaults.permissionMode as PermissionMode}
               onChange={setPermissionMode}
+              info={
+                <OptionsInfo
+                  options={PERMISSION_MODES}
+                  prefix="newSession.permissionMode"
+                  tooltipKey="newSession.permissionInfoTooltip"
+                  ariaKey="newSession.permissionInfoAria"
+                />
+              }
             />
           </div>
           {permissionMode === 'bypassPermissions' ? (

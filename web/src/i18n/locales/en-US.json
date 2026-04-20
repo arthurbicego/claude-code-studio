@@ -107,7 +107,33 @@
     "picking": "Opening…",
     "noFolderSelected": "No folder selected",
     "defaultSuffix": "{{value}} (default)",
-    "bypassPermissionsWarning": "bypassPermissions skips all permission checks — the session will run any tool without asking for authorization. Use only in trusted environments."
+    "bypassPermissionsWarning": "bypassPermissions skips all permission checks — the session will run any tool without asking for authorization. Use only in trusted environments.",
+    "modelInfoTooltip": "About available models",
+    "modelInfoAria": "Show details about models",
+    "modelInfo": {
+      "opus": "Opus 4.7 — max capability for complex reasoning and agentic coding. Higher cost.",
+      "sonnet": "Sonnet 4.6 — best speed/intelligence balance for daily coding. Fast, mid cost.",
+      "haiku": "Haiku 4.5 — fastest and cheapest; near-frontier intelligence on simple tasks."
+    },
+    "effortInfoTooltip": "About effort levels",
+    "effortInfoAria": "Show details about effort levels",
+    "effortInfo": {
+      "low": "Minimal reasoning. Short, scoped, latency-sensitive tasks.",
+      "medium": "Reduces token usage, trading some intelligence. Good when cost matters.",
+      "high": "Balances tokens and intelligence. Minimum for intelligence-sensitive work.",
+      "xhigh": "Best result for coding/agentic tasks. Default on Opus 4.7 (Opus 4.7 only).",
+      "max": "Deepest reasoning, no token cap. Current session only; can overthink."
+    },
+    "permissionInfoTooltip": "About permission modes",
+    "permissionInfoAria": "Show details about permission modes",
+    "permissionMode": {
+      "default": "Read-only. Getting started or sensitive work.",
+      "acceptEdits": "Reads, file edits, and common filesystem commands (mkdir, touch, mv, cp, etc.).",
+      "plan": "Read-only; Claude researches and proposes changes without applying them.",
+      "auto": "Everything, with background safety checks (classifier). Requires v2.1.83+.",
+      "dontAsk": "Only pre-approved tools; auto-denies everything else. Meant for locked-down CI.",
+      "bypassPermissions": "Everything except protected paths. Isolated containers and VMs only."
+    }
   },
   "dialogs": {
     "archiveSession": {
