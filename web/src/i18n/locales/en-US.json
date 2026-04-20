@@ -89,12 +89,13 @@
     "model": "Model",
     "effort": "Effort",
     "permission": "Permission",
-    "worktree": "Worktree",
     "isolate": "Isolate in new worktree",
+    "isolateInfoTooltip": "About isolated worktrees",
+    "isolateInfoAria": "Show details about isolated worktree",
+    "isolateInfo": "Creates a separate git worktree at .claude/worktrees/<name> from origin/HEAD. Lets you run parallel sessions on the same project without the files of one overwriting the other's.",
     "name": "Name (optional)",
-    "namePlaceholder": "leave blank to auto-generate",
+    "namePlaceholder": "e.g.: feature-login (optional — auto-generated if empty)",
     "nameRules": "use only letters, numbers, dot, dash or underscore (up to 64 characters)",
-    "createdFrom": "created at {{when}} from {{base}}",
     "activeWarning": "There is already an active session in this directory — parallel sessions on the same working tree may overwrite each other's files.",
     "activeAutoIsolate": "There is already an active session here — we pre-checked isolating in a worktree.",
     "folder": "Project folder",
@@ -106,9 +107,10 @@
     "picking": "Opening…",
     "noFolderSelected": "No folder selected",
     "defaultSuffix": "{{value}} (default)",
-    "advanced": "Advanced",
-    "dangerouslySkipPermissions": "Skip permission prompts (--dangerously-skip-permissions)",
-    "dangerouslySkipPermissionsHint": "The session will run without asking for authorization. Use only in trusted environments."
+    "dangerouslySkipPermissions": "Skip permission prompts",
+    "dangerouslySkipPermissionsHint": "The session will run without asking for authorization (--dangerously-skip-permissions). Use only in trusted environments.",
+    "dangerouslySkipInfoTooltip": "About skipping permission prompts",
+    "dangerouslySkipInfoAria": "Show details about skipping permission prompts"
   },
   "dialogs": {
     "archiveSession": {

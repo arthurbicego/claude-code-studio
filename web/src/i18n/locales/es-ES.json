@@ -89,12 +89,13 @@
     "model": "Modelo",
     "effort": "Effort",
     "permission": "Permiso",
-    "worktree": "Worktree",
     "isolate": "Aislar en un nuevo worktree",
+    "isolateInfoTooltip": "Sobre worktrees aislados",
+    "isolateInfoAria": "Ver detalles sobre worktree aislado",
+    "isolateInfo": "Crea un git worktree separado en .claude/worktrees/<nombre> a partir de origin/HEAD. Permite ejecutar sesiones paralelas en el mismo proyecto sin que los archivos de una sobrescriban los de la otra.",
     "name": "Nombre (opcional)",
-    "namePlaceholder": "déjalo en blanco para autogenerar",
+    "namePlaceholder": "ej.: feature-login (opcional — generado si está vacío)",
     "nameRules": "usa solo letras, números, punto, guion o subrayado (hasta 64 caracteres)",
-    "createdFrom": "creado en {{when}} a partir de {{base}}",
     "activeWarning": "Ya existe una sesión activa en este directorio — sesiones paralelas en el mismo working tree pueden sobrescribir archivos entre sí.",
     "activeAutoIsolate": "Ya hay una sesión activa aquí — premarcamos para aislar en worktree.",
     "folder": "Carpeta del proyecto",
@@ -106,9 +107,10 @@
     "picking": "Abriendo…",
     "noFolderSelected": "Ninguna carpeta seleccionada",
     "defaultSuffix": "{{value}} (por defecto)",
-    "advanced": "Avanzado",
-    "dangerouslySkipPermissions": "Saltar los prompts de permiso (--dangerously-skip-permissions)",
-    "dangerouslySkipPermissionsHint": "La sesión ejecutará todo sin pedir autorización. Úsalo solo en entornos confiables."
+    "dangerouslySkipPermissions": "Saltar los prompts de permiso",
+    "dangerouslySkipPermissionsHint": "La sesión ejecutará todo sin pedir autorización (--dangerously-skip-permissions). Úsalo solo en entornos confiables.",
+    "dangerouslySkipInfoTooltip": "Sobre saltar los prompts de permiso",
+    "dangerouslySkipInfoAria": "Ver detalles sobre saltar los prompts de permiso"
   },
   "dialogs": {
     "archiveSession": {
