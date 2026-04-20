@@ -402,25 +402,32 @@
           "copyCwd": "Copy cwd"
         },
         "category": {
+          "showInfo": "Show category info",
+          "infoTooltip": "About this category",
           "projectsWithoutSessions": {
             "title": "Projects without sessions",
-            "description": "Folders under ~/.claude/projects/ with no .jsonl files (empty or legacy-only)."
+            "description": "Folders under ~/.claude/projects/ with no .jsonl files (empty or legacy-only).",
+            "info": "Folders under ~/.claude/projects/<slug>/ with no .jsonl file. Usually leftovers from fully-deleted sessions or remnants of the legacy CLI format (UUID subfolders). Removing them does not affect your project files — only drops the dead history folder inside the Claude directory."
           },
           "orphanProjects": {
             "title": "Orphan projects",
-            "description": "Projects whose recorded cwd no longer exists on disk."
+            "description": "Projects whose recorded cwd no longer exists on disk.",
+            "info": "Projects whose cwd recorded in the first .jsonl points to a folder that no longer exists on disk. Means you deleted the project and the history lingered. Removing only clears that history folder inside ~/.claude/projects/."
           },
           "staleArchived": {
             "title": "Stale archived IDs",
-            "description": "Archived entries whose session file was deleted."
+            "description": "Archived entries whose session file was deleted.",
+            "info": "IDs flagged as archived in state.json whose .jsonl file is gone. They would remain indefinitely in the state, growing for no reason. Cleaning only removes the preferences entry — no filesystem changes."
           },
           "statuslineCache": {
             "title": "Statusline cache",
-            "description": "Cache files regenerated automatically when needed."
+            "description": "Cache files regenerated automatically when needed.",
+            "info": "Cache files in ~/.claude-code-studio/statusline-cache/ used to speed up the statusline. Regenerated automatically when needed. Safe to delete at any time."
           },
           "orphanAttachments": {
             "title": "Orphan attachments",
-            "description": "Attachment folders for sessions that no longer exist and are not live."
+            "description": "Attachment folders for sessions that no longer exist and are not live.",
+            "info": "Folders under ~/.claude-code-studio/attachments/ bound to sessions that no longer exist (neither as .jsonl nor as a live session). Removing frees the disk space used by those dead sessions' attachments."
           }
         }
       }
