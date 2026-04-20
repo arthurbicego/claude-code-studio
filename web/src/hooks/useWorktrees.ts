@@ -35,6 +35,7 @@ export function useWorktrees(cwd: string | null, base?: string | null) {
     return fetchOnce()
   }, [fetchOnce])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fetchOnce is the useCallback; cwd/base are its own deps, so Biome sees them as redundant — but listing them keeps the intent explicit and harmless
   useEffect(() => {
     if (!cwd) {
       setData(null)

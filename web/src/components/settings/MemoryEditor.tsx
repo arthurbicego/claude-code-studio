@@ -51,8 +51,8 @@ function ExpandedPreview({
               : ''}
           </summary>
           <ul className="mt-1 flex flex-col gap-0.5 font-mono">
-            {result.imports.map((imp, i) => (
-              <li key={`${imp.resolved}:${i}`} className="flex items-baseline gap-2">
+            {result.imports.map((imp) => (
+              <li key={imp.raw} className="flex items-baseline gap-2">
                 <span
                   className={`w-16 shrink-0 rounded px-1 text-[9px] uppercase ${
                     imp.error ? 'bg-red-500/20 text-red-300' : 'bg-emerald-500/20 text-emerald-300'

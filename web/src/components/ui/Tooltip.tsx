@@ -20,6 +20,7 @@ export function Tooltip({ content, children, side = 'top', className }: Props) {
   const [open, setOpen] = useState(false)
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null)
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reposition only on open/side/content changes; refs are stable and don't belong in deps
   useLayoutEffect(() => {
     if (!open || !triggerRef.current || !tooltipRef.current) return
     const rect = triggerRef.current.getBoundingClientRect()
@@ -58,6 +59,7 @@ export function Tooltip({ content, children, side = 'top', className }: Props) {
 
   return (
     <>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: trigger span forwards mouse/focus handlers to the decorative tooltip; the wrapped child keeps its own semantics and a11y */}
       <span
         ref={triggerRef}
         className={cn('inline-flex', className)}

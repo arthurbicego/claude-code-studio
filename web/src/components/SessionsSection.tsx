@@ -63,7 +63,7 @@ function matchesQuery(s: SessionMeta, query: string): boolean {
   if (!query) return true
   const q = query.toLowerCase()
   if (s.id.toLowerCase().includes(q)) return true
-  if (s.preview && s.preview.toLowerCase().includes(q)) return true
+  if (s.preview?.toLowerCase().includes(q)) return true
   return false
 }
 
@@ -335,6 +335,7 @@ export function SessionsSection({
                 {showBefore ? (
                   <div className="pointer-events-none absolute inset-x-0 -top-1 h-0.5 rounded bg-sky-500" />
                 ) : null}
+                {/* biome-ignore lint/a11y/useSemanticElements: native <button> breaks HTML5 draggable in several browsers; role=button + tabIndex + Enter/Space handler gives the same keyboard affordance */}
                 <div
                   role="button"
                   tabIndex={0}
@@ -392,6 +393,7 @@ export function SessionsSection({
                     </span>
                   </Tooltip>
                   <PathPopover path={p.cwd} />
+                  {/* biome-ignore lint/a11y/noStaticElementInteractions: event-barrier wrapper so clicks/keys on the DropdownMenu don't bubble to the draggable row ancestor; handlers are pure stopPropagation, no user-facing interaction */}
                   <div
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => e.stopPropagation()}

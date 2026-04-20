@@ -28,15 +28,21 @@ export function Modal({ open, onClose, title, children, footer, className }: Pro
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.currentTarget === e.target) onClose()
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose()
+      }}
     >
       <div
         className={cn(
           'flex max-h-[86vh] w-[min(560px,94vw)] flex-col overflow-hidden rounded-lg border border-border bg-card shadow-2xl',
           className,
         )}
-        onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold text-foreground">{title}</h2>

@@ -79,6 +79,7 @@ export function InfoPopover({ ariaLabel, triggerClassName, tooltip, children }: 
       {tooltip && !open ? <Tooltip content={tooltip}>{triggerButton}</Tooltip> : triggerButton}
       {open && typeof document !== 'undefined'
         ? createPortal(
+            // biome-ignore lint/a11y/useKeyWithClickEvents: portal popup stops click/mousedown bubbling so the document-level click-outside handler doesn't close on popover clicks; content inside is non-interactive and keyboard closes via document-level Escape
             <div
               ref={popoverRef}
               role="dialog"
