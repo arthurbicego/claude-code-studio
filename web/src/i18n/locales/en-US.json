@@ -234,7 +234,12 @@
     "pdfBadge": "PDF",
     "screenshot": "Screenshot",
     "dropHere": "Drop to attach",
-    "injectedHint": "Path was inserted into the terminal; removing the chip won't retract it."
+    "injectedHint": "Path was inserted into the terminal; removing the chip won't retract it.",
+    "preview": {
+      "title": "Preview",
+      "open": "Open preview",
+      "unavailable": "Preview unavailable."
+    }
   },
   "panels": {
     "menu": {

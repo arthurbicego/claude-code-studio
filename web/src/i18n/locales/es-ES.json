@@ -234,7 +234,12 @@
     "pdfBadge": "PDF",
     "screenshot": "Captura",
     "dropHere": "Suelta para adjuntar",
-    "injectedHint": "La ruta ya fue insertada en el terminal; eliminar el chip no la retira."
+    "injectedHint": "La ruta ya fue insertada en el terminal; eliminar el chip no la retira.",
+    "preview": {
+      "title": "Vista previa",
+      "open": "Abrir vista previa",
+      "unavailable": "Vista previa no disponible."
+    }
   },
   "panels": {
     "menu": {

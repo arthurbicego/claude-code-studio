@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import type { Attachment, SessionLaunch } from '@/types'
 import { AttachmentChipRow, type UIAttachment } from './AttachmentChip'
+import { AttachmentPreviewModal } from './AttachmentPreview'
 
 type InputSignal = { seq: number; text: string } | null
 
@@ -95,6 +96,7 @@ export function TerminalView({
 
   const [attachments, setAttachments] = useState<UIAttachment[]>([])
   const [dragActive, setDragActive] = useState(false)
+  const [previewTempId, setPreviewTempId] = useState<string | null>(null)
   const uploadsRef = useRef(new Map<string, AbortController>())
   const pendingInjectRef = useRef<string[]>([])
   const dragCounterRef = useRef(0)
@@ -278,7 +280,7 @@ export function TerminalView({
     const mime = inferMime(file)
     const kind = kindFor(mime)
     const tempId = `u_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-    const objectUrl = kind === 'image' ? URL.createObjectURL(file) : undefined
+    const objectUrl = URL.createObjectURL(file)
     const pending: UIAttachment = {
       tempId,
       name: file.name || 'attachment',
@@ -418,14 +420,15 @@ export function TerminalView({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
+      <div ref={hostRef} className="min-h-0 flex-1" />
       {attachments.length > 0 ? (
         <AttachmentChipRow
           items={attachments}
           onRemove={removeAttachment}
-          className="mb-2 max-h-24 overflow-y-auto pr-1"
+          onPreview={setPreviewTempId}
+          className="mt-2 max-h-24 overflow-y-auto pr-1"
         />
       ) : null}
-      <div ref={hostRef} className="min-h-0 flex-1" />
       {dragActive ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded bg-sky-500/10 ring-2 ring-sky-400/60">
           <span className="rounded bg-sky-500/80 px-3 py-1.5 text-xs font-medium text-white shadow">
@@ -433,6 +436,10 @@ export function TerminalView({
           </span>
         </div>
       ) : null}
+      <AttachmentPreviewModal
+        item={attachments.find((a) => a.tempId === previewTempId) ?? null}
+        onClose={() => setPreviewTempId(null)}
+      />
     </div>
   )
 }
