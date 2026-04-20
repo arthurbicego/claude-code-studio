@@ -42,6 +42,7 @@ export function Modal({ open, onClose, title, children, footer, className }: Pro
           <h2 className="text-sm font-semibold text-foreground">{title}</h2>
           <Tooltip content={t('modal.close')}>
             <button
+              type="button"
               className="text-muted-foreground hover:text-foreground cursor-pointer"
               onClick={onClose}
               aria-label={t('modal.close')}

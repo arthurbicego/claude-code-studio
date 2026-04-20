@@ -76,12 +76,10 @@ function SettingsPageInner() {
   useEffect(() => {
     if (!scopeNeedsProject(sandboxScope)) return
     if (!sandboxProjectCwd && projects.length > 0) {
-      // biome-ignore lint/correctness/useExhaustiveDependencies: pick first project when entering project scope
       setSandboxProjectCwd(projects[0].cwd)
     }
   }, [sandboxScope, sandboxProjectCwd, projects])
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: hydrate form state from config on load
   useEffect(() => {
     if (!config) return
     const ms = config.standbyTimeoutMs
@@ -96,7 +94,6 @@ function SettingsPageInner() {
     setStandbyError(null)
   }, [config])
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: hydrate form state from sandbox settings on load
   useEffect(() => {
     if (cs.settings) {
       setSandbox(cs.settings.sandbox)

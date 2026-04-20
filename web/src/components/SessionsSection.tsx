@@ -277,6 +277,7 @@ export function SessionsSection({
     <section className="mb-3">
       <div className="flex items-center gap-1 px-2">
         <button
+          type="button"
           className="flex flex-1 items-center gap-1.5 py-1 text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground cursor-pointer"
           onClick={() => setSectionOpen((v) => !v)}
         >
@@ -297,6 +298,7 @@ export function SessionsSection({
               content={prefs.groupByProject ? t('sessions.groupOn') : t('sessions.groupOff')}
             >
               <button
+                type="button"
                 onClick={toggleGrouping}
                 className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"
                 aria-label={t('sessions.toggleGrouping')}
@@ -547,6 +549,7 @@ function SessionRow({
     >
       <span className="pt-0.5">{renderState(live)}</span>
       <button
+        type="button"
         onClick={() => onResumeSession(project, session)}
         className="flex min-w-0 flex-1 flex-col text-left cursor-pointer"
       >
@@ -564,6 +567,7 @@ function SessionRow({
         {isOpen && onCloseSession ? (
           <Tooltip content={t('sessions.actions.close')}>
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation()
                 onCloseSession(session.id)
