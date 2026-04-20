@@ -225,6 +225,17 @@
     "noSessions": "Select a session in the sidebar or create a new one.",
     "noActiveSession": "No active session."
   },
+  "attachments": {
+    "remove": "Remove attachment",
+    "uploadFailed": "Upload failed",
+    "tooLarge": "File too large (max {{max}})",
+    "unsupportedType": "Unsupported file type",
+    "limitReached": "Attachment limit reached ({{max}})",
+    "pdfBadge": "PDF",
+    "screenshot": "Screenshot",
+    "dropHere": "Drop to attach",
+    "injectedHint": "Path was inserted into the terminal; removing the chip won't retract it."
+  },
   "panels": {
     "menu": {
       "open": "Open panels menu",
@@ -705,6 +716,10 @@
     "WORKTREE_NOT_CLEAN": "Worktree has uncommitted changes — commit before merging.",
     "WORKTREE_NOTHING_TO_MERGE": "Nothing to merge.",
     "GIT_COMMAND_FAILED": "Git command failed: {{message}}",
+    "ATTACHMENT_TYPE_UNSUPPORTED": "Unsupported file type.",
+    "ATTACHMENT_TOO_LARGE": "File too large (max {{max}}).",
+    "ATTACHMENT_LIMIT_REACHED": "Attachment limit reached ({{max}}).",
+    "ATTACHMENT_NOT_FOUND": "Attachment not found.",
     "UNKNOWN": "Unknown error."
   }
 }

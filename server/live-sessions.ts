@@ -226,6 +226,7 @@ export function getOrCreateLiveSession(
     }
     entry.subscribers.clear();
     liveSessions.delete(sessionKey);
+    require('./routes/attachments').cleanupAttachmentsForSession(sessionKey);
     require('./sse').broadcastActivity();
     resolveExit();
   });

@@ -3,8 +3,9 @@ import path from 'node:path';
 import express from 'express';
 import expressWs from 'express-ws';
 import { CLAUDE_BIN } from './claude-bin';
-import { startIdleSweep } from './live-sessions';
+import { liveSessions, startIdleSweep } from './live-sessions';
 import * as agentsSkillsRoutes from './routes/agents-skills';
+import * as attachmentsRoutes from './routes/attachments';
 import * as memoryRoutes from './routes/memory';
 import * as miscRoutes from './routes/misc';
 import * as prefsRoutes from './routes/prefs';
@@ -43,9 +44,11 @@ sandboxRoutes.register(app);
 worktreesRoutes.register(app);
 prefsRoutes.register(app);
 miscRoutes.register(app);
+attachmentsRoutes.register(app);
 ptyRoutes.register(app);
 
 startIdleSweep();
+attachmentsRoutes.cleanupOrphanAttachments(new Set(liveSessions.keys()));
 
 if (fs.existsSync(WEB_DIST)) {
   app.get(/^\/(?!api|pty).*/, (_req, res) => {

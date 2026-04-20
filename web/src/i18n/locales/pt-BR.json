@@ -225,6 +225,17 @@
     "noSessions": "Selecione uma sessão na barra lateral ou crie uma nova.",
     "noActiveSession": "Nenhuma sessão ativa."
   },
+  "attachments": {
+    "remove": "Remover anexo",
+    "uploadFailed": "Falha no upload",
+    "tooLarge": "Arquivo muito grande (máx. {{max}})",
+    "unsupportedType": "Tipo de arquivo não suportado",
+    "limitReached": "Limite de anexos atingido ({{max}})",
+    "pdfBadge": "PDF",
+    "screenshot": "Screenshot",
+    "dropHere": "Solte para anexar",
+    "injectedHint": "O caminho já foi inserido no terminal; remover o chip não o retira."
+  },
   "panels": {
     "menu": {
       "open": "Abrir menu de painéis",
@@ -705,6 +716,10 @@
     "WORKTREE_NOT_CLEAN": "Worktree tem mudanças não commitadas — commite antes de mergear.",
     "WORKTREE_NOTHING_TO_MERGE": "Nada para mergear.",
     "GIT_COMMAND_FAILED": "Comando git falhou: {{message}}",
+    "ATTACHMENT_TYPE_UNSUPPORTED": "Tipo de arquivo não suportado.",
+    "ATTACHMENT_TOO_LARGE": "Arquivo muito grande (máx. {{max}}).",
+    "ATTACHMENT_LIMIT_REACHED": "Limite de anexos atingido ({{max}}).",
+    "ATTACHMENT_NOT_FOUND": "Anexo não encontrado.",
     "UNKNOWN": "Erro desconhecido."
   }
 }
