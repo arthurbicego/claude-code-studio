@@ -402,25 +402,32 @@
           "copyCwd": "Copiar cwd"
         },
         "category": {
+          "showInfo": "Mostrar información de la categoría",
+          "infoTooltip": "Sobre esta categoría",
           "projectsWithoutSessions": {
             "title": "Proyectos sin sesiones",
-            "description": "Carpetas en ~/.claude/projects/ sin ningún archivo .jsonl (vacías o solo con formato legacy)."
+            "description": "Carpetas en ~/.claude/projects/ sin ningún archivo .jsonl (vacías o solo con formato legacy).",
+            "info": "Carpetas en ~/.claude/projects/<slug>/ sin ningún archivo .jsonl. Normalmente son restos de sesiones totalmente borradas o del formato antiguo del CLI (subcarpetas UUID). Eliminar no afecta tus archivos de proyecto — solo borra la carpeta de historial inútil dentro del directorio de Claude."
           },
           "orphanProjects": {
             "title": "Proyectos huérfanos",
-            "description": "Proyectos cuyo cwd registrado ya no existe en el disco."
+            "description": "Proyectos cuyo cwd registrado ya no existe en el disco.",
+            "info": "Proyectos cuyo cwd registrado en el primer .jsonl apunta a una carpeta que ya no existe en el disco. Significa que borraste el proyecto y el historial se quedó. Eliminar solo limpia esa carpeta de historial dentro de ~/.claude/projects/."
           },
           "staleArchived": {
             "title": "IDs archivados obsoletos",
-            "description": "Entradas archivadas cuyo archivo de sesión fue eliminado."
+            "description": "Entradas archivadas cuyo archivo de sesión fue eliminado.",
+            "info": "IDs marcados como archivados en state.json pero cuyo archivo .jsonl ya no existe. Quedarían en el estado creciendo indefinidamente. Limpiar solo elimina la entrada de tus preferencias — no toca ningún archivo."
           },
           "statuslineCache": {
             "title": "Caché del statusline",
-            "description": "Archivos de caché regenerados automáticamente cuando es necesario."
+            "description": "Archivos de caché regenerados automáticamente cuando es necesario.",
+            "info": "Archivos de caché en ~/.claude-code-studio/statusline-cache/ usados para acelerar el statusline. Se regeneran automáticamente cuando hace falta. Seguro de eliminar en cualquier momento."
           },
           "orphanAttachments": {
             "title": "Adjuntos huérfanos",
-            "description": "Carpetas de adjuntos de sesiones que ya no existen y no están activas."
+            "description": "Carpetas de adjuntos de sesiones que ya no existen y no están activas.",
+            "info": "Carpetas en ~/.claude-code-studio/attachments/ vinculadas a sesiones que ya no existen (ni como .jsonl, ni como sesión activa). Eliminar libera el espacio en disco de los adjuntos de esas sesiones muertas."
           }
         }
       }

@@ -152,8 +152,16 @@ function CategoryCard({
     <div className="flex flex-col gap-2 rounded border border-border bg-background/40 px-3 py-2.5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-0.5">
-          <span className="text-xs font-semibold text-foreground">
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
             {t(`settings.geral.maintenance.category.${categoryKey}.title`)}
+            <InfoPopover
+              ariaLabel={t('settings.geral.maintenance.category.showInfo')}
+              tooltip={t('settings.geral.maintenance.category.infoTooltip')}
+            >
+              <p className="whitespace-pre-line">
+                {t(`settings.geral.maintenance.category.${categoryKey}.info`)}
+              </p>
+            </InfoPopover>
           </span>
           <span className="text-[11px] text-muted-foreground">
             {t(`settings.geral.maintenance.category.${categoryKey}.description`)}
