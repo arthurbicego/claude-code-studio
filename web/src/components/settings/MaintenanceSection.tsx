@@ -31,7 +31,7 @@ type Pending = {
 
 export function MaintenanceSection() {
   const { t } = useTranslation()
-  const { result, loading, error, cleaning, scan, cleanup } = useMaintenance()
+  const { result, loading, error, cleaning, cleanup } = useMaintenance()
   const [expanded, setExpanded] = useState<Record<MaintenanceCategoryKey, boolean>>({
     projectsWithoutSessions: false,
     orphanProjects: false,
@@ -73,7 +73,7 @@ export function MaintenanceSection() {
       title={t('settings.geral.maintenance.title')}
       description={t('settings.geral.maintenance.description')}
     >
-      <div className="flex items-center justify-between gap-2">
+      {loading || error ? (
         <span className="text-[11px] text-muted-foreground">
           {loading
             ? t('settings.geral.maintenance.loading')
@@ -81,16 +81,7 @@ export function MaintenanceSection() {
               ? t('settings.geral.maintenance.error', { message: error })
               : null}
         </span>
-        <Button
-          type="button"
-          size="xs"
-          variant="ghost"
-          onClick={scan}
-          disabled={loading || cleaning !== null}
-        >
-          {t('settings.geral.maintenance.refresh')}
-        </Button>
-      </div>
+      ) : null}
       <div className="flex flex-col gap-2">
         {MAINTENANCE_CATEGORY_KEYS.map((key) => {
           const category = result?.categories[key] ?? null

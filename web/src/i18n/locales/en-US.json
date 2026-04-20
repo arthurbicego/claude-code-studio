@@ -371,7 +371,6 @@
         "description": "Identify and remove clutter left by Claude Code and by this studio. Each category lists items before deletion; the action is irreversible.",
         "loading": "Scanning…",
         "error": "Scan failed: {{message}}",
-        "refresh": "Rescan",
         "empty": "Nothing to clean in this category.",
         "details": "Show details",
         "hide": "Hide",
