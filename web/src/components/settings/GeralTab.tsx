@@ -1,6 +1,7 @@
 import { type Locale, SUPPORTED_LOCALES } from '@shared/types'
 import { useTranslation } from 'react-i18next'
 import { usePrefs } from '@/hooks/usePrefs'
+import { MaintenanceSection } from './MaintenanceSection'
 
 export function GeralTab() {
   const { t, i18n } = useTranslation()
@@ -16,8 +17,8 @@ export function GeralTab() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-4">
-      <section className="flex flex-col gap-2">
+    <div className="flex flex-col divide-y divide-border">
+      <section className="flex flex-col gap-2 p-4">
         <h2 className="text-sm font-semibold text-foreground">
           {t('settings.geral.language.title')}
         </h2>
@@ -34,6 +35,7 @@ export function GeralTab() {
           ))}
         </select>
       </section>
+      <MaintenanceSection />
     </div>
   )
 }

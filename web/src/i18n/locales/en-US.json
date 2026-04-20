@@ -365,6 +365,53 @@
           "en-US": "English (United States)",
           "es-ES": "Español (España)"
         }
+      },
+      "maintenance": {
+        "title": "Maintenance",
+        "description": "Identify and remove clutter left by Claude Code and by this studio. Each category lists items before deletion; the action is irreversible.",
+        "loading": "Scanning…",
+        "error": "Scan failed: {{message}}",
+        "refresh": "Rescan",
+        "empty": "Nothing to clean in this category.",
+        "details": "Show details",
+        "hide": "Hide",
+        "clean": "Clean {{count}}",
+        "cleaning": "Cleaning…",
+        "more": "and {{count}} more item(s)",
+        "result": {
+          "deleted_one": "{{count}} item removed.",
+          "deleted_other": "{{count}} items removed.",
+          "skipped_one": "{{count}} skipped due to state change.",
+          "skipped_other": "{{count}} skipped due to state change."
+        },
+        "confirm": {
+          "title": "Confirm cleanup",
+          "body": "You are about to delete {{count}} item(s) from the \"{{category}}\" category.",
+          "irreversible": "This action is irreversible.",
+          "confirm": "Delete permanently"
+        },
+        "category": {
+          "projectsWithoutSessions": {
+            "title": "Projects without sessions",
+            "description": "Folders under ~/.claude/projects/ with no .jsonl files (empty or legacy-only)."
+          },
+          "orphanProjects": {
+            "title": "Orphan projects",
+            "description": "Projects whose recorded cwd no longer exists on disk."
+          },
+          "staleArchived": {
+            "title": "Stale archived IDs",
+            "description": "Archived entries whose session file was deleted."
+          },
+          "statuslineCache": {
+            "title": "Statusline cache",
+            "description": "Cache files regenerated automatically when needed."
+          },
+          "orphanAttachments": {
+            "title": "Orphan attachments",
+            "description": "Attachment folders for sessions that no longer exist and are not live."
+          }
+        }
       }
     },
     "sessions": {

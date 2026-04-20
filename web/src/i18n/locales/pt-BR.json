@@ -365,6 +365,53 @@
           "en-US": "English (United States)",
           "es-ES": "Español (España)"
         }
+      },
+      "maintenance": {
+        "title": "Manutenção",
+        "description": "Identifique e remova sujeiras acumuladas pelo Claude Code e por este studio. Cada categoria lista itens antes de apagar; a ação é irreversível.",
+        "loading": "Analisando…",
+        "error": "Falha ao analisar: {{message}}",
+        "refresh": "Reanalisar",
+        "empty": "Nada a limpar nesta categoria.",
+        "details": "Ver detalhes",
+        "hide": "Ocultar",
+        "clean": "Limpar {{count}}",
+        "cleaning": "Limpando…",
+        "more": "e mais {{count}} item(ns)",
+        "result": {
+          "deleted_one": "{{count}} item removido.",
+          "deleted_other": "{{count}} itens removidos.",
+          "skipped_one": "{{count}} pulado por mudança de estado.",
+          "skipped_other": "{{count}} pulados por mudança de estado."
+        },
+        "confirm": {
+          "title": "Confirmar limpeza",
+          "body": "Você está prestes a apagar {{count}} item(ns) da categoria \"{{category}}\".",
+          "irreversible": "Esta ação é irreversível.",
+          "confirm": "Apagar definitivamente"
+        },
+        "category": {
+          "projectsWithoutSessions": {
+            "title": "Projetos sem sessões",
+            "description": "Pastas em ~/.claude/projects/ sem nenhum arquivo .jsonl (vazias ou só com formato legacy)."
+          },
+          "orphanProjects": {
+            "title": "Projetos órfãos",
+            "description": "Projetos cujo caminho registrado no disco não existe mais."
+          },
+          "staleArchived": {
+            "title": "IDs arquivados inválidos",
+            "description": "Entradas arquivadas cujas sessões já foram deletadas."
+          },
+          "statuslineCache": {
+            "title": "Cache do statusline",
+            "description": "Arquivos de cache regenerados automaticamente quando necessário."
+          },
+          "orphanAttachments": {
+            "title": "Anexos órfãos",
+            "description": "Pastas de anexos de sessões que não existem mais e não estão ativas."
+          }
+        }
       }
     },
     "sessions": {

@@ -279,6 +279,10 @@ export const API_ERROR_CODES = {
   ATTACHMENT_TOO_LARGE: 'ATTACHMENT_TOO_LARGE',
   ATTACHMENT_LIMIT_REACHED: 'ATTACHMENT_LIMIT_REACHED',
   ATTACHMENT_NOT_FOUND: 'ATTACHMENT_NOT_FOUND',
+  // Maintenance
+  MAINTENANCE_CATEGORY_INVALID: 'MAINTENANCE_CATEGORY_INVALID',
+  MAINTENANCE_CONFIRM_REQUIRED: 'MAINTENANCE_CONFIRM_REQUIRED',
+  MAINTENANCE_TOO_MANY_ITEMS: 'MAINTENANCE_TOO_MANY_ITEMS',
 } as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[keyof typeof API_ERROR_CODES];
@@ -408,3 +412,48 @@ export const ATTACHMENT_ALLOWED_MIME: readonly string[] = [
   'text/plain',
   'text/markdown',
 ];
+
+export type MaintenanceCategoryKey =
+  | 'projectsWithoutSessions'
+  | 'orphanProjects'
+  | 'staleArchived'
+  | 'statuslineCache'
+  | 'orphanAttachments';
+
+export const MAINTENANCE_CATEGORY_KEYS: MaintenanceCategoryKey[] = [
+  'projectsWithoutSessions',
+  'orphanProjects',
+  'staleArchived',
+  'statuslineCache',
+  'orphanAttachments',
+];
+
+export type MaintenanceItem = {
+  id: string;
+  path?: string;
+  size?: number;
+  cwd?: string | null;
+  detail?: string | null;
+};
+
+export type MaintenanceCategory = {
+  totalBytes: number;
+  items: MaintenanceItem[];
+};
+
+export type MaintenanceScanResult = {
+  scannedAt: number;
+  categories: Record<MaintenanceCategoryKey, MaintenanceCategory>;
+};
+
+export type MaintenanceCleanupSkipped = {
+  id: string;
+  reason: string;
+};
+
+export type MaintenanceCleanupResult = {
+  deleted: string[];
+  skipped: MaintenanceCleanupSkipped[];
+};
+
+export const MAINTENANCE_MAX_ITEMS_PER_REQUEST = 1000;

@@ -365,6 +365,53 @@
           "en-US": "English (United States)",
           "es-ES": "Español (España)"
         }
+      },
+      "maintenance": {
+        "title": "Mantenimiento",
+        "description": "Identifica y elimina residuos dejados por Claude Code y por este studio. Cada categoría lista los elementos antes de eliminarlos; la acción es irreversible.",
+        "loading": "Analizando…",
+        "error": "Error en el análisis: {{message}}",
+        "refresh": "Reanalizar",
+        "empty": "Nada que limpiar en esta categoría.",
+        "details": "Ver detalles",
+        "hide": "Ocultar",
+        "clean": "Limpiar {{count}}",
+        "cleaning": "Limpiando…",
+        "more": "y {{count}} elemento(s) más",
+        "result": {
+          "deleted_one": "{{count}} elemento eliminado.",
+          "deleted_other": "{{count}} elementos eliminados.",
+          "skipped_one": "{{count}} omitido por cambio de estado.",
+          "skipped_other": "{{count}} omitidos por cambio de estado."
+        },
+        "confirm": {
+          "title": "Confirmar limpieza",
+          "body": "Vas a eliminar {{count}} elemento(s) de la categoría \"{{category}}\".",
+          "irreversible": "Esta acción es irreversible.",
+          "confirm": "Eliminar permanentemente"
+        },
+        "category": {
+          "projectsWithoutSessions": {
+            "title": "Proyectos sin sesiones",
+            "description": "Carpetas en ~/.claude/projects/ sin ningún archivo .jsonl (vacías o solo con formato legacy)."
+          },
+          "orphanProjects": {
+            "title": "Proyectos huérfanos",
+            "description": "Proyectos cuyo cwd registrado ya no existe en el disco."
+          },
+          "staleArchived": {
+            "title": "IDs archivados obsoletos",
+            "description": "Entradas archivadas cuyo archivo de sesión fue eliminado."
+          },
+          "statuslineCache": {
+            "title": "Caché del statusline",
+            "description": "Archivos de caché regenerados automáticamente cuando es necesario."
+          },
+          "orphanAttachments": {
+            "title": "Adjuntos huérfanos",
+            "description": "Carpetas de adjuntos de sesiones que ya no existen y no están activas."
+          }
+        }
       }
     },
     "sessions": {

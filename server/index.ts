@@ -6,6 +6,7 @@ import { CLAUDE_BIN } from './claude-bin';
 import { liveSessions, startIdleSweep } from './live-sessions';
 import * as agentsSkillsRoutes from './routes/agents-skills';
 import * as attachmentsRoutes from './routes/attachments';
+import * as maintenanceRoutes from './routes/maintenance';
 import * as memoryRoutes from './routes/memory';
 import * as miscRoutes from './routes/misc';
 import * as prefsRoutes from './routes/prefs';
@@ -45,6 +46,7 @@ worktreesRoutes.register(app);
 prefsRoutes.register(app);
 miscRoutes.register(app);
 attachmentsRoutes.register(app);
+maintenanceRoutes.register(app);
 ptyRoutes.register(app);
 
 startIdleSweep();
