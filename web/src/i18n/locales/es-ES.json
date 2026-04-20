@@ -262,6 +262,11 @@
       "errorPrefix": "[error] {{message}}",
       "exited": "[shell salió con {{code}}]"
     },
+    "resizer": {
+      "column": "Redimensionar columnas",
+      "row": "Redimensionar filas",
+      "shortcuts": "flechas para ajustar · Shift para paso grande · Home/End para mín/máx · Enter para resetear"
+    },
     "worktrees": {
       "title": "Worktrees",
       "titleWithLast": "Worktrees — {{last}}",
