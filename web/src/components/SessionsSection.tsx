@@ -1,3 +1,4 @@
+import { PROJECT_SORT_OPTIONS, SESSION_SORT_OPTIONS } from '@shared/types'
 import type { TFunction } from 'i18next'
 import {
   Archive,
@@ -18,9 +19,19 @@ import { InfoPopover } from '@/components/ui/InfoPopover'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { useExpanded } from '@/hooks/useExpanded'
 import { useFormatDate } from '@/hooks/useFormatDate'
+import { usePrefs } from '@/hooks/usePrefs'
 import { useSectionPrefs } from '@/hooks/useSectionPrefs'
 import { cn } from '@/lib/utils'
-import type { LiveSession, Project, SessionLaunch, SessionMeta, SessionSortBy } from '@/types'
+import type {
+  LiveSession,
+  Project,
+  ProjectSortBy,
+  SessionLaunch,
+  SessionMeta,
+  SessionSortBy,
+} from '@/types'
+
+const DEFAULT_SESSION_SORT: SessionSortBy = 'lastResponse'
 
 type Variant = 'history' | 'archived' | 'open'
 
@@ -73,19 +84,78 @@ function formatPreview(s: SessionMeta): string {
   return s.id.slice(0, 8)
 }
 
+function alphabeticalKey(s: SessionMeta): string {
+  const line = (s.preview ?? '').split('\n')[0].trim().toLowerCase()
+  return line || s.id
+}
+
 function sortSessions(list: SessionMeta[], by: SessionSortBy): SessionMeta[] {
+  if (by === 'alphabetical') {
+    return [...list].sort((a, b) => alphabeticalKey(a).localeCompare(alphabeticalKey(b)))
+  }
   const key = by === 'createdAt' ? 'createdAt' : 'mtime'
   return [...list].sort((a, b) => b[key] - a[key])
 }
 
-function nextSort(by: SessionSortBy): SessionSortBy {
-  return by === 'lastResponse' ? 'createdAt' : 'lastResponse'
+function projectLastActivity(p: Project): number {
+  let max = 0
+  for (const s of p.sessions) if (s.mtime > max) max = s.mtime
+  return max
 }
 
-function sortLabel(t: TFunction, by: SessionSortBy): string {
-  return by === 'lastResponse'
-    ? t('sessions.sortLabel.lastResponse')
-    : t('sessions.sortLabel.createdAt')
+function projectCreatedAt(p: Project): number {
+  let max = 0
+  for (const s of p.sessions) if (s.createdAt > max) max = s.createdAt
+  return max
+}
+
+function sortProjects<T extends Project>(
+  list: T[],
+  by: ProjectSortBy | null,
+  applyCustomOrder: <U extends { slug: string }>(items: U[]) => U[],
+): T[] {
+  if (by === null) return applyCustomOrder(list)
+  if (by === 'alphabetical') {
+    return [...list].sort((a, b) =>
+      basename(a.cwd).toLowerCase().localeCompare(basename(b.cwd).toLowerCase()),
+    )
+  }
+  if (by === 'lastActivity') {
+    return [...list].sort((a, b) => projectLastActivity(b) - projectLastActivity(a))
+  }
+  return [...list].sort((a, b) => projectCreatedAt(b) - projectCreatedAt(a))
+}
+
+function sessionSortLabel(t: TFunction, by: SessionSortBy): string {
+  return t(`sessions.sortLabel.${by}`)
+}
+
+function projectSortTooltipLabel(t: TFunction, by: ProjectSortBy | null): string {
+  return by === null ? t('sessions.projectSortLabel.custom') : t(`sessions.projectSortLabel.${by}`)
+}
+
+function buildProjectSortMenuItems(
+  t: TFunction,
+  current: ProjectSortBy | null,
+  onSelect: (next: ProjectSortBy) => void,
+): DropdownMenuItem[] {
+  return PROJECT_SORT_OPTIONS.map((option) => ({
+    label: t(`sessions.projectSortLabel.${option}`),
+    checked: current === option,
+    onSelect: () => onSelect(option),
+  }))
+}
+
+function buildSessionSortMenuItems(
+  t: TFunction,
+  current: SessionSortBy,
+  onSelect: (next: SessionSortBy) => void,
+): DropdownMenuItem[] {
+  return SESSION_SORT_OPTIONS.map((option) => ({
+    label: sessionSortLabel(t, option),
+    checked: current === option,
+    onSelect: () => onSelect(option),
+  }))
 }
 
 export function SessionsSection({
@@ -113,7 +183,10 @@ export function SessionsSection({
 }: Props) {
   const { t } = useTranslation()
   const { isExpanded, toggle } = useExpanded()
-  const { prefs, toggleGrouping, setSortBy } = useSectionPrefs(prefsKey)
+  const { prefs, toggleGrouping, setProjectSortBy } = useSectionPrefs(prefsKey)
+  const { prefs: globalPrefs, setSessionSortForProject } = usePrefs()
+  const sessionSortByProject = globalPrefs.sessionSortByProject
+  const projectSortBy = prefs.projectSortBy
   const [sectionOpen, setSectionOpen] = useState(!defaultCollapsed)
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
   const isSearching = !!searchQuery && searchQuery.length > 0
@@ -174,19 +247,25 @@ export function SessionsSection({
       for (const { project } of orphans) filtered.push(project)
     }
 
-    return applyProjectOrder(filtered)
-  }, [variant, projects, openSessionKeys, openLaunches, applyProjectOrder, searchQuery])
+    return sortProjects(filtered, projectSortBy, applyProjectOrder)
+  }, [
+    variant,
+    projects,
+    openSessionKeys,
+    openLaunches,
+    applyProjectOrder,
+    searchQuery,
+    projectSortBy,
+  ])
 
   const flat = useMemo(() => {
     const out: { project: Project; session: SessionMeta }[] = []
     for (const p of filteredProjects) {
-      for (const s of p.sessions) out.push({ project: p, session: s })
+      const sort = sessionSortByProject[p.slug] ?? DEFAULT_SESSION_SORT
+      for (const s of sortSessions(p.sessions, sort)) out.push({ project: p, session: s })
     }
-    return out.sort((a, b) => {
-      const k: keyof SessionMeta = prefs.sortBy === 'createdAt' ? 'createdAt' : 'mtime'
-      return b.session[k] - a.session[k]
-    })
-  }, [filteredProjects, prefs.sortBy])
+    return out
+  }, [filteredProjects, sessionSortByProject])
 
   const total = flat.length
 
@@ -225,15 +304,14 @@ export function SessionsSection({
                 {prefs.groupByProject ? <FolderTree size={12} /> : <List size={12} />}
               </button>
             </Tooltip>
-            <Tooltip content={t('sessions.sortBy', { label: sortLabel(t, prefs.sortBy) })}>
-              <button
-                onClick={() => setSortBy(nextSort(prefs.sortBy))}
-                className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"
-                aria-label={t('sessions.toggleSort')}
-              >
-                <ArrowDownAZ size={12} />
-              </button>
-            </Tooltip>
+            <DropdownMenu
+              triggerIcon={ArrowDownAZ}
+              items={buildProjectSortMenuItems(t, projectSortBy, setProjectSortBy)}
+              ariaLabel={t('sessions.sortMenu')}
+              tooltip={t('sessions.sortBy', {
+                label: projectSortTooltipLabel(t, projectSortBy),
+              })}
+            />
           </>
         ) : null}
       </div>
@@ -243,7 +321,8 @@ export function SessionsSection({
       ) : prefs.groupByProject ? (
         <div className="mt-1">
           {filteredProjects.map((p) => {
-            const sessions = sortSessions(p.sessions, prefs.sortBy)
+            const effectiveSort = sessionSortByProject[p.slug] ?? DEFAULT_SESSION_SORT
+            const sessions = sortSessions(p.sessions, effectiveSort)
             const expandKey = `${prefsKey}:${p.slug}`
             const explicit = isExpanded(expandKey)
             const expanded = groupsExpandedByDefault ? !explicit : explicit
@@ -294,6 +373,7 @@ export function SessionsSection({
                     if (!from || from === p.slug) return
                     e.preventDefault()
                     onReorderProject(from, p.slug, position)
+                    setProjectSortBy(null)
                   }}
                 >
                   <ChevronRight
@@ -316,7 +396,18 @@ export function SessionsSection({
                     onMouseDown={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
                     role="presentation"
+                    className="flex items-center"
                   >
+                    <DropdownMenu
+                      triggerIcon={ArrowDownAZ}
+                      items={buildSessionSortMenuItems(t, effectiveSort, (next) =>
+                        setSessionSortForProject(p.slug, next),
+                      )}
+                      ariaLabel={t('sessions.project.sortMenu')}
+                      tooltip={t('sessions.project.sortBy', {
+                        label: sessionSortLabel(t, effectiveSort),
+                      })}
+                    />
                     <DropdownMenu
                       items={[
                         {

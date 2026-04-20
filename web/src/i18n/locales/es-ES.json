@@ -49,11 +49,19 @@
     "groupOn": "Mostrar lista plana",
     "groupOff": "Agrupar por proyecto",
     "toggleGrouping": "Alternar agrupación",
-    "sortBy": "Ordenar por: {{label}}",
+    "sortBy": "Ordenar proyectos: {{label}}",
+    "sortMenu": "Opciones de ordenación de proyectos",
     "toggleSort": "Alternar orden",
     "sortLabel": {
       "lastResponse": "Última respuesta",
-      "createdAt": "Fecha de creación"
+      "createdAt": "Fecha de creación",
+      "alphabetical": "Alfabético"
+    },
+    "projectSortLabel": {
+      "custom": "Orden personalizado",
+      "lastActivity": "Última actividad",
+      "createdAt": "Fecha de creación",
+      "alphabetical": "Alfabético"
     },
     "actions": {
       "title": "Acciones de la sesión",
@@ -69,7 +77,9 @@
       "deleteAll": "Eliminar sesiones",
       "showPath": "Mostrar ruta del proyecto",
       "path": "Ruta del proyecto",
-      "copyPath": "Copiar ruta del proyecto"
+      "copyPath": "Copiar ruta del proyecto",
+      "sortMenu": "Ordenar sesiones de este proyecto",
+      "sortBy": "Ordenar sesiones: {{label}}"
     }
   },
   "newSession": {
@@ -568,7 +578,14 @@
       "default": "Por defecto",
       "sortOptions": {
         "lastResponse": "Última respuesta",
-        "createdAt": "Fecha de creación"
+        "createdAt": "Fecha de creación",
+        "alphabetical": "Alfabético"
+      },
+      "projectSortOptions": {
+        "custom": "Orden personalizado",
+        "lastActivity": "Última actividad",
+        "createdAt": "Fecha de creación",
+        "alphabetical": "Alfabético"
       },
       "yes": "sí",
       "no": "no",
@@ -579,7 +596,11 @@
       "customOrder": "Orden personalizado de proyectos",
       "customOrderHelp": "Orden definido por arrastrar y soltar en la sidebar. Sin entradas aquí, el orden es automático (última actividad).",
       "noOrder": "Ninguno — orden automático.",
-      "resetOrder": "Resetear orden ({{count}})"
+      "resetOrder": "Resetear orden ({{count}})",
+      "projectSort": "Orden de sesiones por proyecto",
+      "projectSortHelp": "Sobrescritos definidos en el encabezado de cada proyecto. Sin sobrescritura, se usa el predeterminado de la sección.",
+      "noProjectSort": "Ninguno — todos los proyectos usan el predeterminado de la sección.",
+      "resetProjectSort": "Limpiar sobrescrituras ({{count}})"
     }
   },
   "stringList": {

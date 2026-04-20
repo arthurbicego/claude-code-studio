@@ -1,5 +1,13 @@
 import fs from 'node:fs';
-import { type Locale, type Prefs, type SessionSortBy, SUPPORTED_LOCALES } from '../shared/types';
+import {
+  type Locale,
+  PROJECT_SORT_OPTIONS,
+  type Prefs,
+  type ProjectSortBy,
+  SESSION_SORT_OPTIONS,
+  type SessionSortBy,
+  SUPPORTED_LOCALES,
+} from '../shared/types';
 import { CONFIG_DIR, STATE_FILE } from './paths';
 
 export const STATE_VERSION = 1;
@@ -10,7 +18,25 @@ export type AppState = {
 };
 
 export function defaultPrefs(): Prefs {
-  return { sections: {}, expanded: [], projectOrder: [], locale: null };
+  return {
+    sections: {},
+    expanded: [],
+    projectOrder: [],
+    locale: null,
+    sessionSortByProject: {},
+  };
+}
+
+function coerceSessionSortBy(value: unknown): SessionSortBy | null {
+  return typeof value === 'string' && (SESSION_SORT_OPTIONS as string[]).includes(value)
+    ? (value as SessionSortBy)
+    : null;
+}
+
+function coerceProjectSortBy(value: unknown): ProjectSortBy | null {
+  return typeof value === 'string' && (PROJECT_SORT_OPTIONS as string[]).includes(value)
+    ? (value as ProjectSortBy)
+    : null;
 }
 
 export function sanitizePrefs(raw: unknown): Prefs {
@@ -24,11 +50,9 @@ export function sanitizePrefs(raw: unknown): Prefs {
   for (const [name, value] of Object.entries(sectionsRaw)) {
     if (!value || typeof value !== 'object') continue;
     const v = value as Record<string, unknown>;
-    const sortBy: SessionSortBy =
-      v.sortBy === 'createdAt' || v.sortBy === 'lastResponse' ? v.sortBy : 'lastResponse';
     sections[name] = {
       groupByProject: typeof v.groupByProject === 'boolean' ? v.groupByProject : true,
-      sortBy,
+      projectSortBy: coerceProjectSortBy(v.projectSortBy),
     };
   }
   const expanded = Array.isArray(rawObj.expanded)
@@ -41,7 +65,16 @@ export function sanitizePrefs(raw: unknown): Prefs {
     typeof rawObj.locale === 'string' && (SUPPORTED_LOCALES as string[]).includes(rawObj.locale)
       ? (rawObj.locale as Locale)
       : null;
-  return { sections, expanded, projectOrder, locale };
+  const sessionSortByProject: Record<string, SessionSortBy> = {};
+  if (rawObj.sessionSortByProject && typeof rawObj.sessionSortByProject === 'object') {
+    for (const [slug, value] of Object.entries(
+      rawObj.sessionSortByProject as Record<string, unknown>,
+    )) {
+      const coerced = coerceSessionSortBy(value);
+      if (coerced) sessionSortByProject[slug] = coerced;
+    }
+  }
+  return { sections, expanded, projectOrder, locale, sessionSortByProject };
 }
 
 export function migrateState(raw: Record<string, unknown>): Record<string, unknown> {

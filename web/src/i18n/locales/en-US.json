@@ -49,11 +49,19 @@
     "groupOn": "Show flat list",
     "groupOff": "Group by project",
     "toggleGrouping": "Toggle grouping",
-    "sortBy": "Sort by: {{label}}",
+    "sortBy": "Sort projects: {{label}}",
+    "sortMenu": "Project sort options",
     "toggleSort": "Toggle sort",
     "sortLabel": {
       "lastResponse": "Last response",
-      "createdAt": "Creation date"
+      "createdAt": "Creation date",
+      "alphabetical": "Alphabetical"
+    },
+    "projectSortLabel": {
+      "custom": "Custom order",
+      "lastActivity": "Last activity",
+      "createdAt": "Creation date",
+      "alphabetical": "Alphabetical"
     },
     "actions": {
       "title": "Session actions",
@@ -69,7 +77,9 @@
       "deleteAll": "Delete sessions",
       "showPath": "Show project path",
       "path": "Project path",
-      "copyPath": "Copy project path"
+      "copyPath": "Copy project path",
+      "sortMenu": "Sort sessions in this project",
+      "sortBy": "Sort sessions: {{label}}"
     }
   },
   "newSession": {
@@ -568,7 +578,14 @@
       "default": "Default",
       "sortOptions": {
         "lastResponse": "Last response",
-        "createdAt": "Creation date"
+        "createdAt": "Creation date",
+        "alphabetical": "Alphabetical"
+      },
+      "projectSortOptions": {
+        "custom": "Custom order",
+        "lastActivity": "Last activity",
+        "createdAt": "Creation date",
+        "alphabetical": "Alphabetical"
       },
       "yes": "yes",
       "no": "no",
@@ -579,7 +596,11 @@
       "customOrder": "Custom project order",
       "customOrderHelp": "Order defined by drag-and-drop in the sidebar. With no entries here, order is automatic (by last activity).",
       "noOrder": "None — automatic order.",
-      "resetOrder": "Reset order ({{count}})"
+      "resetOrder": "Reset order ({{count}})",
+      "projectSort": "Per-project session sort",
+      "projectSortHelp": "Overrides set on each project's header. Without an override, the section's default is used.",
+      "noProjectSort": "None — all projects use the section default.",
+      "resetProjectSort": "Clear overrides ({{count}})"
     }
   },
   "stringList": {

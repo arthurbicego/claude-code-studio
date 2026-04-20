@@ -1,3 +1,4 @@
+import type { ProjectSortBy, SessionSortBy } from '@shared/types'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { usePrefs } from '@/hooks/usePrefs'
@@ -10,9 +11,25 @@ const SIDEBAR_SECTION_LABEL_KEYS: Record<string, string> = {
 }
 const SIDEBAR_SECTION_ORDER = ['open', 'history', 'archived'] as const
 
+function sessionSortLabel(t: ReturnType<typeof useTranslation>['t'], value: SessionSortBy): string {
+  return t(`settings.sidebarPrefs.sortOptions.${value}`)
+}
+
+function projectSortLabel(
+  t: ReturnType<typeof useTranslation>['t'],
+  value: ProjectSortBy | null,
+): string {
+  return t(
+    value === null
+      ? 'settings.sidebarPrefs.projectSortOptions.custom'
+      : `settings.sidebarPrefs.projectSortOptions.${value}`,
+  )
+}
+
 export function SidebarPrefsTab() {
   const { t } = useTranslation()
-  const { prefs, loaded, removeSection, setExpanded, setProjectOrder } = usePrefs()
+  const { prefs, loaded, removeSection, setExpanded, setProjectOrder, setSessionSortForProject } =
+    usePrefs()
 
   if (!loaded) {
     return (
@@ -39,7 +56,7 @@ export function SidebarPrefsTab() {
             const stored = prefs.sections[key]
             const effective = stored ?? {
               groupByProject: true,
-              sortBy: 'lastResponse' as const,
+              projectSortBy: null,
             }
             const labelKey = SIDEBAR_SECTION_LABEL_KEYS[key]
             const label = labelKey ? t(labelKey) : key
@@ -66,12 +83,7 @@ export function SidebarPrefsTab() {
                   )}
                 </div>
                 <ul className="flex flex-col gap-0.5 font-mono text-[10px] text-muted-foreground">
-                  <li>
-                    sortBy:{' '}
-                    {effective.sortBy === 'lastResponse'
-                      ? t('settings.sidebarPrefs.sortOptions.lastResponse')
-                      : t('settings.sidebarPrefs.sortOptions.createdAt')}
-                  </li>
+                  <li>projectSortBy: {projectSortLabel(t, effective.projectSortBy)}</li>
                   <li>
                     groupByProject:{' '}
                     {effective.groupByProject
@@ -130,6 +142,53 @@ export function SidebarPrefsTab() {
                 onClick={() => setProjectOrder(() => [])}
               >
                 {t('settings.sidebarPrefs.resetOrder', { count: prefs.projectOrder.length })}
+              </Button>
+            </div>
+          </>
+        )}
+      </Section>
+
+      <Section
+        title={t('settings.sidebarPrefs.projectSort')}
+        description={t('settings.sidebarPrefs.projectSortHelp')}
+      >
+        {Object.keys(prefs.sessionSortByProject).length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            {t('settings.sidebarPrefs.noProjectSort')}
+          </p>
+        ) : (
+          <>
+            <ul className="flex max-h-48 flex-col gap-0.5 overflow-auto rounded border border-border bg-black/20 px-2 py-1.5 font-mono text-[10px] text-muted-foreground">
+              {Object.entries(prefs.sessionSortByProject).map(([slug, sortBy]) => (
+                <li key={slug} className="flex items-center justify-between gap-2">
+                  <span className="truncate">
+                    {slug}: {sessionSortLabel(t, sortBy)}
+                  </span>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="ghost"
+                    onClick={() => setSessionSortForProject(slug, null)}
+                  >
+                    {t('settings.sidebarPrefs.reset')}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+            <div>
+              <Button
+                type="button"
+                size="xs"
+                variant="ghost"
+                onClick={() => {
+                  for (const slug of Object.keys(prefs.sessionSortByProject)) {
+                    setSessionSortForProject(slug, null)
+                  }
+                }}
+              >
+                {t('settings.sidebarPrefs.resetProjectSort', {
+                  count: Object.keys(prefs.sessionSortByProject).length,
+                })}
               </Button>
             </div>
           </>

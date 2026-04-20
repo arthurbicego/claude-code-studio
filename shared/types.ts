@@ -10,7 +10,13 @@ export type SessionMeta = {
   archived: boolean;
 };
 
-export type SessionSortBy = 'lastResponse' | 'createdAt';
+export type SessionSortBy = 'lastResponse' | 'createdAt' | 'alphabetical';
+
+export const SESSION_SORT_OPTIONS: SessionSortBy[] = ['lastResponse', 'createdAt', 'alphabetical'];
+
+export type ProjectSortBy = 'alphabetical' | 'lastActivity' | 'createdAt';
+
+export const PROJECT_SORT_OPTIONS: ProjectSortBy[] = ['lastActivity', 'createdAt', 'alphabetical'];
 
 export type Project = {
   slug: string;
@@ -202,7 +208,8 @@ export type WorktreeDiffResult = {
 
 export type SectionPrefs = {
   groupByProject: boolean;
-  sortBy: SessionSortBy;
+  /** `null` means the user has a custom order (drag-and-drop) with no named mode selected. */
+  projectSortBy: ProjectSortBy | null;
 };
 
 export type Locale = 'pt-BR' | 'en-US' | 'es-ES';
@@ -274,6 +281,7 @@ export type Prefs = {
   expanded: string[];
   projectOrder: string[];
   locale: Locale | null;
+  sessionSortByProject: Record<string, SessionSortBy>;
 };
 
 export type MemoryFile = {
