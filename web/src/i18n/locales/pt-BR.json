@@ -49,11 +49,19 @@
     "groupOn": "Listar sem agrupar",
     "groupOff": "Agrupar por projeto",
     "toggleGrouping": "Alternar agrupamento",
-    "sortBy": "Ordenar por: {{label}}",
+    "sortBy": "Ordenar projetos: {{label}}",
+    "sortMenu": "Opções de ordenação de projetos",
     "toggleSort": "Alternar ordenação",
     "sortLabel": {
       "lastResponse": "Última resposta",
-      "createdAt": "Data de criação"
+      "createdAt": "Data de criação",
+      "alphabetical": "Alfabética"
+    },
+    "projectSortLabel": {
+      "custom": "Ordem customizada",
+      "lastActivity": "Última atividade",
+      "createdAt": "Data de criação",
+      "alphabetical": "Alfabética"
     },
     "actions": {
       "title": "Ações da sessão",
@@ -69,7 +77,9 @@
       "deleteAll": "Apagar sessões",
       "showPath": "Mostrar caminho do projeto",
       "path": "Caminho do projeto",
-      "copyPath": "Copiar caminho do projeto"
+      "copyPath": "Copiar caminho do projeto",
+      "sortMenu": "Ordenar sessões deste projeto",
+      "sortBy": "Ordenar sessões: {{label}}"
     }
   },
   "newSession": {
@@ -568,7 +578,14 @@
       "default": "Padrão",
       "sortOptions": {
         "lastResponse": "Última resposta",
-        "createdAt": "Data de criação"
+        "createdAt": "Data de criação",
+        "alphabetical": "Alfabética"
+      },
+      "projectSortOptions": {
+        "custom": "Ordem customizada",
+        "lastActivity": "Última atividade",
+        "createdAt": "Data de criação",
+        "alphabetical": "Alfabética"
       },
       "yes": "sim",
       "no": "não",
@@ -579,7 +596,11 @@
       "customOrder": "Ordem customizada de projetos",
       "customOrderHelp": "Ordem definida por arrastar e soltar na sidebar. Sem entradas aqui, a ordem é automática (última atividade).",
       "noOrder": "Nenhum — ordem automática.",
-      "resetOrder": "Resetar ordem ({{count}})"
+      "resetOrder": "Resetar ordem ({{count}})",
+      "projectSort": "Ordenação de sessões por projeto",
+      "projectSortHelp": "Overrides definidos no cabeçalho de cada projeto. Sem override, usa o padrão da seção.",
+      "noProjectSort": "Nenhum — todos os projetos usam o padrão da seção.",
+      "resetProjectSort": "Limpar overrides ({{count}})"
     }
   },
   "stringList": {

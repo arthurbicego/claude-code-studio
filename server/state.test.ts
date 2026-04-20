@@ -11,13 +11,13 @@ describe('sanitizePrefs', () => {
   it('preserves known section fields and fills defaults', () => {
     const prefs = sanitizePrefs({
       sections: {
-        open: { groupByProject: false, sortBy: 'createdAt' },
+        open: { groupByProject: false, projectSortBy: 'alphabetical' },
         history: {},
       },
     });
-    expect(prefs.sections.open).toEqual({ groupByProject: false, sortBy: 'createdAt' });
-    // history: {} => groupByProject defaults to true, sortBy defaults to 'lastResponse'
-    expect(prefs.sections.history).toEqual({ groupByProject: true, sortBy: 'lastResponse' });
+    expect(prefs.sections.open).toEqual({ groupByProject: false, projectSortBy: 'alphabetical' });
+    // history: {} => groupByProject defaults to true, projectSortBy defaults to null (custom)
+    expect(prefs.sections.history).toEqual({ groupByProject: true, projectSortBy: null });
   });
 
   it('drops sections whose value is not an object', () => {
@@ -25,14 +25,39 @@ describe('sanitizePrefs', () => {
     expect(prefs.sections).toEqual({});
   });
 
-  it('coerces invalid sortBy values to the default', () => {
-    const prefs = sanitizePrefs({ sections: { open: { sortBy: 'garbage' } } });
-    expect(prefs.sections.open?.sortBy).toBe('lastResponse');
+  it('coerces invalid projectSortBy values to null (custom)', () => {
+    const prefs = sanitizePrefs({ sections: { open: { projectSortBy: 'garbage' } } });
+    expect(prefs.sections.open?.projectSortBy).toBeNull();
   });
 
   it('filters non-string entries out of expanded and projectOrder', () => {
     const prefs = sanitizePrefs({ expanded: ['a', 42, null, 'b'], projectOrder: ['x', {}, 'y'] });
     expect(prefs.expanded).toEqual(['a', 'b']);
     expect(prefs.projectOrder).toEqual(['x', 'y']);
+  });
+
+  it('accepts lastActivity as a valid projectSortBy value', () => {
+    const prefs = sanitizePrefs({ sections: { open: { projectSortBy: 'lastActivity' } } });
+    expect(prefs.sections.open?.projectSortBy).toBe('lastActivity');
+  });
+
+  it('keeps only valid per-project session sort overrides', () => {
+    const prefs = sanitizePrefs({
+      sessionSortByProject: {
+        'proj-a': 'createdAt',
+        'proj-b': 'garbage',
+        'proj-c': 'alphabetical',
+        'proj-d': 42,
+      },
+    });
+    expect(prefs.sessionSortByProject).toEqual({
+      'proj-a': 'createdAt',
+      'proj-c': 'alphabetical',
+    });
+  });
+
+  it('returns an empty map when sessionSortByProject is missing or invalid', () => {
+    expect(sanitizePrefs({}).sessionSortByProject).toEqual({});
+    expect(sanitizePrefs({ sessionSortByProject: 'nope' }).sessionSortByProject).toEqual({});
   });
 });

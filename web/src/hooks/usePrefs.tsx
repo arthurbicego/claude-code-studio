@@ -1,4 +1,4 @@
-import { type Locale, SUPPORTED_LOCALES } from '@shared/types'
+import { type Locale, SESSION_SORT_OPTIONS, SUPPORTED_LOCALES } from '@shared/types'
 import {
   createContext,
   type ReactNode,
@@ -9,11 +9,11 @@ import {
   useRef,
   useState,
 } from 'react'
-import type { SessionSortBy } from '@/types'
+import type { ProjectSortBy, SessionSortBy } from '@/types'
 
 export type SectionPrefs = {
   groupByProject: boolean
-  sortBy: SessionSortBy
+  projectSortBy: ProjectSortBy | null
 }
 
 export type Prefs = {
@@ -21,6 +21,7 @@ export type Prefs = {
   expanded: string[]
   projectOrder: string[]
   locale: Locale | null
+  sessionSortByProject: Record<string, SessionSortBy>
 }
 
 type Ctx = {
@@ -31,10 +32,28 @@ type Ctx = {
   setExpanded: (updater: (prev: string[]) => string[]) => void
   setProjectOrder: (updater: (prev: string[]) => string[]) => void
   setLocale: (locale: Locale) => void
+  setSessionSortForProject: (slug: string, next: SessionSortBy | null) => void
 }
 
-const EMPTY_PREFS: Prefs = { sections: {}, expanded: [], projectOrder: [], locale: null }
+const EMPTY_PREFS: Prefs = {
+  sections: {},
+  expanded: [],
+  projectOrder: [],
+  locale: null,
+  sessionSortByProject: {},
+}
 const PrefsContext = createContext<Ctx | null>(null)
+
+function sanitizeSessionSortByProject(raw: unknown): Record<string, SessionSortBy> {
+  if (!raw || typeof raw !== 'object') return {}
+  const out: Record<string, SessionSortBy> = {}
+  for (const [slug, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof value === 'string' && (SESSION_SORT_OPTIONS as string[]).includes(value)) {
+      out[slug] = value as SessionSortBy
+    }
+  }
+  return out
+}
 
 export function PrefsProvider({ children }: { children: ReactNode }) {
   const [prefs, setPrefs] = useState<Prefs>(EMPTY_PREFS)
@@ -60,6 +79,7 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
             typeof data.locale === 'string' && (SUPPORTED_LOCALES as string[]).includes(data.locale)
               ? (data.locale as Locale)
               : null,
+          sessionSortByProject: sanitizeSessionSortByProject(data.sessionSortByProject),
         }
         if (cancelled) return
         lastSavedRef.current = JSON.stringify(initial)
@@ -130,9 +150,38 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
     setPrefs((p) => (p.locale === locale ? p : { ...p, locale }))
   }, [])
 
+  const setSessionSortForProject = useCallback((slug: string, next: SessionSortBy | null) => {
+    setPrefs((p) => {
+      const current = p.sessionSortByProject[slug] ?? null
+      if (current === next) return p
+      const map = { ...p.sessionSortByProject }
+      if (next === null) delete map[slug]
+      else map[slug] = next
+      return { ...p, sessionSortByProject: map }
+    })
+  }, [])
+
   const value = useMemo<Ctx>(
-    () => ({ prefs, loaded, setSection, removeSection, setExpanded, setProjectOrder, setLocale }),
-    [prefs, loaded, setSection, removeSection, setExpanded, setProjectOrder, setLocale],
+    () => ({
+      prefs,
+      loaded,
+      setSection,
+      removeSection,
+      setExpanded,
+      setProjectOrder,
+      setLocale,
+      setSessionSortForProject,
+    }),
+    [
+      prefs,
+      loaded,
+      setSection,
+      removeSection,
+      setExpanded,
+      setProjectOrder,
+      setLocale,
+      setSessionSortForProject,
+    ],
   )
 
   return <PrefsContext.Provider value={value}>{children}</PrefsContext.Provider>
