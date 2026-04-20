@@ -96,7 +96,6 @@ export function NewSessionModal({
   const [model, setModel] = useState<Model>(initialModel)
   const [effort, setEffort] = useState<Effort>(initialEffort)
   const [permissionMode, setPermissionMode] = useState<PermissionMode>(initialPermission)
-  const [dangerouslySkipPermissions, setDangerouslySkipPermissions] = useState(false)
   const [selectedCwd, setSelectedCwd] = useState<string | null>(null)
   const [isolate, setIsolate] = useState(false)
   const [userTouchedIsolate, setUserTouchedIsolate] = useState(false)
@@ -113,7 +112,6 @@ export function NewSessionModal({
       setIsolate(false)
       setUserTouchedIsolate(false)
       setWorktreeName('')
-      setDangerouslySkipPermissions(false)
       setExistingProjectsOpen(false)
       setPickError(null)
       return
@@ -174,9 +172,6 @@ export function NewSessionModal({
       model,
       effort,
       permissionMode,
-    }
-    if (dangerouslySkipPermissions) {
-      launchPayload.dangerouslySkipPermissions = true
     }
     if (isolate) {
       launchPayload.worktree = worktreeName.trim() || '1'
@@ -314,6 +309,12 @@ export function NewSessionModal({
               onChange={setPermissionMode}
             />
           </div>
+          {permissionMode === 'bypassPermissions' ? (
+            <div className="mt-2 flex items-start gap-2 rounded bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-200">
+              <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+              <span>{t('newSession.bypassPermissionsWarning')}</span>
+            </div>
+          ) : null}
 
           <div className="mt-3 flex flex-col gap-2">
             <div className="flex min-h-[32px] items-center gap-2">
@@ -364,25 +365,6 @@ export function NewSessionModal({
                 <span>{t('newSession.activeAutoIsolate')}</span>
               </div>
             ) : null}
-
-            <div className="flex min-h-[32px] items-center gap-2">
-              <label className="flex cursor-pointer items-center gap-2 text-xs text-foreground">
-                <input
-                  type="checkbox"
-                  checked={dangerouslySkipPermissions}
-                  onChange={(e) => setDangerouslySkipPermissions(e.target.checked)}
-                />
-                <span>{t('newSession.dangerouslySkipPermissions')}</span>
-              </label>
-              <InfoPopover
-                ariaLabel={t('newSession.dangerouslySkipInfoAria')}
-                tooltip={t('newSession.dangerouslySkipInfoTooltip')}
-              >
-                <p className="whitespace-pre-line">
-                  {t('newSession.dangerouslySkipPermissionsHint')}
-                </p>
-              </InfoPopover>
-            </div>
           </div>
         </section>
       </div>
