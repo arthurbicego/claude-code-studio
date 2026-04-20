@@ -234,7 +234,12 @@
     "pdfBadge": "PDF",
     "screenshot": "Screenshot",
     "dropHere": "Solte para anexar",
-    "injectedHint": "O caminho já foi inserido no terminal; remover o chip não o retira."
+    "injectedHint": "O caminho já foi inserido no terminal; remover o chip não o retira.",
+    "preview": {
+      "title": "Pré-visualização",
+      "open": "Abrir pré-visualização",
+      "unavailable": "Pré-visualização indisponível."
+    }
   },
   "panels": {
     "menu": {

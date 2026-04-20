@@ -19,6 +19,7 @@ type ChipProps = {
   item: UIAttachment
   onRemove: (tempId: string) => void
   onRetry?: (tempId: string) => void
+  onPreview?: (tempId: string) => void
 }
 
 function formatSize(bytes: number): string {
@@ -34,15 +35,30 @@ function displayName(item: UIAttachment, fallbackScreenshot: string): string {
   return item.name
 }
 
-export function AttachmentChip({ item, onRemove, onRetry }: ChipProps) {
+export function AttachmentChip({ item, onRemove, onRetry, onPreview }: ChipProps) {
   const { t } = useTranslation()
   const failed = item.state === 'failed'
   const uploading = item.state === 'uploading'
+  const ready = item.state === 'ready'
   const name = displayName(item, t('attachments.screenshot'))
+  const canPreview = ready && Boolean(item.objectUrl) && Boolean(onPreview)
 
-  const handleClick = () => {
-    if (failed && onRetry) onRetry(item.tempId)
+  const handleThumbClick = () => {
+    if (failed && onRetry) {
+      onRetry(item.tempId)
+      return
+    }
+    if (canPreview) onPreview?.(item.tempId)
   }
+
+  const thumbTitle = failed
+    ? item.error || t('attachments.uploadFailed')
+    : canPreview
+      ? t('attachments.preview.open')
+      : name
+  const thumbClickable = failed || canPreview
+  const thumbBase =
+    'flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded border border-border bg-muted'
 
   return (
     <div
@@ -54,18 +70,31 @@ export function AttachmentChip({ item, onRemove, onRetry }: ChipProps) {
       )}
       title={failed ? item.error || t('attachments.uploadFailed') : name}
     >
-      {item.kind === 'image' && item.objectUrl ? (
+      {thumbClickable ? (
         <button
           type="button"
-          onClick={handleClick}
-          className="h-9 w-9 shrink-0 overflow-hidden rounded border border-border bg-muted"
-          aria-label={name}
+          onClick={handleThumbClick}
+          className={cn(thumbBase, 'cursor-pointer hover:border-sky-400/60')}
+          aria-label={thumbTitle}
+          title={thumbTitle}
         >
-          <img src={item.objectUrl} alt={name} className="h-full w-full object-cover" />
+          {item.kind === 'image' && item.objectUrl ? (
+            <img src={item.objectUrl} alt={name} className="h-full w-full object-cover" />
+          ) : (
+            <span className="text-muted-foreground">
+              {failed ? <AlertCircle size={14} /> : <FileText size={14} />}
+            </span>
+          )}
         </button>
       ) : (
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-muted text-muted-foreground">
-          {failed ? <AlertCircle size={14} /> : <FileText size={14} />}
+        <div className={cn(thumbBase, 'text-muted-foreground')}>
+          {item.kind === 'image' && item.objectUrl ? (
+            <img src={item.objectUrl} alt={name} className="h-full w-full object-cover" />
+          ) : failed ? (
+            <AlertCircle size={14} />
+          ) : (
+            <FileText size={14} />
+          )}
         </div>
       )}
       <div className="flex min-w-0 flex-col">
@@ -102,15 +131,22 @@ type RowProps = {
   items: UIAttachment[]
   onRemove: (tempId: string) => void
   onRetry?: (tempId: string) => void
+  onPreview?: (tempId: string) => void
   className?: string
 }
 
-export function AttachmentChipRow({ items, onRemove, onRetry, className }: RowProps) {
+export function AttachmentChipRow({ items, onRemove, onRetry, onPreview, className }: RowProps) {
   if (items.length === 0) return null
   return (
     <div className={cn('flex flex-wrap gap-2', className)}>
       {items.map((item) => (
-        <AttachmentChip key={item.tempId} item={item} onRemove={onRemove} onRetry={onRetry} />
+        <AttachmentChip
+          key={item.tempId}
+          item={item}
+          onRemove={onRemove}
+          onRetry={onRetry}
+          onPreview={onPreview}
+        />
       ))}
     </div>
   )
