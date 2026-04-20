@@ -62,6 +62,17 @@ describe('expandImports', () => {
     expect(cycles.length).toBeGreaterThan(0);
   });
 
+  it('rejects symlinks that escape $HOME (no info disclosure through symlinked @imports)', () => {
+    const outside = '/etc/hosts';
+    if (!fs.existsSync(outside)) return;
+    const link = path.join(tmpDir, 'escape.md');
+    fs.symlinkSync(outside, link);
+    const basePath = path.join(tmpDir, 'CLAUDE.md');
+    const result = expandImports('@escape.md\n', basePath);
+    expect(result.imports[0].error).toBe('outside_home');
+    expect(result.expanded).not.toContain(fs.readFileSync(outside, 'utf8'));
+  });
+
   it('stops descending once IMPORT_MAX_DEPTH is reached', () => {
     // Create a chain of N+2 files; expansion should truncate before the bottom.
     const chainLength = IMPORT_MAX_DEPTH + 2;
