@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import os from 'node:os';
 import type { Express, Request } from 'express';
 import * as pty from 'node-pty';
@@ -10,6 +9,7 @@ import {
   maybeBroadcastStateChange,
   safeSend,
 } from '../live-sessions';
+import { isAllowedProjectCwd } from '../paths';
 import { isWsUpgradeAllowed } from '../security';
 
 type WsHandler = (ws: WebSocket, req: Request) => void;
@@ -99,7 +99,9 @@ export function register(app: Express): void {
       return;
     }
     const rawCwd = req.query.cwd ? String(req.query.cwd) : '';
-    const targetCwd = rawCwd && fs.existsSync(rawCwd) ? rawCwd : os.homedir();
+    // Contain the shell cwd inside $HOME so a stray caller cannot spawn `/bin/zsh` rooted at
+    // `/` or an unrelated mount. Falls back to $HOME when the caller supplies nothing valid.
+    const targetCwd = isAllowedProjectCwd(rawCwd) ?? os.homedir();
     let term: ReturnType<typeof pty.spawn>;
     try {
       term = pty.spawn(USER_SHELL, ['-l'], {

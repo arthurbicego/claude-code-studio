@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { MemoryImportEntry } from '@shared/types';
-import { HOME_DIR_REAL } from './paths';
+import { HOME_DIR_REAL, realpathSafe } from './paths';
 
 export const IMPORT_MAX_DEPTH = 5;
 export const IMPORT_LINE_RE = /^(\s*)@(\S+)\s*$/;
@@ -79,8 +79,12 @@ export function expandImports(
       continue;
     }
 
+    // Resolve symlinks before the home check so a symlink inside $HOME that points at, say,
+    // /etc/passwd cannot be read back through an @import.
+    const realResolved = realpathSafe(resolved);
     const withinHome =
-      (resolved + path.sep).startsWith(HOME_DIR_REAL + path.sep) || resolved === HOME_DIR_REAL;
+      (realResolved + path.sep).startsWith(HOME_DIR_REAL + path.sep) ||
+      realResolved === HOME_DIR_REAL;
     if (!withinHome) {
       entry.error = 'outside_home';
       imports.push(entry);
