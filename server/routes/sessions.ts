@@ -4,7 +4,7 @@ import type { SessionsListResponse } from '@shared/types';
 import type { Express, Request, Response } from 'express';
 import { ERR, sendError, sendInternalError } from '../errors';
 import { buildFooterPayload, removeFooterCacheFor } from '../footer';
-import { runGit } from '../git';
+import { runGitArgs } from '../git';
 import { liveSessions } from '../live-sessions';
 import { CLAUDE_PROJECTS } from '../paths';
 import {
@@ -108,10 +108,10 @@ export function register(app: Express): void {
     if (!cwd || !fs.existsSync(cwd)) {
       return res.json({ cwd: null, branch: null, unstaged: '', staged: '', untracked: [] });
     }
-    const branch = runGit(cwd, 'symbolic-ref --short HEAD').trim() || null;
-    const unstaged = runGit(cwd, 'diff --no-color');
-    const staged = runGit(cwd, 'diff --no-color --staged');
-    const untrackedRaw = runGit(cwd, 'ls-files --others --exclude-standard');
+    const branch = runGitArgs(cwd, ['symbolic-ref', '--short', 'HEAD']).trim() || null;
+    const unstaged = runGitArgs(cwd, ['diff', '--no-color']);
+    const staged = runGitArgs(cwd, ['diff', '--no-color', '--staged']);
+    const untrackedRaw = runGitArgs(cwd, ['ls-files', '--others', '--exclude-standard']);
     const untracked = untrackedRaw
       .split('\n')
       .map((s) => s.trim())
