@@ -1,6 +1,8 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import type { Express, Request, Response } from 'express';
+import multer from 'multer';
 import {
   ATTACHMENT_ALLOWED_MIME,
   ATTACHMENT_MAX_BYTES,
@@ -8,8 +10,6 @@ import {
   type Attachment,
   type AttachmentKind,
 } from '../../shared/types';
-import type { Express, Request, Response } from 'express';
-import multer from 'multer';
 import { ERR, sendError, sendInternalError } from '../errors';
 import { liveSessions } from '../live-sessions';
 import { ATTACHMENTS_DIR } from '../paths';

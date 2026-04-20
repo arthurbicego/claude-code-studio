@@ -1,10 +1,11 @@
-import { AlertTriangle, ArrowUp, ChevronRight, Folder, GitBranch, Home } from 'lucide-react'
+import type { PickFolderResponse } from '@shared/types'
+import { AlertTriangle, ChevronRight, Folder, GitBranch } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/Modal'
 import { Button } from '@/components/ui/Button'
 import { Tooltip } from '@/components/ui/Tooltip'
-import { useBrowser } from '@/hooks/useBrowser'
+import { ApiErrorException, readApiError, useApiErrorTranslator } from '@/lib/apiError'
 import { cn } from '@/lib/utils'
 import type {
   Effort,
@@ -100,8 +101,10 @@ export function NewSessionModal({
   const [userTouchedIsolate, setUserTouchedIsolate] = useState(false)
   const [worktreeName, setWorktreeName] = useState('')
   const [existingProjectsOpen, setExistingProjectsOpen] = useState(false)
+  const [picking, setPicking] = useState(false)
+  const [pickError, setPickError] = useState<string | null>(null)
 
-  const browser = useBrowser()
+  const translateApiError = useApiErrorTranslator()
 
   useEffect(() => {
     if (!open) {
@@ -111,6 +114,7 @@ export function NewSessionModal({
       setWorktreeName('')
       setDangerouslySkipPermissions(false)
       setExistingProjectsOpen(false)
+      setPickError(null)
       return
     }
     if (initial?.cwd) setSelectedCwd(initial.cwd)
@@ -120,8 +124,28 @@ export function NewSessionModal({
     }
   }, [open, initial])
 
-  const effectiveCwd = selectedCwd ?? browser.data?.path ?? null
+  const effectiveCwd = selectedCwd
   const conflictsWithLive = !!effectiveCwd && liveCwds.has(effectiveCwd)
+
+  const pickFolder = async () => {
+    if (picking) return
+    setPicking(true)
+    setPickError(null)
+    try {
+      const res = await fetch('/api/pick-folder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ defaultPath: selectedCwd ?? undefined }),
+      })
+      if (!res.ok) throw new ApiErrorException(await readApiError(res))
+      const data = (await res.json()) as PickFolderResponse
+      if (data.path) setSelectedCwd(data.path)
+    } catch (err) {
+      setPickError(translateApiError(err instanceof ApiErrorException ? err.apiError : err))
+    } finally {
+      setPicking(false)
+    }
+  }
 
   useEffect(() => {
     if (userTouchedIsolate) return
@@ -185,6 +209,83 @@ export function NewSessionModal({
       }
     >
       <div className="flex flex-col overflow-y-auto">
+        <section className="border-b border-border p-4">
+          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {t('newSession.folder')}
+          </h3>
+          <div className="flex items-center gap-2">
+            <code
+              dir="rtl"
+              className="flex-1 truncate rounded bg-background px-2 py-1 text-left text-[11px] text-muted-foreground"
+            >
+              {selectedCwd ?? t('newSession.noFolderSelected')}
+            </code>
+            <Button size="xs" variant="ghost" onClick={pickFolder} disabled={picking}>
+              <Folder size={12} className="mr-1" />
+              {picking ? t('newSession.picking') : t('newSession.pickFolder')}
+            </Button>
+          </div>
+          {pickError ? <p className="mt-2 text-[11px] text-rose-400">{pickError}</p> : null}
+          <button
+            type="button"
+            className="mt-3 flex w-full cursor-pointer items-center gap-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
+            onClick={() => setExistingProjectsOpen((v) => !v)}
+            aria-expanded={existingProjectsOpen}
+          >
+            <ChevronRight
+              size={10}
+              className={cn('transition-transform', existingProjectsOpen && 'rotate-90')}
+            />
+            <span className="flex-1">{t('newSession.existingProjects')}</span>
+            <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] normal-case tracking-normal text-muted-foreground">
+              {sortedProjects.length}
+            </span>
+          </button>
+          {existingProjectsOpen ? (
+            <div className="mt-2 flex max-h-44 flex-col gap-1 overflow-y-auto">
+              {sortedProjects.length === 0 ? (
+                <p className="text-xs text-muted-foreground">{t('newSession.noProjects')}</p>
+              ) : (
+                sortedProjects.map((p) => {
+                  const active = selectedCwd === p.cwd
+                  const liveCount = liveCountFor(p.cwd)
+                  return (
+                    <button
+                      type="button"
+                      key={p.slug}
+                      onClick={() => setSelectedCwd(p.cwd)}
+                      className={cn(
+                        'flex cursor-pointer items-center justify-between gap-2 rounded px-3 py-2 text-left text-xs',
+                        active
+                          ? 'bg-sky-500/15 ring-1 ring-sky-500/50'
+                          : 'bg-accent/40 hover:bg-accent',
+                      )}
+                    >
+                      <span className="flex flex-col">
+                        <span className="font-medium text-foreground">{basename(p.cwd)}</span>
+                        <span className="font-mono text-[10px] text-muted-foreground">{p.cwd}</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        {liveCount > 0 ? (
+                          <Tooltip content={t('newSession.activeCount', { count: liveCount })}>
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[10px] text-emerald-300">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                              {liveCount}
+                            </span>
+                          </Tooltip>
+                        ) : null}
+                        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                          {p.sessions.length}
+                        </span>
+                      </span>
+                    </button>
+                  )
+                })
+              )}
+            </div>
+          ) : null}
+        </section>
+
         <section className="border-b border-border p-4">
           <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             {t('newSession.config')}
@@ -271,7 +372,7 @@ export function NewSessionModal({
           ) : null}
         </section>
 
-        <section className="border-b border-border p-4">
+        <section className="p-4">
           <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             {t('newSession.advanced')}
           </h3>
@@ -289,139 +390,6 @@ export function NewSessionModal({
               </span>
             </span>
           </label>
-        </section>
-
-        <section className="border-b border-border p-4">
-          <button
-            type="button"
-            className="flex w-full items-center gap-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground cursor-pointer"
-            onClick={() => setExistingProjectsOpen((v) => !v)}
-            aria-expanded={existingProjectsOpen}
-          >
-            <ChevronRight
-              size={10}
-              className={cn('transition-transform', existingProjectsOpen && 'rotate-90')}
-            />
-            <span className="flex-1">{t('newSession.existingProjects')}</span>
-            <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] normal-case tracking-normal text-muted-foreground">
-              {sortedProjects.length}
-            </span>
-          </button>
-          {existingProjectsOpen ? (
-            <div className="mt-2 flex max-h-44 flex-col gap-1 overflow-y-auto">
-              {sortedProjects.length === 0 ? (
-                <p className="text-xs text-muted-foreground">{t('newSession.noProjects')}</p>
-              ) : (
-                sortedProjects.map((p) => {
-                  const active = selectedCwd === p.cwd
-                  const liveCount = liveCountFor(p.cwd)
-                  return (
-                    <button
-                      type="button"
-                      key={p.slug}
-                      onClick={() => setSelectedCwd(p.cwd)}
-                      className={cn(
-                        'flex items-center justify-between gap-2 rounded px-3 py-2 text-left text-xs cursor-pointer',
-                        active
-                          ? 'bg-sky-500/15 ring-1 ring-sky-500/50'
-                          : 'bg-accent/40 hover:bg-accent',
-                      )}
-                    >
-                      <span className="flex flex-col">
-                        <span className="font-medium text-foreground">{basename(p.cwd)}</span>
-                        <span className="font-mono text-[10px] text-muted-foreground">{p.cwd}</span>
-                      </span>
-                      <span className="flex items-center gap-1">
-                        {liveCount > 0 ? (
-                          <Tooltip content={t('newSession.activeCount', { count: liveCount })}>
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[10px] text-emerald-300">
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                              {liveCount}
-                            </span>
-                          </Tooltip>
-                        ) : null}
-                        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                          {p.sessions.length}
-                        </span>
-                      </span>
-                    </button>
-                  )
-                })
-              )}
-            </div>
-          ) : null}
-        </section>
-
-        <section className="flex min-h-0 flex-col p-4">
-          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            {t('newSession.chooseFolder')}
-          </h3>
-          <div className="mb-2 flex items-center gap-2">
-            <Tooltip content={t('newSession.upLevel')}>
-              <Button
-                size="xs"
-                variant="ghost"
-                onClick={() => browser.data?.parent && browser.load(browser.data.parent)}
-                disabled={!browser.data?.parent}
-                aria-label={t('newSession.upLevel')}
-              >
-                <ArrowUp size={12} />
-              </Button>
-            </Tooltip>
-            <Tooltip content={t('newSession.goHome')}>
-              <Button
-                size="xs"
-                variant="ghost"
-                onClick={() => browser.data && browser.load(browser.data.home)}
-                aria-label={t('newSession.goHome')}
-              >
-                <Home size={12} />
-              </Button>
-            </Tooltip>
-            <code
-              dir="rtl"
-              className="flex-1 truncate rounded bg-background px-2 py-1 text-left text-[11px] text-muted-foreground"
-            >
-              {browser.data?.path ?? (browser.loading ? t('newSession.loading') : '')}
-            </code>
-            <Button
-              size="xs"
-              variant={
-                selectedCwd && browser.data && selectedCwd === browser.data.path
-                  ? 'primary'
-                  : 'ghost'
-              }
-              disabled={!browser.data?.path}
-              onClick={() => browser.data && setSelectedCwd(browser.data.path)}
-            >
-              {t('newSession.select')}
-            </Button>
-            <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <input type="checkbox" checked={browser.showHidden} onChange={browser.toggleHidden} />
-              {t('newSession.hidden')}
-            </label>
-          </div>
-          <div className="grid max-h-56 grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-1 overflow-y-auto rounded bg-background p-2">
-            {browser.error ? (
-              <p className="col-span-full px-2 py-3 text-xs text-red-400">{browser.error}</p>
-            ) : browser.data && browser.data.entries.length === 0 ? (
-              <p className="col-span-full px-2 py-3 text-center text-xs text-muted-foreground">
-                {t('newSession.empty')}
-              </p>
-            ) : (
-              browser.data?.entries.map((e) => (
-                <button
-                  type="button"
-                  key={e.name}
-                  onClick={() => browser.load(`${browser.data!.path.replace(/\/$/, '')}/${e.name}`)}
-                  className="flex items-center gap-1.5 truncate rounded px-2 py-1.5 text-left text-xs text-foreground hover:bg-accent cursor-pointer"
-                >
-                  <Folder size={12} className="shrink-0 text-muted-foreground" />
-                  <span className="truncate">{e.name}</span>
-                </button>
-              ))
-            )}
-          </div>
         </section>
       </div>
     </Modal>

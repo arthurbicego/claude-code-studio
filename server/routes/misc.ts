@@ -87,27 +87,58 @@ export function register(app: Express): void {
     res.json(defaults);
   });
 
-  app.get('/api/browse', (req: Request, res: Response) => {
-    res.set('Cache-Control', 'no-store');
-    const requested = req.query.path ? String(req.query.path) : os.homedir();
-    const showHidden = req.query.hidden === '1';
-    try {
-      const abs = path.resolve(requested);
-      const st = fs.statSync(abs);
-      if (!st.isDirectory()) return sendError(res, 400, ERR.PATH_NOT_DIRECTORY, 'not a directory');
-      const entries = fs
-        .readdirSync(abs, { withFileTypes: true })
-        .filter((e) => e.isDirectory() && (showHidden || !e.name.startsWith('.')))
-        .map((e) => ({ name: e.name }))
-        .sort((a, b) => a.name.localeCompare(b.name));
-      res.json({
-        path: abs,
-        parent: path.dirname(abs) === abs ? null : path.dirname(abs),
-        home: os.homedir(),
-        entries,
-      });
-    } catch (e) {
-      return sendError(res, 400, ERR.PATH_INVALID, (e as Error).message);
+  app.post('/api/pick-folder', (req: Request, res: Response) => {
+    if (process.platform !== 'darwin') {
+      return sendError(res, 501, ERR.INTERNAL, 'folder picker is only supported on macOS');
     }
+    const rawDefault = typeof req.body?.defaultPath === 'string' ? req.body.defaultPath : '';
+    let defaultClause = '';
+    if (rawDefault) {
+      try {
+        const resolved = path.resolve(rawDefault);
+        if (fs.statSync(resolved).isDirectory()) {
+          defaultClause = ` default location POSIX file ${quoteApplescriptString(resolved)}`;
+        }
+      } catch {
+        // ignore — fall back to the Finder default.
+      }
+    }
+    const script = `try\n  set theFolder to choose folder with prompt "Selecione a pasta do projeto"${defaultClause}\n  return POSIX path of theFolder\non error number -128\n  return ""\nend try`;
+    const child = spawn('osascript', ['-e', script]);
+    let stdout = '';
+    let stderr = '';
+    let responded = false;
+    const respond = (fn: () => void) => {
+      if (responded) return;
+      responded = true;
+      fn();
+    };
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on('error', (err) => {
+      respond(() => sendInternalError(res, err));
+    });
+    child.on('close', (code) => {
+      respond(() => {
+        if (code !== 0) {
+          return sendInternalError(
+            res,
+            new Error(stderr.trim() || `osascript exited with code ${code}`),
+          );
+        }
+        const raw = stdout.trim();
+        if (!raw) return res.json({ path: null, canceled: true });
+        const folderPath = raw.replace(/\/$/, '');
+        res.json({ path: folderPath, canceled: false });
+      });
+    });
   });
+}
+
+function quoteApplescriptString(value: string): string {
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 }
