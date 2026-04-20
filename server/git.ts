@@ -1,21 +1,8 @@
-import { execFileSync, execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
 export const UNTRACKED_MAX_BYTES = 2 * 1024 * 1024;
-
-export function runGit(cwd: string, args: string): string {
-  try {
-    return execSync(`git --no-optional-locks ${args}`, {
-      cwd,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-      maxBuffer: 16 * 1024 * 1024,
-    });
-  } catch {
-    return '';
-  }
-}
 
 export function runGitArgs(cwd: string, args: string[]): string {
   try {
@@ -68,32 +55,19 @@ export type GitInfo = { branch: string | null; dirty: boolean };
 
 export function gitInfo(cwd: string | null): GitInfo {
   if (!cwd) return { branch: null, dirty: false };
-  try {
-    const branch =
-      execSync('git --no-optional-locks symbolic-ref --short HEAD', {
-        cwd,
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'ignore'],
-      }).trim() || null;
-    const status = execSync('git --no-optional-locks status --porcelain', {
-      cwd,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    });
-    return { branch, dirty: status.length > 0 };
-  } catch {
-    return { branch: null, dirty: false };
-  }
+  const branch = runGitArgs(cwd, ['symbolic-ref', '--short', 'HEAD']).trim() || null;
+  const status = runGitArgs(cwd, ['status', '--porcelain']);
+  return { branch, dirty: status.length > 0 };
 }
 
 export type UncommittedLineStats = { added: number | null; removed: number | null };
 
 export function uncommittedLineStats(cwd: string | null): UncommittedLineStats {
   if (!cwd || !fs.existsSync(cwd)) return { added: null, removed: null };
-  const tracked = parseNumstat(runGit(cwd, 'diff --numstat HEAD'));
+  const tracked = parseNumstat(runGitArgs(cwd, ['diff', '--numstat', 'HEAD']));
   let added = tracked.added;
   const removed = tracked.removed;
-  const untrackedRaw = runGit(cwd, 'ls-files --others --exclude-standard');
+  const untrackedRaw = runGitArgs(cwd, ['ls-files', '--others', '--exclude-standard']);
   for (const rel of untrackedRaw
     .split('\n')
     .map((s) => s.trim())
