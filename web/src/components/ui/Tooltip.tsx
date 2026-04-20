@@ -14,7 +14,7 @@ type Props = {
 const MARGIN = 4
 const EDGE_PAD = 6
 
-export function Tooltip({ content, children, side = 'top', className }: Props) {
+export function Tooltip({ content, children, side = 'bottom', className }: Props) {
   const triggerRef = useRef<HTMLSpanElement | null>(null)
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const [open, setOpen] = useState(false)
