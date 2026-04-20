@@ -1,9 +1,10 @@
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal as Xterm } from '@xterm/xterm'
-import { useEffect, useRef } from 'react'
+import { type ClipboardEvent, type DragEvent, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
-import type { SessionLaunch } from '@/types'
+import type { Attachment, SessionLaunch } from '@/types'
+import { AttachmentChipRow, type UIAttachment } from './AttachmentChip'
 
 type InputSignal = { seq: number; text: string } | null
 
@@ -19,6 +20,41 @@ type Props = {
   interruptSignal: number
   inputSignal: InputSignal
   isActive: boolean
+}
+
+const ACCEPTED_MIMES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/gif',
+  'application/pdf',
+  'text/plain',
+  'text/markdown',
+])
+
+const EXTENSION_MIME: Record<string, string> = {
+  md: 'text/markdown',
+  markdown: 'text/markdown',
+  txt: 'text/plain',
+  pdf: 'application/pdf',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  webp: 'image/webp',
+  gif: 'image/gif',
+}
+
+function inferMime(file: File): string {
+  if (file.type && ACCEPTED_MIMES.has(file.type)) return file.type
+  const ext = file.name.split('.').pop()?.toLowerCase()
+  if (ext && EXTENSION_MIME[ext]) return EXTENSION_MIME[ext]
+  return file.type
+}
+
+function kindFor(mime: string): UIAttachment['kind'] {
+  if (mime.startsWith('image/')) return 'image'
+  if (mime === 'application/pdf') return 'pdf'
+  return 'text'
 }
 
 function buildWsUrl(launch: SessionLaunch, skip?: Props['skipDefaults']) {
@@ -56,6 +92,14 @@ export function TerminalView({
   const fitRef = useRef<FitAddon | null>(null)
   const isActiveRef = useRef(isActive)
   isActiveRef.current = isActive
+
+  const [attachments, setAttachments] = useState<UIAttachment[]>([])
+  const [dragActive, setDragActive] = useState(false)
+  const uploadsRef = useRef(new Map<string, AbortController>())
+  const pendingInjectRef = useRef<string[]>([])
+  const dragCounterRef = useRef(0)
+  const sessionKeyRef = useRef<string | null>(null)
+  sessionKeyRef.current = launch?.sessionKey ?? null
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: reconnect the WS only when the session changes; adding callbacks/translations as deps would tear down and rebuild the PTY socket on every parent rerender
   useEffect(() => {
@@ -97,6 +141,10 @@ export function TerminalView({
       )
       safeSend({ type: 'resize', cols: term.cols, rows: term.rows })
       safeSend({ type: 'focus', active: isActiveRef.current })
+      if (pendingInjectRef.current.length > 0) {
+        for (const data of pendingInjectRef.current) safeSend({ type: 'input', data })
+        pendingInjectRef.current = []
+      }
     }
     ws.onmessage = (ev) => {
       try {
@@ -153,6 +201,15 @@ export function TerminalView({
       termRef.current = null
       wsRef.current = null
       fitRef.current = null
+      pendingInjectRef.current = []
+      for (const ctrl of uploadsRef.current.values()) ctrl.abort()
+      uploadsRef.current.clear()
+      setAttachments((prev) => {
+        for (const item of prev) {
+          if (item.objectUrl) URL.revokeObjectURL(item.objectUrl)
+        }
+        return []
+      })
     }
   }, [launch])
 
@@ -201,9 +258,181 @@ export function TerminalView({
     return () => cancelAnimationFrame(raf)
   }, [isActive])
 
+  const injectPath = (absPath: string) => {
+    const data = `@${absPath} `
+    const ws = wsRef.current
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try {
+        ws.send(JSON.stringify({ type: 'input', data }))
+        return
+      } catch {
+        /* noop */
+      }
+    }
+    pendingInjectRef.current.push(data)
+  }
+
+  const uploadFile = (file: File) => {
+    const sessionKey = sessionKeyRef.current
+    if (!sessionKey) return
+    const mime = inferMime(file)
+    const kind = kindFor(mime)
+    const tempId = `u_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    const objectUrl = kind === 'image' ? URL.createObjectURL(file) : undefined
+    const pending: UIAttachment = {
+      tempId,
+      name: file.name || 'attachment',
+      size: file.size,
+      mime,
+      kind,
+      state: 'uploading',
+      objectUrl,
+    }
+    setAttachments((prev) => [...prev, pending])
+
+    const controller = new AbortController()
+    uploadsRef.current.set(tempId, controller)
+
+    const form = new FormData()
+    form.append('file', file)
+
+    fetch(`/api/sessions/${encodeURIComponent(sessionKey)}/attachments`, {
+      method: 'POST',
+      body: form,
+      signal: controller.signal,
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          let message = `HTTP ${res.status}`
+          try {
+            const body = (await res.json()) as { code?: string; message?: string }
+            if (body.code === 'ATTACHMENT_TYPE_UNSUPPORTED')
+              message = t('attachments.unsupportedType')
+            else if (body.code === 'ATTACHMENT_TOO_LARGE')
+              message = t('attachments.tooLarge', { max: '25 MB' })
+            else if (body.code === 'ATTACHMENT_LIMIT_REACHED')
+              message = t('attachments.limitReached', { max: 20 })
+            else if (body.message) message = body.message
+          } catch {
+            /* noop */
+          }
+          throw new Error(message)
+        }
+        return (await res.json()) as Attachment
+      })
+      .then((attachment) => {
+        uploadsRef.current.delete(tempId)
+        setAttachments((prev) =>
+          prev.map((item) =>
+            item.tempId === tempId ? { ...item, state: 'ready', attachment } : item,
+          ),
+        )
+        injectPath(attachment.path)
+      })
+      .catch((err: Error) => {
+        if (controller.signal.aborted) return
+        uploadsRef.current.delete(tempId)
+        setAttachments((prev) =>
+          prev.map((item) =>
+            item.tempId === tempId ? { ...item, state: 'failed', error: err.message } : item,
+          ),
+        )
+      })
+  }
+
+  const handleFiles = (files: FileList | File[]) => {
+    for (const file of Array.from(files)) uploadFile(file)
+  }
+
+  const removeAttachment = (tempId: string) => {
+    const existing = uploadsRef.current.get(tempId)
+    if (existing) {
+      existing.abort()
+      uploadsRef.current.delete(tempId)
+    }
+    setAttachments((prev) => {
+      const item = prev.find((a) => a.tempId === tempId)
+      if (item?.objectUrl) URL.revokeObjectURL(item.objectUrl)
+      if (item?.attachment && sessionKeyRef.current) {
+        fetch(
+          `/api/sessions/${encodeURIComponent(sessionKeyRef.current)}/attachments/${item.attachment.id}`,
+          { method: 'DELETE' },
+        ).catch(() => {
+          /* best-effort */
+        })
+      }
+      return prev.filter((a) => a.tempId !== tempId)
+    })
+  }
+
+  const onPaste = (e: ClipboardEvent<HTMLDivElement>) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+    const files: File[] = []
+    for (const item of Array.from(items)) {
+      if (item.kind === 'file') {
+        const f = item.getAsFile()
+        if (f) files.push(f)
+      }
+    }
+    if (files.length === 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    handleFiles(files)
+  }
+
+  const onDragEnter = (e: DragEvent<HTMLDivElement>) => {
+    if (!e.dataTransfer?.types?.includes('Files')) return
+    e.preventDefault()
+    dragCounterRef.current += 1
+    setDragActive(true)
+  }
+
+  const onDragOver = (e: DragEvent<HTMLDivElement>) => {
+    if (!e.dataTransfer?.types?.includes('Files')) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+  }
+
+  const onDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    if (!e.dataTransfer?.types?.includes('Files')) return
+    dragCounterRef.current = Math.max(0, dragCounterRef.current - 1)
+    if (dragCounterRef.current === 0) setDragActive(false)
+  }
+
+  const onDrop = (e: DragEvent<HTMLDivElement>) => {
+    if (!e.dataTransfer?.files || e.dataTransfer.files.length === 0) return
+    e.preventDefault()
+    dragCounterRef.current = 0
+    setDragActive(false)
+    handleFiles(e.dataTransfer.files)
+  }
+
   return (
-    <div className={cn('absolute inset-0 bg-[#1e1e1e] p-2', !isActive && 'hidden')}>
-      <div ref={hostRef} className="h-full w-full" />
+    // biome-ignore lint/a11y/noStaticElementInteractions: paste/drag handlers run on the container so the inner xterm instance (which manages its own a11y and focus) continues to receive keyboard input; the host is not otherwise interactive
+    <div
+      className={cn('absolute inset-0 flex flex-col bg-[#1e1e1e] p-2', !isActive && 'hidden')}
+      onPasteCapture={onPaste}
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
+      {attachments.length > 0 ? (
+        <AttachmentChipRow
+          items={attachments}
+          onRemove={removeAttachment}
+          className="mb-2 max-h-24 overflow-y-auto pr-1"
+        />
+      ) : null}
+      <div ref={hostRef} className="min-h-0 flex-1" />
+      {dragActive ? (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded bg-sky-500/10 ring-2 ring-sky-400/60">
+          <span className="rounded bg-sky-500/80 px-3 py-1.5 text-xs font-medium text-white shadow">
+            {t('attachments.dropHere')}
+          </span>
+        </div>
+      ) : null}
     </div>
   )
 }

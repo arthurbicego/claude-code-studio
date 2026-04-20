@@ -225,6 +225,17 @@
     "noSessions": "Selecciona una sesión en la barra lateral o crea una nueva.",
     "noActiveSession": "No hay sesión activa."
   },
+  "attachments": {
+    "remove": "Quitar adjunto",
+    "uploadFailed": "Error al subir",
+    "tooLarge": "Archivo demasiado grande (máx. {{max}})",
+    "unsupportedType": "Tipo de archivo no soportado",
+    "limitReached": "Límite de adjuntos alcanzado ({{max}})",
+    "pdfBadge": "PDF",
+    "screenshot": "Captura",
+    "dropHere": "Suelta para adjuntar",
+    "injectedHint": "La ruta ya fue insertada en el terminal; eliminar el chip no la retira."
+  },
   "panels": {
     "menu": {
       "open": "Abrir menú de paneles",
@@ -705,6 +716,10 @@
     "WORKTREE_NOT_CLEAN": "El worktree tiene cambios sin commitear — commitea antes de fusionar.",
     "WORKTREE_NOTHING_TO_MERGE": "Nada que fusionar.",
     "GIT_COMMAND_FAILED": "Comando git falló: {{message}}",
+    "ATTACHMENT_TYPE_UNSUPPORTED": "Tipo de archivo no soportado.",
+    "ATTACHMENT_TOO_LARGE": "Archivo demasiado grande (máx. {{max}}).",
+    "ATTACHMENT_LIMIT_REACHED": "Límite de adjuntos alcanzado ({{max}}).",
+    "ATTACHMENT_NOT_FOUND": "Adjunto no encontrado.",
     "UNKNOWN": "Error desconocido."
   }
 }

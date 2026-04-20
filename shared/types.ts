@@ -274,6 +274,11 @@ export const API_ERROR_CODES = {
   WORKTREE_NOT_CLEAN: 'WORKTREE_NOT_CLEAN',
   WORKTREE_NOTHING_TO_MERGE: 'WORKTREE_NOTHING_TO_MERGE',
   GIT_COMMAND_FAILED: 'GIT_COMMAND_FAILED',
+  // Attachments
+  ATTACHMENT_TYPE_UNSUPPORTED: 'ATTACHMENT_TYPE_UNSUPPORTED',
+  ATTACHMENT_TOO_LARGE: 'ATTACHMENT_TOO_LARGE',
+  ATTACHMENT_LIMIT_REACHED: 'ATTACHMENT_LIMIT_REACHED',
+  ATTACHMENT_NOT_FOUND: 'ATTACHMENT_NOT_FOUND',
 } as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[keyof typeof API_ERROR_CODES];
@@ -380,3 +385,26 @@ export type SkillListResponse = {
   user: SkillSummary[];
   project: SkillSummary[];
 };
+
+export type AttachmentKind = 'image' | 'pdf' | 'text';
+
+export type Attachment = {
+  id: string;
+  path: string;
+  name: string;
+  size: number;
+  mime: string;
+  kind: AttachmentKind;
+};
+
+export const ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024;
+export const ATTACHMENT_MAX_PER_SESSION = 20;
+export const ATTACHMENT_ALLOWED_MIME: readonly string[] = [
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/gif',
+  'application/pdf',
+  'text/plain',
+  'text/markdown',
+];
