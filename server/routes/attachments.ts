@@ -7,7 +7,7 @@ import {
   ATTACHMENT_MAX_PER_SESSION,
   type Attachment,
   type AttachmentKind,
-} from '@shared/types';
+} from '../../shared/types';
 import type { Express, Request, Response } from 'express';
 import multer from 'multer';
 import { ERR, sendError, sendInternalError } from '../errors';
