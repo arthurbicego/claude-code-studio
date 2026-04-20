@@ -2,9 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { SessionsListResponse } from '@shared/types';
 import type { Express, Request, Response } from 'express';
+import { ERR, sendError, sendInternalError } from '../errors';
 import { buildFooterPayload, removeFooterCacheFor } from '../footer';
 import { runGit } from '../git';
-import { ERR, sendError, sendInternalError } from '../errors';
 import { liveSessions } from '../live-sessions';
 import { CLAUDE_PROJECTS } from '../paths';
 import {
