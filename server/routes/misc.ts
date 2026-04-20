@@ -68,7 +68,12 @@ export function register(app: Express): void {
       const p = path.join(os.homedir(), '.claude', name);
       try {
         const s = JSON.parse(fs.readFileSync(p, 'utf8')) as Record<string, unknown>;
-        if (typeof s.model === 'string') defaults.model = s.model;
+        if (typeof s.model === 'string') {
+          // Claude stores model variants as `opus[1m]`, `sonnet[1m]`, etc. The web UI only
+          // offers the base family in its dropdown, so strip the trailing `[…]` suffix so the
+          // user's configured model matches one of the options and renders as the default.
+          defaults.model = s.model.replace(/\[[^\]]*\]$/, '');
+        }
         if (typeof s.effortLevel === 'string') defaults.effort = s.effortLevel;
         if (typeof s.permissionMode === 'string') defaults.permissionMode = s.permissionMode;
       } catch (err) {
