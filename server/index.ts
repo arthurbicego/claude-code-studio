@@ -12,6 +12,7 @@ import * as ptyRoutes from './routes/pty';
 import * as sandboxRoutes from './routes/sandbox';
 import * as sessionsRoutes from './routes/sessions';
 import * as worktreesRoutes from './routes/worktrees';
+import { hostGuard, originGuard } from './security';
 import * as sse from './sse';
 
 if (!CLAUDE_BIN) {
@@ -26,6 +27,8 @@ const WEB_DIST = path.join(__dirname, '..', 'web', 'dist');
 
 const app = express();
 expressWs(app);
+app.use(hostGuard);
+app.use(originGuard);
 app.use(express.json());
 
 if (fs.existsSync(WEB_DIST)) {

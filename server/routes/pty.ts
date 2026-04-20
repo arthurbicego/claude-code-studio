@@ -10,6 +10,7 @@ import {
   maybeBroadcastStateChange,
   safeSend,
 } from '../live-sessions';
+import { isWsUpgradeAllowed } from '../security';
 
 type WsHandler = (ws: WebSocket, req: Request) => void;
 type AppWithWs = Express & { ws: (path: string, handler: WsHandler) => void };
@@ -26,6 +27,10 @@ export function register(app: Express): void {
   const wsApp = app as AppWithWs;
 
   wsApp.ws('/pty', (ws, req) => {
+    if (!isWsUpgradeAllowed(req)) {
+      closeSilently(ws);
+      return;
+    }
     const sessionKey = req.query.sessionKey ? String(req.query.sessionKey).trim() : '';
     if (!sessionKey) {
       safeSend(ws, { type: 'error', message: 'sessionKey obrigatório' });
@@ -89,6 +94,10 @@ export function register(app: Express): void {
   });
 
   wsApp.ws('/pty/shell', (ws, req) => {
+    if (!isWsUpgradeAllowed(req)) {
+      closeSilently(ws);
+      return;
+    }
     const rawCwd = req.query.cwd ? String(req.query.cwd) : '';
     const targetCwd = rawCwd && fs.existsSync(rawCwd) ? rawCwd : os.homedir();
     let term: ReturnType<typeof pty.spawn>;
