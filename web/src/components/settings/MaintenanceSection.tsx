@@ -3,11 +3,14 @@ import {
   type MaintenanceCategory,
   type MaintenanceCategoryKey,
   type MaintenanceCleanupResult,
+  type MaintenanceItem,
 } from '@shared/types'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/Button'
+import { CopyableField } from '@/components/ui/CopyableField'
+import { InfoPopover } from '@/components/ui/InfoPopover'
 import { useMaintenance } from '@/hooks/useMaintenance'
 import { cn } from '@/lib/utils'
 import { Section } from './atoms'
@@ -198,8 +201,9 @@ function CategoryCard({
       {expanded && category && category.items.length > 0 ? (
         <ul className="flex max-h-48 flex-col gap-0.5 overflow-auto rounded bg-black/20 px-2 py-1.5 font-mono text-[10px] text-muted-foreground">
           {category.items.slice(0, PREVIEW_LIMIT).map((item) => (
-            <li key={item.id} className="truncate">
-              {item.path ?? item.id}
+            <li key={item.id} className="flex items-center gap-2">
+              <span className="min-w-0 flex-1 truncate">{item.path ?? item.id}</span>
+              <ItemInfoPopover item={item} />
             </li>
           ))}
           {category.items.length > PREVIEW_LIMIT ? (
@@ -220,5 +224,54 @@ function CategoryCard({
         </p>
       ) : null}
     </div>
+  )
+}
+
+function ItemInfoPopover({ item }: { item: MaintenanceItem }) {
+  const { t } = useTranslation()
+  return (
+    <InfoPopover
+      ariaLabel={t('settings.geral.maintenance.item.showDetails')}
+      tooltip={t('settings.geral.maintenance.item.tooltip')}
+      triggerClassName="shrink-0"
+    >
+      <div className="flex flex-col gap-2">
+        <CopyableField
+          label={t('settings.geral.maintenance.item.fieldId')}
+          value={item.id}
+          copyAriaLabel={t('settings.geral.maintenance.item.copyId')}
+        />
+        {item.path ? (
+          <CopyableField
+            label={t('settings.geral.maintenance.item.fieldPath')}
+            value={item.path}
+            copyAriaLabel={t('settings.geral.maintenance.item.copyPath')}
+          />
+        ) : null}
+        {item.cwd ? (
+          <CopyableField
+            label={t('settings.geral.maintenance.item.fieldCwd')}
+            value={item.cwd}
+            copyAriaLabel={t('settings.geral.maintenance.item.copyCwd')}
+          />
+        ) : null}
+        {typeof item.size === 'number' ? (
+          <div className="flex flex-col gap-1">
+            <span className="text-[9px] uppercase tracking-wide text-muted-foreground">
+              {t('settings.geral.maintenance.item.fieldSize')}
+            </span>
+            <span className="font-mono">{formatBytes(item.size)}</span>
+          </div>
+        ) : null}
+        {item.detail ? (
+          <div className="flex flex-col gap-1">
+            <span className="text-[9px] uppercase tracking-wide text-muted-foreground">
+              {t('settings.geral.maintenance.item.fieldDetail')}
+            </span>
+            <span className="font-mono">{item.detail}</span>
+          </div>
+        ) : null}
+      </div>
+    </InfoPopover>
   )
 }

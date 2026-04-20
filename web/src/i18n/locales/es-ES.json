@@ -390,6 +390,18 @@
           "irreversible": "Esta acción es irreversible.",
           "confirm": "Eliminar permanentemente"
         },
+        "item": {
+          "showDetails": "Mostrar detalles del elemento",
+          "tooltip": "Detalles",
+          "fieldId": "ID",
+          "fieldPath": "Ruta",
+          "fieldSize": "Tamaño",
+          "fieldCwd": "cwd registrado",
+          "fieldDetail": "Detalle",
+          "copyId": "Copiar ID",
+          "copyPath": "Copiar ruta",
+          "copyCwd": "Copiar cwd"
+        },
         "category": {
           "projectsWithoutSessions": {
             "title": "Proyectos sin sesiones",

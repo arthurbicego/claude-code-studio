@@ -390,6 +390,18 @@
           "irreversible": "This action is irreversible.",
           "confirm": "Delete permanently"
         },
+        "item": {
+          "showDetails": "Show item details",
+          "tooltip": "Details",
+          "fieldId": "ID",
+          "fieldPath": "Path",
+          "fieldSize": "Size",
+          "fieldCwd": "Recorded cwd",
+          "fieldDetail": "Detail",
+          "copyId": "Copy ID",
+          "copyPath": "Copy path",
+          "copyCwd": "Copy cwd"
+        },
         "category": {
           "projectsWithoutSessions": {
             "title": "Projects without sessions",
