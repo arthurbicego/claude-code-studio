@@ -99,10 +99,17 @@ export function buildChildEnv(): NodeJS.ProcessEnv {
   return env;
 }
 
+function extractFlag(args: string[], name: string): string | null {
+  const i = args.indexOf(name);
+  if (i === -1 || i + 1 >= args.length) return null;
+  return args[i + 1];
+}
+
 export function spawnClaudePty({ cwd, args }: { cwd?: string; args: string[] }): IPty {
   if (!CLAUDE_BIN) throw new Error('claude binary not found');
   const targetCwd = cwd && fs.existsSync(cwd) ? cwd : os.homedir();
-  console.log(`[pty] spawn: claude ${args.join(' ')}  (cwd=${targetCwd})`);
+  const sessionId = extractFlag(args, '--session-id') || extractFlag(args, '--resume') || '(new)';
+  console.log(`[pty] spawn: claude session=${sessionId} cwd=${targetCwd}`);
   return pty.spawn(CLAUDE_BIN, args, {
     name: 'xterm-256color',
     cols: 80,
