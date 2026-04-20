@@ -108,7 +108,10 @@
     "select": "Select",
     "hidden": "hidden",
     "empty": "Empty folder",
-    "defaultSuffix": "{{value}} (default)"
+    "defaultSuffix": "{{value}} (default)",
+    "advanced": "Advanced",
+    "dangerouslySkipPermissions": "Skip permission prompts (--dangerously-skip-permissions)",
+    "dangerouslySkipPermissionsHint": "The session will run without asking for authorization. Use only in trusted environments."
   },
   "dialogs": {
     "archiveSession": {

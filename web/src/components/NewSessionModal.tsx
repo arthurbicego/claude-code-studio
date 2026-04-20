@@ -94,6 +94,7 @@ export function NewSessionModal({
   const [model, setModel] = useState<Model>(initialModel)
   const [effort, setEffort] = useState<Effort>(initialEffort)
   const [permissionMode, setPermissionMode] = useState<PermissionMode>(initialPermission)
+  const [dangerouslySkipPermissions, setDangerouslySkipPermissions] = useState(false)
   const [selectedCwd, setSelectedCwd] = useState<string | null>(null)
   const [isolate, setIsolate] = useState(false)
   const [userTouchedIsolate, setUserTouchedIsolate] = useState(false)
@@ -107,6 +108,7 @@ export function NewSessionModal({
       setIsolate(false)
       setUserTouchedIsolate(false)
       setWorktreeName('')
+      setDangerouslySkipPermissions(false)
       return
     }
     if (initial?.cwd) setSelectedCwd(initial.cwd)
@@ -145,6 +147,9 @@ export function NewSessionModal({
       model,
       effort,
       permissionMode,
+    }
+    if (dangerouslySkipPermissions) {
+      launchPayload.dangerouslySkipPermissions = true
     }
     if (isolate) {
       launchPayload.worktree = worktreeName.trim() || '1'
@@ -262,6 +267,26 @@ export function NewSessionModal({
               <span>{t('newSession.activeAutoIsolate')}</span>
             </div>
           ) : null}
+        </section>
+
+        <section className="border-b border-border p-4">
+          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {t('newSession.advanced')}
+          </h3>
+          <label className="flex cursor-pointer items-start gap-2 text-xs text-foreground">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={dangerouslySkipPermissions}
+              onChange={(e) => setDangerouslySkipPermissions(e.target.checked)}
+            />
+            <span className="flex flex-col gap-0.5">
+              <span>{t('newSession.dangerouslySkipPermissions')}</span>
+              <span className="text-[11px] text-muted-foreground/80">
+                {t('newSession.dangerouslySkipPermissionsHint')}
+              </span>
+            </span>
+          </label>
         </section>
 
         <section className="border-b border-border p-4">

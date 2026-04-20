@@ -108,7 +108,10 @@
     "select": "Seleccionar",
     "hidden": "ocultos",
     "empty": "Carpeta vacía",
-    "defaultSuffix": "{{value}} (por defecto)"
+    "defaultSuffix": "{{value}} (por defecto)",
+    "advanced": "Avanzado",
+    "dangerouslySkipPermissions": "Saltar los prompts de permiso (--dangerously-skip-permissions)",
+    "dangerouslySkipPermissionsHint": "La sesión ejecutará todo sin pedir autorización. Úsalo solo en entornos confiables."
   },
   "dialogs": {
     "archiveSession": {
