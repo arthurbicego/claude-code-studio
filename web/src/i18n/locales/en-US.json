@@ -127,12 +127,12 @@
     "permissionInfoTooltip": "About permission modes",
     "permissionInfoAria": "Show details about permission modes",
     "permissionMode": {
-      "default": "Read-only. Getting started or sensitive work.",
-      "acceptEdits": "Reads, file edits, and common filesystem commands (mkdir, touch, mv, cp, etc.).",
-      "plan": "Read-only; Claude researches and proposes changes without applying them.",
-      "auto": "Everything, with background safety checks (classifier). Requires v2.1.83+.",
-      "dontAsk": "Only pre-approved tools; auto-denies everything else. Meant for locked-down CI.",
-      "bypassPermissions": "Everything except protected paths. Isolated containers and VMs only."
+      "default": "Asks permission before each tool (except ones pre-approved in settings). Safe default.",
+      "acceptEdits": "Auto-approves file edits and common filesystem commands (mkdir, touch, mv, cp…). Still asks for riskier operations.",
+      "plan": "Research-only — Claude proposes a plan without applying any edits. Good for aligning the approach before executing.",
+      "auto": "Runs everything without asking, with a background safety classifier blocking risky actions. Requires v2.1.83+.",
+      "dontAsk": "Runs only pre-approved tools; auto-denies the rest. Built for CI/automation that can't block waiting for input.",
+      "bypassPermissions": "Runs anything without asking, except protected paths. Use only in isolated containers/VMs."
     }
   },
   "dialogs": {
