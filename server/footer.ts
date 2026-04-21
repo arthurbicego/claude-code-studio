@@ -5,7 +5,7 @@ import type { SessionFooter } from '@shared/types';
 import { gitInfo, uncommittedLineStats } from './git';
 import { STATUSLINE_CACHE_DIR, STATUSLINE_GLOBAL_META } from './paths';
 import { FOOTER_ID_RE } from './validators';
-import { detectWorktree } from './worktrees';
+import { detectWorktree, projectWorktreeRef } from './worktrees';
 
 type RateLimitBlock = {
   used_percentage?: number;
@@ -51,6 +51,11 @@ export function buildFooterPayload(id: string): SessionFooter {
   const { branch, dirty } = gitInfo(cwd);
   const { added: linesAdded, removed: linesRemoved } = uncommittedLineStats(cwd);
   const worktree = detectWorktree(cwd);
+  // When the session runs inside a linked worktree, surface the parent repo's
+  // directory name in the "dir" field — the worktree identity is already shown
+  // by the adjacent branch pill.
+  const wtRef = cwd ? projectWorktreeRef(cwd) : null;
+  const labelCwd = wtRef?.parentCwd ?? cwd;
 
   const ctxPct = cache?.context_window?.used_percentage;
   const exceeds200k = cache?.exceeds_200k_tokens === true;
@@ -61,7 +66,7 @@ export function buildFooterPayload(id: string): SessionFooter {
   return {
     hasCache: !!cache,
     cwd,
-    dirLabel: cwd ? (cwd === os.homedir() ? '~' : path.basename(cwd)) : null,
+    dirLabel: labelCwd ? (labelCwd === os.homedir() ? '~' : path.basename(labelCwd)) : null,
     branch,
     dirty,
     model: cache?.model?.display_name || null,
