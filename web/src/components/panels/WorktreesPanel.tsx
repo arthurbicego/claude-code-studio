@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next'
-import { FileDiff, GitBranch, GitMerge, Play, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { FileDiff, GitBranch, GitMerge, Play, Plus, RefreshCw, Trash, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
@@ -8,7 +8,7 @@ import { Tooltip } from '@/components/ui/Tooltip'
 import { useWorktrees } from '@/hooks/useWorktrees'
 import { readApiError, translateApiError } from '@/lib/apiError'
 import { cn } from '@/lib/utils'
-import type { Worktree } from '@/types'
+import type { Worktree, WorktreeRemoveResult } from '@/types'
 import { PanelContainer } from './PanelContainer'
 
 type Props = {
@@ -48,6 +48,7 @@ export function WorktreesPanel({
   const { data, loading, error, refresh } = useWorktrees(cwd)
   const [pendingRemove, setPendingRemove] = useState<Worktree | null>(null)
   const [pendingMerge, setPendingMerge] = useState<Worktree | null>(null)
+  const [pendingDiscard, setPendingDiscard] = useState<Worktree | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [actionNotice, setActionNotice] = useState<string | null>(null)
 
@@ -86,6 +87,26 @@ export function WorktreesPanel({
     </>
   )
 
+  const buildCleanupNotice = (
+    baseKey: 'removed' | 'discarded',
+    wt: Worktree,
+    body: WorktreeRemoveResult,
+  ): string => {
+    const name = wt.branch ?? wt.path
+    const parts: string[] = [t(`panels.worktrees.${baseKey}`, { name })]
+    if (body.branch) {
+      parts.push(
+        body.branchDeleted
+          ? t('panels.worktrees.branchDeleted', { branch: body.branch })
+          : t('panels.worktrees.branchKept', { branch: body.branch }),
+      )
+    }
+    if (body.upstream) {
+      parts.push(t('panels.worktrees.remoteHint', { upstream: body.upstream }))
+    }
+    return parts.join(' · ')
+  }
+
   const doRemove = async (wt: Worktree) => {
     if (!cwd) return
     setActionError(null)
@@ -96,7 +117,29 @@ export function WorktreesPanel({
         const apiErr = await readApiError(res)
         throw new Error(translateApiError(t, apiErr))
       }
-      setActionNotice(t('panels.worktrees.removed', { name: wt.branch ?? wt.path }))
+      const body = (await res.json()) as WorktreeRemoveResult
+      setActionNotice(buildCleanupNotice('removed', wt, body))
+      refresh()
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err))
+    }
+  }
+
+  const doDiscard = async (wt: Worktree) => {
+    if (!cwd) return
+    setActionError(null)
+    try {
+      const res = await fetch('/api/worktrees/discard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cwd, path: wt.path }),
+      })
+      if (!res.ok) {
+        const apiErr = await readApiError(res)
+        throw new Error(translateApiError(t, apiErr))
+      }
+      const body = (await res.json()) as WorktreeRemoveResult
+      setActionNotice(buildCleanupNotice('discarded', wt, body))
       refresh()
     } catch (err) {
       setActionError(err instanceof Error ? err.message : String(err))
@@ -128,6 +171,7 @@ export function WorktreesPanel({
     const rel = cwd ? formatRelative(wt.path, cwd) : wt.path
     const age = formatAge(wt.mtime, t)
     const removeDisabled = wt.isMain || wt.liveSessionCount > 0 || !wt.clean
+    const discardDisabled = wt.isMain || wt.liveSessionCount > 0 || wt.clean
     const removeReason = wt.isMain
       ? t('panels.worktrees.mainCannotRemove')
       : wt.liveSessionCount > 0
@@ -166,6 +210,14 @@ export function WorktreesPanel({
         icon: Trash2,
         destructive: true,
         onSelect: () => setPendingRemove(wt),
+      })
+    }
+    if (!discardDisabled) {
+      items.push({
+        label: t('panels.worktrees.discardWorktree'),
+        icon: Trash,
+        destructive: true,
+        onSelect: () => setPendingDiscard(wt),
       })
     }
 
@@ -368,6 +420,25 @@ export function WorktreesPanel({
           if (pendingMerge) await doMerge(pendingMerge)
         }}
         onClose={() => setPendingMerge(null)}
+      />
+
+      <ConfirmDialog
+        open={!!pendingDiscard}
+        title={t('panels.worktrees.discardConfirmTitle')}
+        description={
+          pendingDiscard
+            ? t('panels.worktrees.discardConfirmBody', {
+                name: pendingDiscard.branch ?? pendingDiscard.path,
+                count: pendingDiscard.modifiedCount,
+              })
+            : ''
+        }
+        confirmLabel={t('panels.worktrees.discardConfirm')}
+        destructive
+        onConfirm={async () => {
+          if (pendingDiscard) await doDiscard(pendingDiscard)
+        }}
+        onClose={() => setPendingDiscard(null)}
       />
     </PanelContainer>
   )

@@ -8,6 +8,8 @@ import { liveSessionWorkspaces } from '../live-sessions';
 import { isAllowedProjectCwd, isPathWithinCwd, realpathSafe } from '../paths';
 import { BRANCH_NAME_RE } from '../validators';
 import {
+  branchUpstream,
+  deleteLocalBranch,
   guessDefaultBranch,
   listWorktrees,
   pickMainWorktree,
@@ -123,6 +125,9 @@ export function register(app: Express): void {
         'there are active sessions in this worktree',
       );
     }
+    const entry = entries.find((e) => realpathSafe(e.path) === realpathSafe(resolved)) ?? null;
+    const branch = entry?.branch && BRANCH_NAME_RE.test(entry.branch) ? entry.branch : null;
+    const upstream = branch ? branchUpstream(cwd, branch) : null;
     try {
       const args = ['worktree', 'remove'];
       if (force) args.push('--force');
@@ -137,7 +142,10 @@ export function register(app: Express): void {
         e.stderr?.toString() || e.message || 'git command failed',
       );
     }
-    res.json({ ok: true });
+    // Best-effort local branch cleanup: `-d` refuses unmerged branches, so
+    // anything with unmerged work stays put for the user to decide on.
+    const branchDeleted = branch ? deleteLocalBranch(cwd, branch) : false;
+    res.json({ ok: true, branch, branchDeleted, upstream });
   });
 
   app.post('/api/worktrees/commit', (req: Request, res: Response) => {
@@ -199,6 +207,9 @@ export function register(app: Express): void {
         'there are active sessions in this worktree',
       );
     }
+    const entry = entries.find((e) => realpathSafe(e.path) === realpathSafe(resolved)) ?? null;
+    const branch = entry?.branch && BRANCH_NAME_RE.test(entry.branch) ? entry.branch : null;
+    const upstream = branch ? branchUpstream(cwd, branch) : null;
     try {
       runGitArgs(resolved, ['reset', '--hard', 'HEAD']);
       runGitArgs(resolved, ['clean', '-fd']);
@@ -212,7 +223,9 @@ export function register(app: Express): void {
         e.stderr?.toString() || e.message || 'git command failed',
       );
     }
-    res.json({ ok: true });
+    // Discard is explicitly destructive, so force-delete any local commits too.
+    const branchDeleted = branch ? deleteLocalBranch(cwd, branch, { force: true }) : false;
+    res.json({ ok: true, branch, branchDeleted, upstream });
   });
 
   app.post('/api/worktrees/merge', (req: Request, res: Response) => {

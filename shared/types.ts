@@ -202,6 +202,13 @@ export type WorktreeDiffResult = {
   untracked: string[];
 };
 
+export type WorktreeRemoveResult = {
+  ok: true;
+  branch: string | null;
+  branchDeleted: boolean;
+  upstream: string | null;
+};
+
 export type SectionPrefs = {
   groupByProject: boolean;
   /** `null` means the user has a custom order (drag-and-drop) with no named mode selected. */

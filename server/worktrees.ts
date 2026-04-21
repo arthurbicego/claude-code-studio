@@ -117,3 +117,34 @@ export function pickMainWorktree(entries: WorktreeEntry[]): WorktreeEntry | null
   }
   return entries[0] || null;
 }
+
+export function branchUpstream(cwd: string, branch: string): string | null {
+  const out = runGitArgs(cwd, [
+    'for-each-ref',
+    '--format=%(upstream:short)',
+    `refs/heads/${branch}`,
+  ]).trim();
+  return out || null;
+}
+
+export function branchExists(cwd: string, branch: string): boolean {
+  return (
+    runGitArgs(cwd, ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`]).trim().length > 0
+  );
+}
+
+/**
+ * Tries to delete a local branch. With `force=false` (default), `git branch -d`
+ * refuses unmerged branches — acts as a safety net, leaving anything with lost
+ * work alone. With `force=true`, uses `-D` (unsafe delete).
+ * Returns true if the branch is gone after the call.
+ */
+export function deleteLocalBranch(
+  cwd: string,
+  branch: string,
+  opts: { force?: boolean } = {},
+): boolean {
+  const flag = opts.force ? '-D' : '-d';
+  runGitArgs(cwd, ['branch', flag, branch]);
+  return !branchExists(cwd, branch);
+}
