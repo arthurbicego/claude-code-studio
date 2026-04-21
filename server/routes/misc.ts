@@ -75,7 +75,14 @@ export function register(app: Express): void {
           defaults.model = s.model.replace(/\[[^\]]*\]$/, '');
         }
         if (typeof s.effortLevel === 'string') defaults.effort = s.effortLevel;
+        // The Claude Code CLI reads the user's default permission mode from
+        // `permissions.defaultMode`. Accept the legacy top-level `permissionMode` as a
+        // fallback, and give the nested key precedence so the studio matches CLI behaviour.
         if (typeof s.permissionMode === 'string') defaults.permissionMode = s.permissionMode;
+        if (typeof s.permissions === 'object' && s.permissions !== null) {
+          const perms = s.permissions as Record<string, unknown>;
+          if (typeof perms.defaultMode === 'string') defaults.permissionMode = perms.defaultMode;
+        }
       } catch (err) {
         const e = err as NodeJS.ErrnoException;
         // ENOENT is the normal case when either settings file is missing.
