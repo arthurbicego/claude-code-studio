@@ -184,6 +184,7 @@ export function listProjectsWithSessions(
       cwd: projectCwd,
       cwdResolved: true,
       sessions,
+      worktreeOf: null,
     });
   }
   return projects.sort((a, b) => (b.sessions[0]?.mtime || 0) - (a.sessions[0]?.mtime || 0));

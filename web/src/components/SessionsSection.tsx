@@ -7,6 +7,7 @@ import {
   ChevronRight,
   FolderCode,
   FolderTree,
+  GitBranch,
   List,
   Trash2,
   X,
@@ -239,6 +240,7 @@ export function SessionsSection({
               cwd: launch.cwd,
               cwdResolved: false,
               sessions: [synthSession],
+              worktreeOf: null,
             },
             session: synthSession,
           })
@@ -266,6 +268,27 @@ export function SessionsSection({
     }
     return out
   }, [filteredProjects, sessionSortByProject])
+
+  // Split filteredProjects into main projects and their worktree children.
+  // A project counts as a worktree child only if its parent is also present in
+  // the filtered list — otherwise we promote it to the top level so nothing gets
+  // hidden when the parent repo has no sessions in this section.
+  const { mainProjects, childrenByParent } = useMemo(() => {
+    const mainCwdSet = new Set<string>()
+    for (const p of filteredProjects) if (!p.worktreeOf) mainCwdSet.add(p.cwd)
+    const main: Project[] = []
+    const byParent = new Map<string, Project[]>()
+    for (const p of filteredProjects) {
+      if (p.worktreeOf && mainCwdSet.has(p.worktreeOf.parentCwd)) {
+        const arr = byParent.get(p.worktreeOf.parentCwd) ?? []
+        arr.push(p)
+        byParent.set(p.worktreeOf.parentCwd, arr)
+      } else {
+        main.push(p)
+      }
+    }
+    return { mainProjects: main, childrenByParent: byParent }
+  }, [filteredProjects])
 
   const total = flat.length
 
@@ -322,7 +345,7 @@ export function SessionsSection({
         <p className="px-2 py-2 text-xs text-muted-foreground">{t('common.empty')}</p>
       ) : prefs.groupByProject ? (
         <div className="mt-1">
-          {filteredProjects.map((p) => {
+          {mainProjects.map((p) => {
             const effectiveSort = sessionSortByProject[p.slug] ?? DEFAULT_SESSION_SORT
             const sessions = sortSessions(p.sessions, effectiveSort)
             const expandKey = `${prefsKey}:${p.slug}`
@@ -330,6 +353,7 @@ export function SessionsSection({
             const expanded = groupsExpandedByDefault ? !explicit : explicit
             const showBefore = dropTarget?.slug === p.slug && dropTarget.position === 'before'
             const showAfter = dropTarget?.slug === p.slug && dropTarget.position === 'after'
+            const worktreeChildren = childrenByParent.get(p.cwd) ?? []
             return (
               <div key={p.slug} className="relative mb-2">
                 {showBefore ? (
@@ -387,6 +411,7 @@ export function SessionsSection({
                     )}
                   />
                   <span className="flex-1 truncate">{basename(p.cwd)}</span>
+                  {p.worktreeOf ? <WorktreeBranchPill branch={p.worktreeOf.branch} /> : null}
                   <Tooltip content={t('sessions.count', { count: sessions.length })}>
                     <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                       {sessions.length}
@@ -438,6 +463,25 @@ export function SessionsSection({
                 </div>
                 {expanded ? (
                   <div className="flex flex-col gap-px pl-3.5">
+                    {worktreeChildren.map((child) => (
+                      <WorktreeGroup
+                        key={child.slug}
+                        project={child}
+                        prefsKey={prefsKey}
+                        groupsExpandedByDefault={groupsExpandedByDefault}
+                        sessionSortByProject={sessionSortByProject}
+                        setSessionSortForProject={setSessionSortForProject}
+                        liveSessions={liveSessions}
+                        activeSessionKey={activeSessionKey}
+                        variant={variant}
+                        onResumeSession={onResumeSession}
+                        onArchive={onArchive}
+                        onUnarchive={onUnarchive}
+                        onDelete={onDelete}
+                        onCloseSession={onCloseSession}
+                        renderState={renderState}
+                      />
+                    ))}
                     {sessions.map((s) => (
                       <SessionRow
                         key={s.id}
@@ -557,8 +601,9 @@ function SessionRow({
       >
         <span className="line-clamp-2 leading-snug">{formatPreview(session)}</span>
         {showProject ? (
-          <span className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground/60">
-            {basename(project.cwd)}
+          <span className="mt-0.5 flex items-center gap-1 truncate font-mono text-[10px] text-muted-foreground/60">
+            <span className="truncate">{basename(project.cwd)}</span>
+            {project.worktreeOf ? <WorktreeBranchPill branch={project.worktreeOf.branch} /> : null}
           </span>
         ) : null}
         <span className="mt-1 font-mono text-[10px] text-muted-foreground/60">
@@ -601,5 +646,128 @@ function PathPopover({ path }: { path: string }) {
         copyAriaLabel={t('sessions.project.copyPath')}
       />
     </InfoPopover>
+  )
+}
+
+function WorktreeBranchPill({ branch }: { branch: string | null }) {
+  const { t } = useTranslation()
+  const label = branch ?? t('panels.worktrees.detached')
+  return (
+    <span className="inline-flex items-center gap-1 rounded bg-indigo-500/15 px-1.5 py-0.5 text-indigo-300">
+      <GitBranch size={10} />
+      <span className="font-mono text-[10px]">{label}</span>
+    </span>
+  )
+}
+
+type WorktreeGroupProps = {
+  project: Project
+  prefsKey: string
+  groupsExpandedByDefault: boolean
+  sessionSortByProject: Record<string, SessionSortBy>
+  setSessionSortForProject: (slug: string, next: SessionSortBy) => void
+  liveSessions: Map<string, LiveSession>
+  activeSessionKey: string | null
+  variant: Variant
+  onResumeSession: (project: Project, session: SessionMeta) => void
+  onArchive: (id: string) => void
+  onUnarchive: (id: string) => void
+  onDelete: (session: SessionMeta) => void
+  onCloseSession?: (sessionKey: string) => void
+  renderState: (live: LiveSession | undefined) => React.ReactNode
+}
+
+function WorktreeGroup({
+  project,
+  prefsKey,
+  groupsExpandedByDefault,
+  sessionSortByProject,
+  setSessionSortForProject,
+  liveSessions,
+  activeSessionKey,
+  variant,
+  onResumeSession,
+  onArchive,
+  onUnarchive,
+  onDelete,
+  onCloseSession,
+  renderState,
+}: WorktreeGroupProps) {
+  const { t } = useTranslation()
+  const { isExpanded, toggle } = useExpanded()
+  const expandKey = `${prefsKey}:${project.slug}`
+  const explicit = isExpanded(expandKey)
+  const expanded = groupsExpandedByDefault ? !explicit : explicit
+  const effectiveSort = sessionSortByProject[project.slug] ?? DEFAULT_SESSION_SORT
+  const sessions = sortSessions(project.sessions, effectiveSort)
+
+  return (
+    <div className="mb-1">
+      {/* biome-ignore lint/a11y/useSemanticElements: keep markup parallel to the main project row; nested <button> inside the sort dropdown would be invalid HTML */}
+      <div
+        role="button"
+        tabIndex={0}
+        className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-left text-xs text-foreground hover:bg-accent cursor-pointer"
+        onClick={() => toggle(expandKey)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            toggle(expandKey)
+          }
+        }}
+      >
+        <ChevronRight
+          size={12}
+          className={cn('text-muted-foreground transition-transform', expanded && 'rotate-90')}
+        />
+        <WorktreeBranchPill branch={project.worktreeOf?.branch ?? null} />
+        <Tooltip content={t('sessions.count', { count: sessions.length })}>
+          <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+            {sessions.length}
+          </span>
+        </Tooltip>
+        <span className="flex-1" />
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: event-barrier wrapper so clicks/keys on the DropdownMenu don't bubble to the row toggle */}
+        <div
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          role="presentation"
+          className="flex items-center"
+        >
+          <DropdownMenu
+            triggerIcon={ArrowDownAZ}
+            items={buildSessionSortMenuItems(t, effectiveSort, (next) =>
+              setSessionSortForProject(project.slug, next),
+            )}
+            ariaLabel={t('sessions.project.sortMenu')}
+            tooltip={t('sessions.project.sortBy', {
+              label: sessionSortLabel(t, effectiveSort),
+            })}
+          />
+        </div>
+      </div>
+      {expanded ? (
+        <div className="flex flex-col gap-px pl-3.5">
+          {sessions.map((s) => (
+            <SessionRow
+              key={s.id}
+              project={project}
+              session={s}
+              live={liveSessions.get(s.id)}
+              active={s.id === activeSessionKey}
+              variant={variant}
+              onResumeSession={onResumeSession}
+              onArchive={onArchive}
+              onUnarchive={onUnarchive}
+              onDelete={onDelete}
+              onCloseSession={onCloseSession}
+              renderState={renderState}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
   )
 }

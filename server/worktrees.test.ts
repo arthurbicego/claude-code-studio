@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { branchExists, branchUpstream, deleteLocalBranch } from './worktrees';
+import { branchExists, branchUpstream, deleteLocalBranch, projectWorktreeRef } from './worktrees';
 
 function git(cwd: string, ...args: string[]): string {
   return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
@@ -86,6 +86,30 @@ describe('worktrees branch helpers', () => {
       git(repo, 'checkout', 'main');
       expect(deleteLocalBranch(repo, 'feature-force', { force: true })).toBe(true);
       expect(branchExists(repo, 'feature-force')).toBe(false);
+    });
+  });
+
+  describe('projectWorktreeRef', () => {
+    it('returns null for the main worktree', () => {
+      expect(projectWorktreeRef(repo)).toBeNull();
+    });
+
+    it('returns null for a non-existent path', () => {
+      expect(projectWorktreeRef(path.join(repo, 'nope'))).toBeNull();
+    });
+
+    it('returns parentCwd and branch when cwd is a linked worktree', () => {
+      const wtPath = path.join(path.dirname(repo), `ccs-wt-linked-${path.basename(repo)}`);
+      try {
+        git(repo, 'worktree', 'add', '-b', 'feature-x', wtPath);
+        const ref = projectWorktreeRef(wtPath);
+        expect(ref).not.toBeNull();
+        expect(ref?.branch).toBe('feature-x');
+        // realpath comparison avoids false negatives when /tmp resolves through symlinks.
+        expect(fs.realpathSync(ref?.parentCwd ?? '')).toBe(fs.realpathSync(repo));
+      } finally {
+        fs.rmSync(wtPath, { recursive: true, force: true });
+      }
     });
   });
 });
