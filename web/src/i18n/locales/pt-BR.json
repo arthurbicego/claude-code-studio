@@ -127,12 +127,12 @@
     "permissionInfoTooltip": "Sobre os modos de permissão",
     "permissionInfoAria": "Ver detalhes dos modos de permissão",
     "permissionMode": {
-      "default": "Apenas leitura. Ideal para começar ou em trabalho sensível.",
-      "acceptEdits": "Leituras, edições de arquivo e comandos comuns de FS (mkdir, touch, mv, cp, etc.).",
-      "plan": "Apenas leitura; Claude pesquisa e propõe mudanças sem aplicar.",
-      "auto": "Tudo, com verificações de segurança em background (classificador). Requer v2.1.83+.",
-      "dontAsk": "Apenas ferramentas pré-aprovadas; nega automaticamente o resto. Indicado para CI.",
-      "bypassPermissions": "Tudo, exceto caminhos protegidos. Apenas em containers isolados e VMs."
+      "default": "Pede autorização antes de cada ferramenta (exceto as pré-aprovadas em settings). Padrão seguro.",
+      "acceptEdits": "Aprova sozinho edições de arquivo e comandos comuns de FS (mkdir, touch, mv, cp…). Ainda pergunta em operações de risco.",
+      "plan": "Só pesquisa e propõe um plano — nenhuma edição é aplicada. Bom para alinhar a abordagem antes de executar.",
+      "auto": "Executa tudo sem perguntar, com um classificador de segurança em background barrando ações de risco. Requer v2.1.83+.",
+      "dontAsk": "Só executa ferramentas pré-aprovadas; nega o resto sem perguntar. Feito para CI/automação que não pode travar esperando input.",
+      "bypassPermissions": "Executa qualquer coisa sem perguntar, exceto caminhos protegidos. Use só em containers/VMs isolados."
     }
   },
   "dialogs": {
