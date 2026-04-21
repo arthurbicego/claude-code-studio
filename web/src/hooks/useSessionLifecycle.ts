@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { LiveSession, OpenPanel, PanelKind, SessionLaunch } from '@/types'
 
 function newSessionKey(): string {
@@ -20,6 +20,34 @@ export function useSessionLifecycle(liveSessions: LiveSessionsMap) {
   const [openPanelsBySession, setOpenPanelsBySession] = useState<Map<string, OpenPanel[]>>(
     new Map(),
   )
+  // Sessões que já foram conciliadas com o snapshot do servidor. Garante que,
+  // se o usuário fechar uma sessão rehidratada, ela não reapareça quando a
+  // próxima atualização do SSE ainda a contiver.
+  const reconciledKeysRef = useRef<Set<string>>(new Set())
+
+  // Rehidrata `openSessions` a partir do snapshot de sessões vivas do servidor.
+  // Sem isso, um refresh da página zera o mapa local (estado React em memória)
+  // enquanto o PTY continua rodando no backend — as sessões reaparecem no
+  // histórico em "standby" mas somem da seção "Abertas".
+  useEffect(() => {
+    const fresh: [string, SessionLaunch][] = []
+    for (const [key, live] of liveSessions) {
+      if (reconciledKeysRef.current.has(key)) continue
+      reconciledKeysRef.current.add(key)
+      fresh.push([key, { sessionKey: key, cwd: live.cwd, resume: key }])
+    }
+    if (fresh.length === 0) return
+    setOpenSessions((prev) => {
+      let changed = false
+      const next = new Map(prev)
+      for (const [key, launch] of fresh) {
+        if (next.has(key)) continue
+        next.set(key, launch)
+        changed = true
+      }
+      return changed ? next : prev
+    })
+  }, [liveSessions])
 
   const activeLaunch = activeSessionKey ? (openSessions.get(activeSessionKey) ?? null) : null
 
