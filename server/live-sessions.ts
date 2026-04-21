@@ -147,6 +147,23 @@ export type LiveSessionEntry = {
 
 export const liveSessions = new Map<string, LiveSessionEntry>();
 
+/**
+ * Kills the PTY for `sessionKey` (if live) and waits up to `timeoutMs` for its `onExit` handler
+ * to run — which clears the timers, removes the entry from `liveSessions`, and purges the
+ * session's attachment directory. No-ops when the session is not live.
+ */
+export async function terminateLiveSession(sessionKey: string, timeoutMs = 3000): Promise<void> {
+  const entry = liveSessions.get(sessionKey);
+  if (!entry) return;
+  try {
+    entry.pty.kill();
+  } catch {
+    // PTY may have exited between the lookup and kill.
+  }
+  const timeout = new Promise<void>((resolve) => setTimeout(resolve, timeoutMs));
+  await Promise.race([entry.exited, timeout]);
+}
+
 export function computeState(entry: LiveSessionEntry | undefined | null): LiveSessionState {
   if (!entry) return 'finalizado';
   if (entry.focusedWs && entry.focusedWs.size > 0) return 'ativo';

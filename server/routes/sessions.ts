@@ -4,7 +4,7 @@ import type { Express, Request, Response } from 'express';
 import { ERR, sendError, sendInternalError } from '../errors';
 import { buildFooterPayload, removeFooterCacheFor } from '../footer';
 import { runGitArgs } from '../git';
-import { liveSessions } from '../live-sessions';
+import { liveSessions, terminateLiveSession } from '../live-sessions';
 import { CLAUDE_PROJECTS } from '../paths';
 import {
   findLastToolUse,
@@ -15,6 +15,7 @@ import {
 import { broadcastInvalidate } from '../sse';
 import { appState, saveState } from '../state';
 import { FOOTER_ID_RE } from '../validators';
+import { cleanupAttachmentsForSession } from './attachments';
 
 export function register(app: Express): void {
   app.get('/api/sessions', (_req: Request, res: Response) => {
@@ -26,7 +27,7 @@ export function register(app: Express): void {
   app.post('/api/sessions/:id/archive', (req: Request, res: Response) => {
     const id = String(req.params.id || '').trim();
     if (!id) return sendError(res, 400, ERR.SESSION_ID_REQUIRED, 'session id is required');
-    appState.archived.add(id);
+    appState.archived.set(id, Date.now());
     saveState(appState);
     broadcastInvalidate();
     res.json({ ok: true, archived: true });
@@ -41,16 +42,20 @@ export function register(app: Express): void {
     res.json({ ok: true, archived: false });
   });
 
-  app.delete('/api/sessions/:id', (req: Request, res: Response) => {
+  app.delete('/api/sessions/:id', async (req: Request, res: Response) => {
     const id = String(req.params.id || '').trim();
     if (!id) return sendError(res, 400, ERR.SESSION_ID_REQUIRED, 'session id is required');
     const fpath = findSessionFile(id);
     if (!fpath) return sendError(res, 404, ERR.SESSION_NOT_FOUND, 'session not found');
+    // Kill the PTY first so it cannot re-materialize the .jsonl after we unlink it.
+    await terminateLiveSession(id);
     try {
       fs.unlinkSync(fpath);
     } catch (err) {
-      return sendInternalError(res, err);
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== 'ENOENT') return sendInternalError(res, err);
     }
+    cleanupAttachmentsForSession(id);
     removeFooterCacheFor(id);
     if (appState.archived.delete(id)) saveState(appState);
     broadcastInvalidate();

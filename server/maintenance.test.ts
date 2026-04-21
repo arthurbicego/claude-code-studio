@@ -150,8 +150,19 @@ describe('scanOrphanProjects', () => {
 describe('scanStaleArchived', () => {
   it('returns archived ids whose findSessionFile resolves null', () => {
     const find = (id: string) => (id === 'alive' ? '/tmp/alive.jsonl' : null);
-    const cat = scanStaleArchived(new Set(['alive', 'stale-1', 'stale-2']), find);
+    const archived = new Map<string, number>([
+      ['alive', 0],
+      ['stale-1', 0],
+      ['stale-2', 0],
+    ]);
+    const cat = scanStaleArchived(archived, find);
     expect(cat.items.map((i) => i.id).sort()).toEqual(['stale-1', 'stale-2']);
+  });
+
+  it('still accepts a plain Set for callers that have not migrated', () => {
+    const find = (id: string) => (id === 'alive' ? '/tmp/alive.jsonl' : null);
+    const cat = scanStaleArchived(new Set(['alive', 'stale-1']), find);
+    expect(cat.items.map((i) => i.id)).toEqual(['stale-1']);
   });
 });
 

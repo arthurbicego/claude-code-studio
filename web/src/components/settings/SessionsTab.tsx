@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { AppConfig, AppConfigBounds } from '@/types'
 import { Field, Section } from './atoms'
+import { RetentionSection } from './RetentionSection'
 
 export type StandbyUnit = 'seconds' | 'minutes'
 
@@ -36,41 +37,44 @@ export function SessionsTab({
   const def = Math.round(defaultMs / factor)
 
   return (
-    <Section title={t('settings.sessions.title')}>
-      <Field
-        label={t('settings.sessions.standbyLabel', { unit: unitLabel })}
-        hint={t('settings.sessions.standbyHelp', { min, max, unit: unitLabel, def })}
-      >
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            min={min}
-            max={max}
-            value={value}
-            onChange={(e) => onValueChange(e.target.value)}
-            className="w-32 rounded border border-border bg-background px-2 py-1.5 font-mono text-xs text-foreground focus:border-sky-500 focus:outline-none"
-          />
-          <div className="flex rounded border border-border overflow-hidden">
-            {STANDBY_UNIT_OPTIONS.map((opt) => {
-              const isActive = opt.id === unit
-              return (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => onUnitChange(opt.id)}
-                  className={`cursor-pointer px-3 py-1.5 text-xs font-medium transition-colors ${
-                    isActive
-                      ? 'bg-sky-700 text-white'
-                      : 'bg-background text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {t(opt.labelKey)}
-                </button>
-              )
-            })}
+    <div className="flex flex-col divide-y divide-border">
+      <Section title={t('settings.sessions.title')}>
+        <Field
+          label={t('settings.sessions.standbyLabel', { unit: unitLabel })}
+          hint={t('settings.sessions.standbyHelp', { min, max, unit: unitLabel, def })}
+        >
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={min}
+              max={max}
+              value={value}
+              onChange={(e) => onValueChange(e.target.value)}
+              className="w-32 rounded border border-border bg-background px-2 py-1.5 font-mono text-xs text-foreground focus:border-sky-500 focus:outline-none"
+            />
+            <div className="flex rounded border border-border overflow-hidden">
+              {STANDBY_UNIT_OPTIONS.map((opt) => {
+                const isActive = opt.id === unit
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => onUnitChange(opt.id)}
+                    className={`cursor-pointer px-3 py-1.5 text-xs font-medium transition-colors ${
+                      isActive
+                        ? 'bg-sky-700 text-white'
+                        : 'bg-background text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {t(opt.labelKey)}
+                  </button>
+                )
+              })}
+            </div>
           </div>
-        </div>
-      </Field>
-    </Section>
+        </Field>
+      </Section>
+      <RetentionSection />
+    </div>
   )
 }

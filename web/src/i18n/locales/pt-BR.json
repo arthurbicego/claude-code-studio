@@ -466,6 +466,28 @@
       "unitOption": {
         "Seconds": "Segundos",
         "Minutes": "Minutos"
+      },
+      "retention": {
+        "title": "Retenção de sessões arquivadas",
+        "description": "Quando habilitado, sessões arquivadas há mais de N dias são excluídas permanentemente do disco em segundo plano. Desabilitado por padrão.",
+        "enable": "Excluir automaticamente sessões arquivadas antigas",
+        "enableHint": "A exclusão remove o arquivo .jsonl em ~/.claude/projects/. É irreversível.",
+        "daysLabel": "Dias até a exclusão",
+        "daysHint": "Entre {{min}} e {{max}} dias após o momento em que a sessão foi arquivada.",
+        "purgeNow": "Executar agora",
+        "purging": "Executando…",
+        "lastPurged_one": "{{count}} sessão removida na última execução.",
+        "lastPurged_other": "{{count}} sessões removidas na última execução.",
+        "confirm": {
+          "title": "Habilitar exclusão automática?",
+          "body": "Sessões arquivadas há mais de {{days}} dias serão apagadas permanentemente. Você pode ajustar o período depois ou desabilitar quando quiser.",
+          "confirm": "Habilitar"
+        },
+        "purgeConfirm": {
+          "title": "Executar limpeza agora?",
+          "body": "Todas as sessões arquivadas há mais de {{days}} dias serão apagadas permanentemente do disco. Esta ação é irreversível.",
+          "confirm": "Executar agora"
+        }
       }
     },
     "sandbox": {

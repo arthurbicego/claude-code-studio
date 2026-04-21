@@ -135,7 +135,7 @@ export function resolveSessionCwd(id: string): string | null {
  */
 export function listProjectsWithSessions(
   projectsRoot: string,
-  archived: ReadonlySet<string>,
+  archived: ReadonlyMap<string, number> | ReadonlySet<string>,
 ): Project[] {
   if (!fs.existsSync(projectsRoot)) return [];
   const projects: Project[] = [];

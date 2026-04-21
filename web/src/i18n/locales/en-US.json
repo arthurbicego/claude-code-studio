@@ -466,6 +466,28 @@
       "unitOption": {
         "Seconds": "Seconds",
         "Minutes": "Minutes"
+      },
+      "retention": {
+        "title": "Archived session retention",
+        "description": "When enabled, sessions archived for longer than N days are permanently deleted from disk in the background. Disabled by default.",
+        "enable": "Automatically delete old archived sessions",
+        "enableHint": "Deletion removes the .jsonl file under ~/.claude/projects/. This is irreversible.",
+        "daysLabel": "Days until deletion",
+        "daysHint": "Between {{min}} and {{max}} days after the session was archived.",
+        "purgeNow": "Run now",
+        "purging": "Running…",
+        "lastPurged_one": "{{count}} session removed in the last run.",
+        "lastPurged_other": "{{count}} sessions removed in the last run.",
+        "confirm": {
+          "title": "Enable automatic deletion?",
+          "body": "Sessions archived for more than {{days}} days will be permanently deleted. You can adjust the period or disable it later.",
+          "confirm": "Enable"
+        },
+        "purgeConfirm": {
+          "title": "Run cleanup now?",
+          "body": "All sessions archived for more than {{days}} days will be permanently deleted from disk. This action is irreversible.",
+          "confirm": "Run now"
+        }
       }
     },
     "sandbox": {

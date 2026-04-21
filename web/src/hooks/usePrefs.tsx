@@ -1,4 +1,10 @@
-import { type Locale, SESSION_SORT_OPTIONS, SUPPORTED_LOCALES } from '@shared/types'
+import {
+  ARCHIVE_RETENTION_MAX_DAYS,
+  ARCHIVE_RETENTION_MIN_DAYS,
+  type Locale,
+  SESSION_SORT_OPTIONS,
+  SUPPORTED_LOCALES,
+} from '@shared/types'
 import {
   createContext,
   type ReactNode,
@@ -22,6 +28,7 @@ export type Prefs = {
   projectOrder: string[]
   locale: Locale | null
   sessionSortByProject: Record<string, SessionSortBy>
+  autoDeleteArchivedDays: number | null
 }
 
 type Ctx = {
@@ -33,6 +40,7 @@ type Ctx = {
   setProjectOrder: (updater: (prev: string[]) => string[]) => void
   setLocale: (locale: Locale) => void
   setSessionSortForProject: (slug: string, next: SessionSortBy | null) => void
+  setAutoDeleteArchivedDays: (next: number | null) => void
 }
 
 const EMPTY_PREFS: Prefs = {
@@ -41,6 +49,14 @@ const EMPTY_PREFS: Prefs = {
   projectOrder: [],
   locale: null,
   sessionSortByProject: {},
+  autoDeleteArchivedDays: null,
+}
+
+function sanitizeAutoDeleteDays(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null
+  const n = Math.trunc(value)
+  if (n < ARCHIVE_RETENTION_MIN_DAYS || n > ARCHIVE_RETENTION_MAX_DAYS) return null
+  return n
 }
 const PrefsContext = createContext<Ctx | null>(null)
 
@@ -80,6 +96,7 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
               ? (data.locale as Locale)
               : null,
           sessionSortByProject: sanitizeSessionSortByProject(data.sessionSortByProject),
+          autoDeleteArchivedDays: sanitizeAutoDeleteDays(data.autoDeleteArchivedDays),
         }
         if (cancelled) return
         lastSavedRef.current = JSON.stringify(initial)
@@ -161,6 +178,13 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  const setAutoDeleteArchivedDays = useCallback((next: number | null) => {
+    const sanitized = sanitizeAutoDeleteDays(next)
+    setPrefs((p) =>
+      p.autoDeleteArchivedDays === sanitized ? p : { ...p, autoDeleteArchivedDays: sanitized },
+    )
+  }, [])
+
   const value = useMemo<Ctx>(
     () => ({
       prefs,
@@ -171,6 +195,7 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
       setProjectOrder,
       setLocale,
       setSessionSortForProject,
+      setAutoDeleteArchivedDays,
     }),
     [
       prefs,
@@ -181,6 +206,7 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
       setProjectOrder,
       setLocale,
       setSessionSortForProject,
+      setAutoDeleteArchivedDays,
     ],
   )
 
