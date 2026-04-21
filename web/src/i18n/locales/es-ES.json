@@ -466,6 +466,28 @@
       "unitOption": {
         "Seconds": "Segundos",
         "Minutes": "Minutos"
+      },
+      "retention": {
+        "title": "Retención de sesiones archivadas",
+        "description": "Cuando está habilitado, las sesiones archivadas hace más de N días se eliminan permanentemente del disco en segundo plano. Desactivado por defecto.",
+        "enable": "Eliminar automáticamente sesiones archivadas antiguas",
+        "enableHint": "La eliminación borra el archivo .jsonl en ~/.claude/projects/. Es irreversible.",
+        "daysLabel": "Días hasta la eliminación",
+        "daysHint": "Entre {{min}} y {{max}} días tras archivar la sesión.",
+        "purgeNow": "Ejecutar ahora",
+        "purging": "Ejecutando…",
+        "lastPurged_one": "{{count}} sesión eliminada en la última ejecución.",
+        "lastPurged_other": "{{count}} sesiones eliminadas en la última ejecución.",
+        "confirm": {
+          "title": "¿Habilitar eliminación automática?",
+          "body": "Las sesiones archivadas hace más de {{days}} días se eliminarán permanentemente. Puedes ajustar el período o desactivarlo más tarde.",
+          "confirm": "Habilitar"
+        },
+        "purgeConfirm": {
+          "title": "¿Ejecutar limpieza ahora?",
+          "body": "Todas las sesiones archivadas hace más de {{days}} días se eliminarán permanentemente del disco. Esta acción es irreversible.",
+          "confirm": "Ejecutar ahora"
+        }
       }
     },
     "sandbox": {

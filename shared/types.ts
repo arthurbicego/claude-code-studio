@@ -288,7 +288,12 @@ export type Prefs = {
   projectOrder: string[];
   locale: Locale | null;
   sessionSortByProject: Record<string, SessionSortBy>;
+  /** Days after archiving before a session is permanently deleted. `null` disables auto-purge. */
+  autoDeleteArchivedDays: number | null;
 };
+
+export const ARCHIVE_RETENTION_MIN_DAYS = 1;
+export const ARCHIVE_RETENTION_MAX_DAYS = 365;
 
 export type MemoryFile = {
   path: string;

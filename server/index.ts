@@ -4,6 +4,7 @@ import express from 'express';
 import expressWs from 'express-ws';
 import { CLAUDE_BIN } from './claude-bin';
 import { liveSessions, startIdleSweep } from './live-sessions';
+import { startArchivePurgeSchedule } from './purge';
 import * as agentsSkillsRoutes from './routes/agents-skills';
 import * as attachmentsRoutes from './routes/attachments';
 import * as maintenanceRoutes from './routes/maintenance';
@@ -50,6 +51,7 @@ maintenanceRoutes.register(app);
 ptyRoutes.register(app);
 
 startIdleSweep();
+startArchivePurgeSchedule();
 attachmentsRoutes.cleanupOrphanAttachments(new Set(liveSessions.keys()));
 
 if (fs.existsSync(WEB_DIST)) {

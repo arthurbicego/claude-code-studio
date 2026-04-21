@@ -129,11 +129,15 @@ export function scanOrphanProjects(projectsRoot: string): MaintenanceCategory {
  * up drops dangling entries from the state file that would otherwise grow unbounded.
  */
 export function scanStaleArchived(
-  archived: ReadonlySet<string>,
+  archived: ReadonlyMap<string, number> | ReadonlySet<string>,
   findSessionFile: (id: string) => string | null,
 ): MaintenanceCategory {
   const category = emptyCategory();
-  for (const id of archived) {
+  const ids: Iterable<string> =
+    archived instanceof Map
+      ? (archived.keys() as Iterable<string>)
+      : (archived as ReadonlySet<string>);
+  for (const id of ids) {
     if (findSessionFile(id)) continue;
     category.items.push({ id });
   }

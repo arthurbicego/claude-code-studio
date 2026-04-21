@@ -1,4 +1,5 @@
 import type { Express, Request, Response } from 'express';
+import { runArchivePurge } from '../purge';
 import { appState, sanitizePrefs, saveState } from '../state';
 
 export function register(app: Express): void {
@@ -11,5 +12,10 @@ export function register(app: Express): void {
     appState.prefs = sanitizePrefs(req.body);
     saveState(appState);
     res.json(appState.prefs);
+  });
+
+  app.post('/api/prefs/archive-purge/run', async (_req: Request, res: Response) => {
+    const purged = await runArchivePurge();
+    res.json({ purged });
   });
 }

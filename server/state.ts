@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 import {
+  ARCHIVE_RETENTION_MAX_DAYS,
+  ARCHIVE_RETENTION_MIN_DAYS,
   type Locale,
   PROJECT_SORT_OPTIONS,
   type Prefs,
@@ -10,10 +12,12 @@ import {
 } from '../shared/types';
 import { CONFIG_DIR, STATE_FILE } from './paths';
 
-export const STATE_VERSION = 1;
+export const STATE_VERSION = 2;
+
+export type ArchivedMap = Map<string, number>;
 
 export type AppState = {
-  archived: Set<string>;
+  archived: ArchivedMap;
   prefs: Prefs;
 };
 
@@ -24,6 +28,7 @@ export function defaultPrefs(): Prefs {
     projectOrder: [],
     locale: null,
     sessionSortByProject: {},
+    autoDeleteArchivedDays: null,
   };
 }
 
@@ -37,6 +42,13 @@ function coerceProjectSortBy(value: unknown): ProjectSortBy | null {
   return typeof value === 'string' && (PROJECT_SORT_OPTIONS as string[]).includes(value)
     ? (value as ProjectSortBy)
     : null;
+}
+
+function coerceAutoDeleteArchivedDays(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  const n = Math.trunc(value);
+  if (n < ARCHIVE_RETENTION_MIN_DAYS || n > ARCHIVE_RETENTION_MAX_DAYS) return null;
+  return n;
 }
 
 export function sanitizePrefs(raw: unknown): Prefs {
@@ -74,25 +86,55 @@ export function sanitizePrefs(raw: unknown): Prefs {
       if (coerced) sessionSortByProject[slug] = coerced;
     }
   }
-  return { sections, expanded, projectOrder, locale, sessionSortByProject };
+  return {
+    sections,
+    expanded,
+    projectOrder,
+    locale,
+    sessionSortByProject,
+    autoDeleteArchivedDays: coerceAutoDeleteArchivedDays(rawObj.autoDeleteArchivedDays),
+  };
 }
 
 export function migrateState(raw: Record<string, unknown>): Record<string, unknown> {
-  // v0 (no `version` field) has the same shape as v1 — no transform needed.
-  // Add future steps here: if (raw.version === 1) raw = migrateV1toV2(raw); etc.
+  const version = typeof raw.version === 'number' ? raw.version : 0;
+  // v0/v1 → v2: `archived` was a string[]; now it's a [{id, archivedAt}][]. Unknown archive
+  // timestamps default to now — the retention clock starts at migration for old entries.
+  if (version < 2 && Array.isArray(raw.archived)) {
+    const now = Date.now();
+    raw.archived = (raw.archived as unknown[])
+      .filter((x): x is string => typeof x === 'string')
+      .map((id) => ({ id, archivedAt: now }));
+    raw.version = 2;
+  }
   return raw;
+}
+
+function coerceArchived(value: unknown): ArchivedMap {
+  const map: ArchivedMap = new Map();
+  if (!Array.isArray(value)) return map;
+  const now = Date.now();
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object') continue;
+    const e = entry as Record<string, unknown>;
+    if (typeof e.id !== 'string' || !e.id) continue;
+    const ts =
+      typeof e.archivedAt === 'number' && Number.isFinite(e.archivedAt) ? e.archivedAt : now;
+    map.set(e.id, ts);
+  }
+  return map;
 }
 
 export function loadState(): AppState {
   try {
     const raw = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')) as Record<string, unknown>;
     const migrated = migrateState(raw);
-    const archived = Array.isArray(migrated.archived)
-      ? (migrated.archived as unknown[]).filter((x): x is string => typeof x === 'string')
-      : [];
-    return { archived: new Set(archived), prefs: sanitizePrefs(migrated.prefs) };
+    return {
+      archived: coerceArchived(migrated.archived),
+      prefs: sanitizePrefs(migrated.prefs),
+    };
   } catch {
-    return { archived: new Set(), prefs: defaultPrefs() };
+    return { archived: new Map(), prefs: defaultPrefs() };
   }
 }
 
@@ -101,7 +143,7 @@ export function saveState(state: AppState): void {
     fs.mkdirSync(CONFIG_DIR, { recursive: true });
     const payload = {
       version: STATE_VERSION,
-      archived: [...state.archived],
+      archived: Array.from(state.archived.entries(), ([id, archivedAt]) => ({ id, archivedAt })),
       prefs: state.prefs,
     };
     const tmp = `${STATE_FILE}.tmp`;
