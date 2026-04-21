@@ -601,9 +601,15 @@ function SessionRow({
       >
         <span className="line-clamp-2 leading-snug">{formatPreview(session)}</span>
         {showProject ? (
-          <span className="mt-0.5 flex min-w-0 items-center gap-1 font-mono text-[10px] text-muted-foreground/60">
-            <span className="truncate">{basename(project.cwd)}</span>
-            {project.worktreeOf ? <WorktreeBranchPill branch={project.worktreeOf.branch} /> : null}
+          <span className="mt-0.5 flex min-w-0 items-center gap-1 font-mono text-[10px]">
+            <span className="min-w-0 flex-1 truncate font-semibold text-foreground/80">
+              {basename(project.worktreeOf?.parentCwd ?? project.cwd)}
+            </span>
+            {project.worktreeOf ? (
+              <span className="flex min-w-0 flex-1 justify-start">
+                <WorktreeBranchPill branch={project.worktreeOf.branch} />
+              </span>
+            ) : null}
           </span>
         ) : null}
         <span className="mt-1 font-mono text-[10px] text-muted-foreground/60">
@@ -653,8 +659,8 @@ function WorktreeBranchPill({ branch }: { branch: string | null }) {
   const { t } = useTranslation()
   const label = branch ?? t('panels.worktrees.detached')
   return (
-    <Tooltip content={label}>
-      <span className="inline-flex min-w-0 max-w-[10rem] shrink items-center gap-1 rounded bg-indigo-500/15 px-1.5 py-0.5 text-indigo-300">
+    <Tooltip content={label} className="min-w-0 max-w-full">
+      <span className="inline-flex min-w-0 max-w-[14rem] shrink items-center gap-1 rounded bg-indigo-500/15 px-1.5 py-0.5 text-indigo-300">
         <GitBranch size={10} className="shrink-0" />
         <span className="truncate font-mono text-[10px]">{label}</span>
       </span>
