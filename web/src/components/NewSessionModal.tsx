@@ -128,6 +128,9 @@ export function NewSessionModal({
   const [permissionMode, setPermissionMode] = useState<PermissionMode>(
     (defaults.permissionMode as PermissionMode) ?? 'default',
   )
+  const [userTouchedModel, setUserTouchedModel] = useState(false)
+  const [userTouchedEffort, setUserTouchedEffort] = useState(false)
+  const [userTouchedPermissionMode, setUserTouchedPermissionMode] = useState(false)
   const [selectedCwd, setSelectedCwd] = useState<string | null>(null)
   const [isolate, setIsolate] = useState(false)
   const [userTouchedIsolate, setUserTouchedIsolate] = useState(false)
@@ -140,17 +143,23 @@ export function NewSessionModal({
 
   // Server defaults load asynchronously — mirror them into local state once they arrive so the
   // select's selected value matches the "(padrão)" marker instead of staying on the fallback.
+  // Skip fields the user already changed so we don't clobber their selection.
   useEffect(() => {
-    if (defaults.model) setModel(defaults.model as Model)
-    if (defaults.effort) setEffort(defaults.effort as Effort)
-    if (defaults.permissionMode) setPermissionMode(defaults.permissionMode as PermissionMode)
-  }, [defaults])
+    if (defaults.model && !userTouchedModel) setModel(defaults.model as Model)
+    if (defaults.effort && !userTouchedEffort) setEffort(defaults.effort as Effort)
+    if (defaults.permissionMode && !userTouchedPermissionMode) {
+      setPermissionMode(defaults.permissionMode as PermissionMode)
+    }
+  }, [defaults, userTouchedModel, userTouchedEffort, userTouchedPermissionMode])
 
   useEffect(() => {
     if (!open) {
       setSelectedCwd(null)
       setIsolate(false)
       setUserTouchedIsolate(false)
+      setUserTouchedModel(false)
+      setUserTouchedEffort(false)
+      setUserTouchedPermissionMode(false)
       setWorktreeName('')
       setExistingProjectsOpen(false)
       setPickError(null)
@@ -332,7 +341,10 @@ export function NewSessionModal({
               value={model}
               options={MODELS}
               defaultValue={defaults.model as Model | null}
-              onChange={setModel}
+              onChange={(v) => {
+                setUserTouchedModel(true)
+                setModel(v)
+              }}
               info={
                 <OptionsInfo
                   options={MODELS}
@@ -347,7 +359,10 @@ export function NewSessionModal({
               value={effort}
               options={EFFORTS}
               defaultValue={defaults.effort as Effort | null}
-              onChange={setEffort}
+              onChange={(v) => {
+                setUserTouchedEffort(true)
+                setEffort(v)
+              }}
               info={
                 <OptionsInfo
                   options={EFFORTS}
@@ -362,7 +377,10 @@ export function NewSessionModal({
               value={permissionMode}
               options={PERMISSION_MODES}
               defaultValue={defaults.permissionMode as PermissionMode}
-              onChange={setPermissionMode}
+              onChange={(v) => {
+                setUserTouchedPermissionMode(true)
+                setPermissionMode(v)
+              }}
               info={
                 <OptionsInfo
                   options={PERMISSION_MODES}
