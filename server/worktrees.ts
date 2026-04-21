@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import type { ProjectWorktreeRef } from '../shared/types';
 import { type NumStat, parseNumstat, runGitArgs } from './git';
+import { realpathSafe } from './paths';
 
 export type WorktreeEntry = {
   path: string;
@@ -116,6 +118,25 @@ export function pickMainWorktree(entries: WorktreeEntry[]): WorktreeEntry | null
     if (!e.detached && !e.bare && !e.prunable) return e;
   }
   return entries[0] || null;
+}
+
+/**
+ * If `cwd` is a linked worktree of another git repo, returns a ref pointing at
+ * the main worktree path and the branch currently checked out in `cwd`.
+ * Returns null when `cwd` is the main worktree itself, isn't a git repo, or
+ * has vanished on disk.
+ */
+export function projectWorktreeRef(cwd: string): ProjectWorktreeRef | null {
+  if (!cwd || !fs.existsSync(cwd)) return null;
+  const entries = listWorktrees(cwd);
+  if (entries.length <= 1) return null;
+  const main = pickMainWorktree(entries);
+  if (!main) return null;
+  const mainReal = realpathSafe(main.path);
+  const ownReal = realpathSafe(cwd);
+  if (mainReal === ownReal) return null;
+  const branch = runGitArgs(cwd, ['symbolic-ref', '--short', 'HEAD']).trim();
+  return { parentCwd: main.path, branch: branch || null };
 }
 
 export function branchUpstream(cwd: string, branch: string): string | null {

@@ -18,11 +18,17 @@ export type ProjectSortBy = 'alphabetical' | 'lastActivity' | 'createdAt';
 
 export const PROJECT_SORT_OPTIONS: ProjectSortBy[] = ['lastActivity', 'createdAt', 'alphabetical'];
 
+export type ProjectWorktreeRef = {
+  parentCwd: string;
+  branch: string | null;
+};
+
 export type Project = {
   slug: string;
   cwd: string;
   cwdResolved: boolean;
   sessions: SessionMeta[];
+  worktreeOf: ProjectWorktreeRef | null;
 };
 
 export type SessionsListResponse = {

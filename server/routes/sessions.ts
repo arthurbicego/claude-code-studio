@@ -15,12 +15,14 @@ import {
 import { broadcastInvalidate } from '../sse';
 import { appState, saveState } from '../state';
 import { FOOTER_ID_RE } from '../validators';
+import { projectWorktreeRef } from '../worktrees';
 import { cleanupAttachmentsForSession } from './attachments';
 
 export function register(app: Express): void {
   app.get('/api/sessions', (_req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store, max-age=0');
-    const projects = listProjectsWithSessions(CLAUDE_PROJECTS, appState.archived);
+    const rawProjects = listProjectsWithSessions(CLAUDE_PROJECTS, appState.archived);
+    const projects = rawProjects.map((p) => ({ ...p, worktreeOf: projectWorktreeRef(p.cwd) }));
     res.json({ projects } satisfies SessionsListResponse);
   });
 
