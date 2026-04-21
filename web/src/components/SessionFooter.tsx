@@ -1,7 +1,6 @@
 import type { TFunction } from 'i18next'
 import { GitBranch } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Tooltip } from '@/components/ui/Tooltip'
 import type { SessionFooter as SessionFooterData } from '@/types'
 
 type Props = {
@@ -73,12 +72,10 @@ export function SessionFooter({ data }: Props) {
       {data.worktree ? (
         <>
           <span className="text-muted-foreground/40">·</span>
-          <Tooltip content={t('sessionFooter.worktreeAt', { path: data.worktree.path })}>
-            <span className="inline-flex items-center gap-1 rounded bg-indigo-500/15 px-1.5 py-0.5 text-indigo-300">
-              <GitBranch size={10} />
-              <span className="font-mono text-[10px]">{data.worktree.name}</span>
-            </span>
-          </Tooltip>
+          <span className="inline-flex items-center gap-1 rounded bg-indigo-500/15 px-1.5 py-0.5 text-indigo-300">
+            <GitBranch size={10} />
+            <span className="font-mono text-[10px]">{data.worktree.name}</span>
+          </span>
         </>
       ) : null}
       {data.branch && (
