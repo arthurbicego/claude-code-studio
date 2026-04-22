@@ -5,6 +5,7 @@ import {
   ArchiveRestore,
   ArrowDownAZ,
   ChevronRight,
+  Folder,
   FolderCode,
   FolderTree,
   List,
@@ -619,12 +620,13 @@ function SessionRow({
         <span className="line-clamp-2 leading-snug">{formatPreview(session)}</span>
         {showProject ? (
           <span className="mt-0.5 flex min-w-0 items-center gap-1 font-mono text-[10px]">
+            <Folder size={10} className="shrink-0 text-muted-foreground" aria-hidden />
             <TruncatingLabel
               text={basename(project.worktreeOf?.parentCwd ?? project.cwd)}
               tooltipClassName={
                 project.worktreeOf ? 'min-w-0 max-w-[50%] shrink' : 'min-w-0 flex-1 shrink'
               }
-              className="font-semibold text-foreground/80"
+              className="text-foreground/80"
             />
             {project.worktreeOf ? (
               <span className="flex min-w-0 shrink justify-start">
