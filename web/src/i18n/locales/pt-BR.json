@@ -163,7 +163,15 @@
       "empty": "Não há sessões para apagar em \"{{name}}\".",
       "body_one": "Esta ação remove do disco {{count}} sessão do projeto \"{{name}}\". Não pode ser desfeita.",
       "body_other": "Esta ação remove do disco {{count}} sessões do projeto \"{{name}}\". Não pode ser desfeita.",
-      "confirm": "Apagar todas"
+      "confirm": "Apagar todas",
+      "confirmCascade": "Apagar projeto e worktrees",
+      "worktreesInfo_one": "Este projeto também tem {{count}} sessão em {{worktrees}} worktree vinculado.",
+      "worktreesInfo_other": "Este projeto também tem {{count}} sessões em {{worktrees}} worktrees vinculados.",
+      "worktreesCount_one": "{{count}} worktree",
+      "worktreesCount_other": "{{count}} worktrees",
+      "cascadeLabel": "Apagar também as sessões das worktrees",
+      "cascadeHint": "Não remove os diretórios das worktrees no disco; só apaga o histórico de sessões.",
+      "keepPreviewTitle": "Se manter, as worktrees continuarão listadas assim:"
     },
     "deleteSession": {
       "title": "Apagar sessão definitivamente",

@@ -7,7 +7,6 @@ import {
   ChevronRight,
   FolderCode,
   FolderTree,
-  GitBranch,
   List,
   Trash2,
   X,
@@ -18,6 +17,8 @@ import { CopyableField } from '@/components/ui/CopyableField'
 import { DropdownMenu, type DropdownMenuItem } from '@/components/ui/DropdownMenu'
 import { InfoPopover } from '@/components/ui/InfoPopover'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { TruncatingLabel } from '@/components/ui/TruncatingLabel'
+import { WorktreeBranchPill } from '@/components/WorktreeBranchPill'
 import { useExpanded } from '@/hooks/useExpanded'
 import { useFormatDate } from '@/hooks/useFormatDate'
 import { usePrefs } from '@/hooks/usePrefs'
@@ -427,8 +428,7 @@ export function SessionsSection({
                       expanded && 'rotate-90',
                     )}
                   />
-                  <span className="flex-1 truncate">{basename(p.cwd)}</span>
-                  {p.worktreeOf ? <WorktreeBranchPill branch={p.worktreeOf.branch} /> : null}
+                  <ProjectRowTitle project={p} />
                   <Tooltip content={t('sessions.count', { count: sessions.length })}>
                     <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                       {sessions.length}
@@ -619,11 +619,15 @@ function SessionRow({
         <span className="line-clamp-2 leading-snug">{formatPreview(session)}</span>
         {showProject ? (
           <span className="mt-0.5 flex min-w-0 items-center gap-1 font-mono text-[10px]">
-            <span className="min-w-0 flex-1 truncate font-semibold text-foreground/80">
-              {basename(project.worktreeOf?.parentCwd ?? project.cwd)}
-            </span>
+            <TruncatingLabel
+              text={basename(project.worktreeOf?.parentCwd ?? project.cwd)}
+              tooltipClassName={
+                project.worktreeOf ? 'min-w-0 max-w-[50%] shrink' : 'min-w-0 flex-1 shrink'
+              }
+              className="font-semibold text-foreground/80"
+            />
             {project.worktreeOf ? (
-              <span className="flex min-w-0 flex-1 justify-start">
+              <span className="flex min-w-0 shrink justify-start">
                 <WorktreeBranchPill branch={project.worktreeOf.branch} />
               </span>
             ) : null}
@@ -672,16 +676,19 @@ function PathPopover({ path }: { path: string }) {
   )
 }
 
-function WorktreeBranchPill({ branch }: { branch: string | null }) {
-  const { t } = useTranslation()
-  const label = branch ?? t('panels.worktrees.detached')
+function ProjectRowTitle({ project }: { project: Project }) {
+  const wt = project.worktreeOf
+  if (!wt) {
+    return <TruncatingLabel text={basename(project.cwd)} tooltipClassName="min-w-0 flex-1 shrink" />
+  }
+  const parentName = basename(wt.parentCwd)
   return (
-    <Tooltip content={label} className="min-w-0 max-w-full">
-      <span className="inline-flex min-w-0 max-w-[14rem] shrink items-center gap-1 rounded bg-indigo-500/15 px-1.5 py-0.5 text-indigo-300">
-        <GitBranch size={10} className="shrink-0" />
-        <span className="truncate font-mono text-[10px]">{label}</span>
+    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+      <TruncatingLabel text={parentName} tooltipClassName="min-w-0 max-w-[50%] shrink" />
+      <span className="flex min-w-0 shrink">
+        <WorktreeBranchPill branch={wt.branch} />
       </span>
-    </Tooltip>
+    </div>
   )
 }
 

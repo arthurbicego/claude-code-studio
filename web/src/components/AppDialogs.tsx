@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { DeleteProjectDialog } from '@/components/DeleteProjectDialog'
 import { type WorktreeCloseChoice, WorktreeCloseDialog } from '@/components/WorktreeCloseDialog'
 import type { Project, SessionMeta, Worktree } from '@/types'
 
@@ -55,8 +56,8 @@ export function AppDialogs({
   onConfirmProjectArchive: () => void | Promise<void>
   onCloseProjectArchive: () => void
 
-  pendingProjectDelete: Project | null
-  onConfirmProjectDelete: () => void | Promise<void>
+  pendingProjectDelete: { project: Project; worktrees: Project[] } | null
+  onConfirmProjectDelete: (cascade: boolean) => void | Promise<void>
   onCloseProjectDelete: () => void
 
   pendingDelete: SessionMeta | null
@@ -132,24 +133,10 @@ export function AppDialogs({
         onClose={onCloseProjectArchive}
       />
 
-      <ConfirmDialog
+      <DeleteProjectDialog
         open={!!pendingProjectDelete}
-        title={t('dialogs.deleteProject.title')}
-        description={
-          pendingProjectDelete
-            ? (() => {
-                const count = pendingProjectDelete.sessions.length
-                const name =
-                  pendingProjectDelete.cwd.split('/').filter(Boolean).pop() ||
-                  pendingProjectDelete.cwd
-                return count === 0
-                  ? t('dialogs.deleteProject.empty', { name })
-                  : t('dialogs.deleteProject.body', { count, name })
-              })()
-            : ''
-        }
-        confirmLabel={t('dialogs.deleteProject.confirm')}
-        destructive
+        project={pendingProjectDelete?.project ?? null}
+        worktrees={pendingProjectDelete?.worktrees ?? []}
         onConfirm={onConfirmProjectDelete}
         onClose={onCloseProjectDelete}
       />
