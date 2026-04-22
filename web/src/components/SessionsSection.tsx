@@ -545,6 +545,10 @@ export function SessionsSection({
               onUnarchive={onUnarchive}
               onDelete={onDelete}
               onCloseSession={onCloseSession}
+              onOpenProjectInVSCode={onOpenProjectInVSCode}
+              onArchiveProject={onArchiveProject}
+              onDeleteProject={onDeleteProject}
+              onEndWorktree={onEndWorktree}
               renderState={renderState}
             />
           ))}
@@ -566,6 +570,10 @@ type RowProps = {
   onUnarchive: (id: string) => void
   onDelete: (session: SessionMeta) => void
   onCloseSession?: (sessionKey: string) => void
+  onOpenProjectInVSCode?: (project: Project) => void
+  onArchiveProject?: (project: Project) => void
+  onDeleteProject?: (project: Project) => void
+  onEndWorktree?: (project: Project) => void
   renderState: (live: LiveSession | undefined) => React.ReactNode
 }
 
@@ -581,6 +589,10 @@ function SessionRow({
   onUnarchive,
   onDelete,
   onCloseSession,
+  onOpenProjectInVSCode,
+  onArchiveProject,
+  onDeleteProject,
+  onEndWorktree,
   renderState,
 }: RowProps) {
   const { t } = useTranslation()
@@ -606,52 +618,56 @@ function SessionRow({
       onSelect: () => onDelete(session),
     },
   ]
+  const resume = () => onResumeSession(project, session)
   return (
+    // biome-ignore lint/a11y/useSemanticElements: the row hosts nested interactive children (session DropdownMenu, optional project chip menu); a native <button> would be invalid HTML with buttons inside. Keyboard parity via tabIndex + Enter/Space handler.
     <div
+      role="button"
+      tabIndex={0}
+      onClick={resume}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          resume()
+        }
+      }}
       className={cn(
-        'group/row flex items-start gap-2 rounded border-l-2 border-transparent px-2 py-1.5 text-xs',
+        'group/row flex items-start gap-2 rounded border-l-2 border-transparent px-2 py-1.5 text-xs cursor-pointer',
         active
           ? 'border-sky-500 bg-sky-900/30 text-foreground'
           : 'text-muted-foreground hover:bg-accent/60',
       )}
     >
       <span className="pt-0.5">{renderState(live)}</span>
-      <button
-        type="button"
-        onClick={() => onResumeSession(project, session)}
-        className="flex min-w-0 flex-1 flex-col text-left cursor-pointer"
-      >
+      <div className="flex min-w-0 flex-1 flex-col text-left">
         <span className="line-clamp-2 leading-snug">{formatPreview(session)}</span>
         {showProject ? (
-          <span className="mt-0.5 flex min-w-0 items-center gap-1 font-mono text-[10px]">
-            <Folder size={10} className="shrink-0 text-muted-foreground" aria-hidden />
-            <TruncatingLabel
-              text={basename(project.worktreeOf?.parentCwd ?? project.cwd)}
-              tooltipClassName={
-                project.worktreeOf ? 'min-w-0 max-w-[50%] shrink' : 'min-w-0 flex-1 shrink'
-              }
-              className="text-foreground/80"
-            />
-            {project.worktreeOf ? (
-              <span className="flex min-w-0 shrink justify-start">
-                <WorktreeBranchPill branch={project.worktreeOf.branch} />
-              </span>
-            ) : null}
-          </span>
+          <ProjectChip
+            project={project}
+            onOpenProjectInVSCode={onOpenProjectInVSCode}
+            onArchiveProject={onArchiveProject}
+            onDeleteProject={onDeleteProject}
+            onEndWorktree={onEndWorktree}
+          />
         ) : null}
         <span className="mt-1 font-mono text-[10px] text-muted-foreground/60">
           {formatDate(session.mtime)}
         </span>
-      </button>
-      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
+      </div>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: event-barrier wrapper so clicks/keys on the action buttons don't bubble up to the row's resume handler; handlers are pure stopPropagation */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        role="presentation"
+        className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100"
+      >
         {isOpen && onCloseSession ? (
           <Tooltip content={t('sessions.actions.close')}>
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                onCloseSession(session.id)
-              }}
+              onClick={() => onCloseSession(session.id)}
               className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"
               aria-label={t('sessions.actions.close')}
             >
@@ -665,6 +681,116 @@ function SessionRow({
           tooltip={t('sessions.actions.title')}
         />
       </div>
+    </div>
+  )
+}
+
+type ProjectChipProps = {
+  project: Project
+  onOpenProjectInVSCode?: (project: Project) => void
+  onArchiveProject?: (project: Project) => void
+  onDeleteProject?: (project: Project) => void
+  onEndWorktree?: (project: Project) => void
+}
+
+function ProjectChip({
+  project,
+  onOpenProjectInVSCode,
+  onArchiveProject,
+  onDeleteProject,
+  onEndWorktree,
+}: ProjectChipProps) {
+  const { t } = useTranslation()
+  const wt = project.worktreeOf
+  const chipContent = (
+    <>
+      <Folder size={10} className="shrink-0 text-muted-foreground" aria-hidden />
+      <TruncatingLabel
+        text={basename(wt?.parentCwd ?? project.cwd)}
+        tooltipClassName={wt ? 'min-w-0 max-w-[50%] shrink' : 'min-w-0 flex-1 shrink'}
+        className="text-foreground/80"
+      />
+      {wt ? (
+        <span className="flex min-w-0 shrink justify-start">
+          <WorktreeBranchPill branch={wt.branch} />
+        </span>
+      ) : null}
+    </>
+  )
+
+  const items: DropdownMenuItem[] = wt
+    ? // Worktrees expose only the end-worktree action — must match the 3-dots
+      // menu rendered for WorktreeGroup in grouped mode. Skip when the branch
+      // is unknown (ghost worktree: directory already gone, nothing to end).
+      wt.branch && onEndWorktree
+      ? [
+          {
+            label: t('sessions.project.endWorktree'),
+            icon: LogOut,
+            destructive: true,
+            onSelect: () => onEndWorktree(project),
+          },
+        ]
+      : []
+    : // Main projects expose the same actions as the 3-dots menu on grouped
+      // project rows: open in VS Code, archive all, delete all.
+      [
+        ...(onOpenProjectInVSCode
+          ? [
+              {
+                label: t('sessions.project.openInVscode'),
+                icon: FolderCode,
+                onSelect: () => onOpenProjectInVSCode(project),
+              },
+            ]
+          : []),
+        ...(onArchiveProject
+          ? [
+              {
+                label: t('sessions.project.archiveAll'),
+                icon: Archive,
+                onSelect: () => onArchiveProject(project),
+              },
+            ]
+          : []),
+        ...(onDeleteProject
+          ? [
+              {
+                label: t('sessions.project.deleteAll'),
+                icon: Trash2,
+                destructive: true,
+                onSelect: () => onDeleteProject(project),
+              },
+            ]
+          : []),
+      ]
+
+  if (items.length === 0) {
+    return (
+      <span className="mt-0.5 flex min-w-0 items-center gap-1 font-mono text-[10px]">
+        {chipContent}
+      </span>
+    )
+  }
+
+  return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: event-barrier so clicking the menu trigger doesn't bubble to the row's resume handler; handlers are pure stopPropagation
+    <div
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      role="presentation"
+      className="mt-0.5 flex min-w-0"
+    >
+      <DropdownMenu
+        items={items}
+        ariaLabel={t('sessions.project.actions')}
+        tooltip={t('sessions.project.actions')}
+        triggerClassName="flex min-w-0 items-center gap-1 px-1 py-0 font-mono text-[10px]"
+      >
+        {chipContent}
+      </DropdownMenu>
     </div>
   )
 }

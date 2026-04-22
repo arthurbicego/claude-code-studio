@@ -1,5 +1,12 @@
 import { Check, MoreVertical } from 'lucide-react'
-import { type ComponentType, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import {
+  type ComponentType,
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Tooltip } from '@/components/ui/Tooltip'
@@ -21,6 +28,13 @@ type Props = {
   triggerIcon?: ComponentType<{ size?: number | string; className?: string }>
   triggerIconSize?: number
   disabled?: boolean
+  /**
+   * Custom content rendered inside the default trigger button. When provided,
+   * replaces the default `triggerIcon`. Useful for triggers that combine an
+   * icon with text (e.g. a project chip). The callout behavior, ref handling,
+   * and aria wiring still come from the built-in button.
+   */
+  children?: ReactNode
 }
 
 export function DropdownMenu({
@@ -31,6 +45,7 @@ export function DropdownMenu({
   triggerIcon: TriggerIcon = MoreVertical,
   triggerIconSize = 12,
   disabled,
+  children,
 }: Props) {
   const { t } = useTranslation()
   const resolvedAriaLabel = ariaLabel ?? t('common.openMenu')
@@ -92,7 +107,7 @@ export function DropdownMenu({
       aria-expanded={open}
       aria-haspopup="menu"
     >
-      <TriggerIcon size={triggerIconSize} />
+      {children ?? <TriggerIcon size={triggerIconSize} />}
     </button>
   )
 
