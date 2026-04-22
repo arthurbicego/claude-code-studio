@@ -1,14 +1,19 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { type SectionPrefs, usePrefs } from '@/hooks/usePrefs'
-import type { ProjectSortBy } from '@/types'
+import type { ProjectSortBy, SessionSortBy } from '@/types'
 
-const DEFAULTS: SectionPrefs = { groupByProject: true, projectSortBy: null }
+const DEFAULTS: SectionPrefs = {
+  groupByProject: true,
+  projectSortBy: null,
+  flatSessionSort: 'lastResponse',
+}
 
 export type { SectionPrefs }
 
 export function useSectionPrefs(name: string) {
   const { prefs, setSection } = usePrefs()
-  const current = prefs.sections[name] ?? DEFAULTS
+  const stored = prefs.sections[name]
+  const current = useMemo<SectionPrefs>(() => ({ ...DEFAULTS, ...stored }), [stored])
 
   const toggleGrouping = useCallback(() => {
     setSection(name, { ...current, groupByProject: !current.groupByProject })
@@ -21,5 +26,12 @@ export function useSectionPrefs(name: string) {
     [name, current, setSection],
   )
 
-  return { prefs: current, toggleGrouping, setProjectSortBy }
+  const setFlatSessionSort = useCallback(
+    (flatSessionSort: SessionSortBy) => {
+      setSection(name, { ...current, flatSessionSort })
+    },
+    [name, current, setSection],
+  )
+
+  return { prefs: current, toggleGrouping, setProjectSortBy, setFlatSessionSort }
 }

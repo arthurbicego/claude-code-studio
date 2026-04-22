@@ -51,6 +51,8 @@
     "toggleGrouping": "Toggle grouping",
     "sortBy": "Sort projects: {{label}}",
     "sortMenu": "Project sort options",
+    "flatSortBy": "Sort sessions: {{label}}",
+    "flatSortMenu": "Session sort options",
     "toggleSort": "Toggle sort",
     "sortLabel": {
       "lastResponse": "Last response",

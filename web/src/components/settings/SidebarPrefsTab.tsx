@@ -1,4 +1,4 @@
-import type { ProjectSortBy, SessionSortBy } from '@shared/types'
+import type { ProjectSortBy, SectionPrefs, SessionSortBy } from '@shared/types'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { usePrefs } from '@/hooks/usePrefs'
@@ -54,9 +54,10 @@ export function SidebarPrefsTab() {
         <div className="flex flex-col gap-2">
           {allKeys.map((key) => {
             const stored = prefs.sections[key]
-            const effective = stored ?? {
-              groupByProject: true,
-              projectSortBy: null,
+            const effective: SectionPrefs = {
+              groupByProject: stored?.groupByProject ?? true,
+              projectSortBy: stored?.projectSortBy ?? null,
+              flatSessionSort: stored?.flatSessionSort ?? 'lastResponse',
             }
             const labelKey = SIDEBAR_SECTION_LABEL_KEYS[key]
             const label = labelKey ? t(labelKey) : key
@@ -84,6 +85,7 @@ export function SidebarPrefsTab() {
                 </div>
                 <ul className="flex flex-col gap-0.5 font-mono text-[10px] text-muted-foreground">
                   <li>projectSortBy: {projectSortLabel(t, effective.projectSortBy)}</li>
+                  <li>flatSessionSort: {sessionSortLabel(t, effective.flatSessionSort)}</li>
                   <li>
                     groupByProject:{' '}
                     {effective.groupByProject

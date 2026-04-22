@@ -219,6 +219,8 @@ export type SectionPrefs = {
   groupByProject: boolean;
   /** `null` means the user has a custom order (drag-and-drop) with no named mode selected. */
   projectSortBy: ProjectSortBy | null;
+  /** Sort applied to all sessions globally when `groupByProject` is false. */
+  flatSessionSort: SessionSortBy;
 };
 
 export type Locale = 'pt-BR' | 'en-US' | 'es-ES';
