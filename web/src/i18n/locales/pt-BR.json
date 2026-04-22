@@ -21,7 +21,7 @@
     "showInfo": "Mostrar informações"
   },
   "sidebar": {
-    "appName": "Claude Code Studio",
+    "appName": "Cockpit for Claude Code",
     "settings": "Configurações",
     "newSession": "Nova sessão",
     "reloadList": "Recarregar lista",
@@ -455,12 +455,12 @@
           "statuslineCache": {
             "title": "Cache do statusline",
             "description": "Arquivos de cache regenerados automaticamente quando necessário.",
-            "info": "Arquivos de cache em ~/.claude-code-studio/statusline-cache/ usados pra acelerar o statusline. São regerados automaticamente quando preciso. Seguro apagar a qualquer momento."
+            "info": "Arquivos de cache em ~/.cockpit-for-claude-code/statusline-cache/ usados pra acelerar o statusline. São regerados automaticamente quando preciso. Seguro apagar a qualquer momento."
           },
           "orphanAttachments": {
             "title": "Anexos órfãos",
             "description": "Pastas de anexos de sessões que não existem mais e não estão ativas.",
-            "info": "Pastas em ~/.claude-code-studio/attachments/ vinculadas a sessões que não existem mais (nem como .jsonl, nem como sessão ativa). Remover libera o espaço em disco dos anexos dessas sessões mortas."
+            "info": "Pastas em ~/.cockpit-for-claude-code/attachments/ vinculadas a sessões que não existem mais (nem como .jsonl, nem como sessão ativa). Remover libera o espaço em disco dos anexos dessas sessões mortas."
           }
         }
       }
@@ -766,13 +766,13 @@
   "help": {
     "open": "Abrir guia de uso",
     "title": "Guia de uso",
-    "subtitle": "Como navegar e tirar o máximo do Claude Code Studio",
+    "subtitle": "Como navegar e tirar o máximo do Cockpit for Claude Code",
     "tocLabel": "Sumário",
     "close": "Fechar guia",
     "sections": {
       "overview": {
         "title": "Visão geral",
-        "body": "O Claude Code Studio é um painel local (roda em 127.0.0.1, sem autenticação) que envolve o CLI claude-code. Pense nele como mission-control para várias sessões do Claude rodando em paralelo, com worktrees git first-class e painéis vivos do que o modelo está fazendo.\n\nO que você ganha em relação ao CLI puro:\n• Múltiplas sessões abertas com indicador de estado (aguardando, ativa, standby, fechada).\n• Workflow de worktrees integrado ao ciclo de vida da sessão.\n• Painéis Plan / Tasks / Diff lado a lado com o terminal — você vê o raciocínio e as mudanças sem sair da view.\n• Custo da sessão e quota (5h/7d) sempre visíveis no rodapé.\n• Editores em UI para CLAUDE.md, agentes, skills e sandbox."
+        "body": "O Cockpit for Claude Code é um painel local (roda em 127.0.0.1, sem autenticação) que envolve o CLI claude-code. Pense nele como mission-control para várias sessões do Claude rodando em paralelo, com worktrees git first-class e painéis vivos do que o modelo está fazendo.\n\nO que você ganha em relação ao CLI puro:\n• Múltiplas sessões abertas com indicador de estado (aguardando, ativa, standby, fechada).\n• Workflow de worktrees integrado ao ciclo de vida da sessão.\n• Painéis Plan / Tasks / Diff lado a lado com o terminal — você vê o raciocínio e as mudanças sem sair da view.\n• Custo da sessão e quota (5h/7d) sempre visíveis no rodapé.\n• Editores em UI para CLAUDE.md, agentes, skills e sandbox."
       },
       "sessions": {
         "title": "Sessões",

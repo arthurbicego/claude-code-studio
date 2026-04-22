@@ -70,7 +70,7 @@ function matchesQuery(s: SessionMeta, query: string): boolean {
 
 type DropTarget = { slug: string; position: 'before' | 'after' }
 
-const DRAG_MIME = 'application/x-claude-code-studio-project-slug'
+const DRAG_MIME = 'application/x-cockpit-for-claude-code-project-slug'
 
 function basename(cwd: string): string {
   const parts = cwd.split('/').filter(Boolean)

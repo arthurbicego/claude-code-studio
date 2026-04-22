@@ -9,7 +9,7 @@ import { expandImports, IMPORT_MAX_DEPTH } from './memory-expand';
 let tmpDir: string;
 
 beforeEach(() => {
-  tmpDir = fs.mkdtempSync(path.join(os.homedir(), '.claude-code-studio-test-'));
+  tmpDir = fs.mkdtempSync(path.join(os.homedir(), '.cockpit-for-claude-code-test-'));
 });
 
 afterEach(() => {
