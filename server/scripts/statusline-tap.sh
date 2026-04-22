@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Claude Code Studio statusLine tap.
+# Cockpit for Claude Code statusLine tap.
 #
 # Wraps the user's own statusLine script transparently:
 #   1. Reads the JSON payload from stdin.
-#   2. Persists it to ~/.claude-code-studio/statusline-cache/<session_id>.json
+#   2. Persists it to ~/.cockpit-for-claude-code/statusline-cache/<session_id>.json
 #      and a global rate-limits snapshot — these feed the per-session footer
 #      shown in the Studio web UI.
 #   3. Pipes the same stdin to the user's ~/.claude/statusline.sh (when it
@@ -19,7 +19,7 @@ umask 077
 
 input=$(cat)
 
-cache_root="${HOME}/.claude-code-studio"
+cache_root="${HOME}/.cockpit-for-claude-code"
 mkdir -p "$cache_root/statusline-cache" 2>/dev/null
 chmod 700 "$cache_root" 2>/dev/null
 

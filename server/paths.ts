@@ -17,16 +17,16 @@ export const USER_AGENTS_DIR = path.join(HOME_DIR, '.claude', 'agents');
 export const USER_SKILLS_DIR = path.join(HOME_DIR, '.claude', 'skills');
 export const GLOBAL_CLAUDE_MD = path.join(HOME_DIR, '.claude', 'CLAUDE.md');
 
-export const CONFIG_DIR = path.join(HOME_DIR, '.claude-code-studio');
+export const CONFIG_DIR = path.join(HOME_DIR, '.cockpit-for-claude-code');
 export const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 export const STATE_FILE = path.join(CONFIG_DIR, 'state.json');
 export const ATTACHMENTS_DIR = path.join(CONFIG_DIR, 'attachments');
 
 export const STATUSLINE_TAP = path.join(__dirname, 'scripts', 'statusline-tap.sh');
-export const STATUSLINE_CACHE_DIR = path.join(HOME_DIR, '.claude-code-studio', 'statusline-cache');
+export const STATUSLINE_CACHE_DIR = path.join(HOME_DIR, '.cockpit-for-claude-code', 'statusline-cache');
 export const STATUSLINE_GLOBAL_META = path.join(
   HOME_DIR,
-  '.claude-code-studio',
+  '.cockpit-for-claude-code',
   'global-meta.json',
 );
 

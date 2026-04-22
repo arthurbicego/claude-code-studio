@@ -1,4 +1,4 @@
-# Claude Code Studio
+# Cockpit for Claude Code
 
 A local mission-control dashboard for the [Claude Code](https://docs.claude.com/en/docs/claude-code)
 CLI. Run multiple sessions in parallel, manage git worktrees first-class, and
@@ -9,7 +9,7 @@ browser, no extra service to configure.
 > expose it to a network.
 
 <!-- TODO: replace with a real screenshot of the running app -->
-<!-- ![Claude Code Studio overview](docs/screenshot.png) -->
+<!-- ![Cockpit for Claude Code overview](docs/screenshot.png) -->
 
 ## What you get over the bare CLI
 

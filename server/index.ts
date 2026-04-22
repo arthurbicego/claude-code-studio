@@ -61,5 +61,5 @@ if (fs.existsSync(WEB_DIST)) {
 }
 
 app.listen(PORT, HOST, () => {
-  console.log(`Claude Code Studio rodando em http://${HOST}:${PORT}`);
+  console.log(`Cockpit for Claude Code rodando em http://${HOST}:${PORT}`);
 });

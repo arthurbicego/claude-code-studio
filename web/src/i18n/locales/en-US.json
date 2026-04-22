@@ -21,7 +21,7 @@
     "showInfo": "Show info"
   },
   "sidebar": {
-    "appName": "Claude Code Studio",
+    "appName": "Cockpit for Claude Code",
     "settings": "Settings",
     "newSession": "New session",
     "reloadList": "Reload list",
@@ -455,12 +455,12 @@
           "statuslineCache": {
             "title": "Statusline cache",
             "description": "Cache files regenerated automatically when needed.",
-            "info": "Cache files in ~/.claude-code-studio/statusline-cache/ used to speed up the statusline. Regenerated automatically when needed. Safe to delete at any time."
+            "info": "Cache files in ~/.cockpit-for-claude-code/statusline-cache/ used to speed up the statusline. Regenerated automatically when needed. Safe to delete at any time."
           },
           "orphanAttachments": {
             "title": "Orphan attachments",
             "description": "Attachment folders for sessions that no longer exist and are not live.",
-            "info": "Folders under ~/.claude-code-studio/attachments/ bound to sessions that no longer exist (neither as .jsonl nor as a live session). Removing frees the disk space used by those dead sessions' attachments."
+            "info": "Folders under ~/.cockpit-for-claude-code/attachments/ bound to sessions that no longer exist (neither as .jsonl nor as a live session). Removing frees the disk space used by those dead sessions' attachments."
           }
         }
       }
@@ -766,13 +766,13 @@
   "help": {
     "open": "Open user guide",
     "title": "User guide",
-    "subtitle": "How to navigate and get the most out of Claude Code Studio",
+    "subtitle": "How to navigate and get the most out of Cockpit for Claude Code",
     "tocLabel": "Contents",
     "close": "Close guide",
     "sections": {
       "overview": {
         "title": "Overview",
-        "body": "Claude Code Studio is a local dashboard (it binds to 127.0.0.1, no auth) that wraps the claude-code CLI. Think of it as mission-control for several Claude sessions running in parallel, with first-class git worktrees and live panels showing what the model is doing.\n\nWhat you get over the bare CLI:\n• Multiple concurrent sessions with state indicators (waiting, active, standby, closed).\n• Worktree workflow integrated into the session lifecycle.\n• Plan / Tasks / Diff panels next to the terminal — see reasoning and changes without leaving the view.\n• Session cost and quota (5h/7d) always visible in the footer.\n• In-app editors for CLAUDE.md, agents, skills, and sandbox."
+        "body": "Cockpit for Claude Code is a local dashboard (it binds to 127.0.0.1, no auth) that wraps the claude-code CLI. Think of it as mission-control for several Claude sessions running in parallel, with first-class git worktrees and live panels showing what the model is doing.\n\nWhat you get over the bare CLI:\n• Multiple concurrent sessions with state indicators (waiting, active, standby, closed).\n• Worktree workflow integrated into the session lifecycle.\n• Plan / Tasks / Diff panels next to the terminal — see reasoning and changes without leaving the view.\n• Session cost and quota (5h/7d) always visible in the footer.\n• In-app editors for CLAUDE.md, agents, skills, and sandbox."
       },
       "sessions": {
         "title": "Sessions",

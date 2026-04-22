@@ -15,7 +15,7 @@ test('home page loads, renders the sidebar header, and reaches the sessions API'
 
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: 'Claude Code Studio' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Cockpit for Claude Code' })).toBeVisible();
   await sessionsResponse;
 
   // The empty-state message only renders once the sessions fetch settles — so
