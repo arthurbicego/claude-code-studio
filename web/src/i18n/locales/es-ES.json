@@ -163,7 +163,15 @@
       "empty": "No hay sesiones para eliminar en \"{{name}}\".",
       "body_one": "Esta acción elimina del disco {{count}} sesión del proyecto \"{{name}}\". No se puede deshacer.",
       "body_other": "Esta acción elimina del disco {{count}} sesiones del proyecto \"{{name}}\". No se puede deshacer.",
-      "confirm": "Eliminar todas"
+      "confirm": "Eliminar todas",
+      "confirmCascade": "Eliminar proyecto y worktrees",
+      "worktreesInfo_one": "Este proyecto también tiene {{count}} sesión en {{worktrees}} worktree vinculado.",
+      "worktreesInfo_other": "Este proyecto también tiene {{count}} sesiones en {{worktrees}} worktrees vinculados.",
+      "worktreesCount_one": "{{count}} worktree",
+      "worktreesCount_other": "{{count}} worktrees",
+      "cascadeLabel": "Eliminar también las sesiones de los worktrees",
+      "cascadeHint": "No elimina los directorios de los worktrees del disco; solo borra su historial de sesiones.",
+      "keepPreviewTitle": "Si los mantienes, los worktrees quedarán listados así:"
     },
     "deleteSession": {
       "title": "Eliminar sesión definitivamente",

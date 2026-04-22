@@ -58,7 +58,10 @@ export default function App() {
     action: 'archive' | 'unarchive'
   } | null>(null)
   const [pendingProjectArchive, setPendingProjectArchive] = useState<Project | null>(null)
-  const [pendingProjectDelete, setPendingProjectDelete] = useState<Project | null>(null)
+  const [pendingProjectDelete, setPendingProjectDelete] = useState<{
+    project: Project
+    worktrees: Project[]
+  } | null>(null)
   const [pendingVSCodeOpen, setPendingVSCodeOpen] = useState<{
     path: string
     label: string
@@ -292,23 +295,31 @@ export default function App() {
     refresh()
   }, [pendingProjectArchive, refresh])
 
-  const confirmProjectDelete = useCallback(async () => {
-    const target = pendingProjectDelete
-    if (!target) return
-    const ids = target.sessions.map((s) => s.id)
-    for (const id of ids) {
-      try {
-        if (openSessions.has(id)) {
-          await fetch(`/api/sessions/${encodeURIComponent(id)}/close`, { method: 'POST' })
+  const confirmProjectDelete = useCallback(
+    async (cascade: boolean) => {
+      const target = pendingProjectDelete
+      if (!target) return
+      const ids = target.project.sessions.map((s) => s.id)
+      if (cascade) {
+        for (const wt of target.worktrees) {
+          for (const s of wt.sessions) ids.push(s.id)
         }
-        await fetch(`/api/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' })
-      } catch {
-        /* noop */
       }
-    }
-    removeSessions(ids)
-    refresh()
-  }, [pendingProjectDelete, openSessions, removeSessions, refresh])
+      for (const id of ids) {
+        try {
+          if (openSessions.has(id)) {
+            await fetch(`/api/sessions/${encodeURIComponent(id)}/close`, { method: 'POST' })
+          }
+          await fetch(`/api/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' })
+        } catch {
+          /* noop */
+        }
+      }
+      removeSessions(ids)
+      refresh()
+    },
+    [pendingProjectDelete, openSessions, removeSessions, refresh],
+  )
 
   const confirmDelete = useCallback(async () => {
     const target = pendingDelete
@@ -349,7 +360,12 @@ export default function App() {
           )
         }
         onArchiveProject={(project) => setPendingProjectArchive(project)}
-        onDeleteProject={(project) => setPendingProjectDelete(project)}
+        onDeleteProject={(project) => {
+          const worktrees = projects.filter(
+            (p) => p.worktreeOf?.parentCwd === project.cwd && p.sessions.length > 0,
+          )
+          setPendingProjectDelete({ project, worktrees })
+        }}
       />
       <main className="flex min-w-0 flex-1 flex-col">
         <Toolbar

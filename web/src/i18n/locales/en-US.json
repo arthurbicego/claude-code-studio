@@ -163,7 +163,15 @@
       "empty": "No sessions to delete in \"{{name}}\".",
       "body_one": "This action removes {{count}} session of project \"{{name}}\" from disk. Cannot be undone.",
       "body_other": "This action removes {{count}} sessions of project \"{{name}}\" from disk. Cannot be undone.",
-      "confirm": "Delete all"
+      "confirm": "Delete all",
+      "confirmCascade": "Delete project and worktrees",
+      "worktreesInfo_one": "This project also has {{count}} session across {{worktrees}} linked worktree.",
+      "worktreesInfo_other": "This project also has {{count}} sessions across {{worktrees}} linked worktrees.",
+      "worktreesCount_one": "{{count}} worktree",
+      "worktreesCount_other": "{{count}} worktrees",
+      "cascadeLabel": "Also delete worktree sessions",
+      "cascadeHint": "Does not remove the worktree directories from disk; only deletes their session history.",
+      "keepPreviewTitle": "If kept, the worktrees will remain listed like this:"
     },
     "deleteSession": {
       "title": "Permanently delete session",

@@ -9,12 +9,13 @@ type Props = {
   children: ReactNode
   side?: Side
   className?: string
+  disabled?: boolean
 }
 
 const MARGIN = 4
 const EDGE_PAD = 6
 
-export function Tooltip({ content, children, side = 'bottom', className }: Props) {
+export function Tooltip({ content, children, side = 'bottom', className, disabled }: Props) {
   const triggerRef = useRef<HTMLSpanElement | null>(null)
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const [open, setOpen] = useState(false)
@@ -51,7 +52,10 @@ export function Tooltip({ content, children, side = 'bottom', className }: Props
     setCoords({ top, left })
   }, [open, side, content])
 
-  const show = () => setOpen(true)
+  const show = () => {
+    if (disabled) return
+    setOpen(true)
+  }
   const hide = () => {
     setOpen(false)
     setCoords(null)
@@ -70,7 +74,7 @@ export function Tooltip({ content, children, side = 'bottom', className }: Props
       >
         {children}
       </span>
-      {open && typeof document !== 'undefined'
+      {open && !disabled && typeof document !== 'undefined'
         ? createPortal(
             <div
               ref={tooltipRef}
