@@ -120,6 +120,18 @@ export function TerminalView({
     termRef.current = term
     fitRef.current = fit
 
+    // Re-fit on the next frame: the sync fit above runs before xterm has
+    // measured the monospace cell, so it often silently keeps the terminal at
+    // the default 80x24. By the next animation frame the renderer has done its
+    // first pass and fit() produces the real container dimensions.
+    const initialFitRaf = requestAnimationFrame(() => {
+      try {
+        fit.fit()
+      } catch {
+        /* noop */
+      }
+    })
+
     const url = buildWsUrl(launch, skipDefaults)
     const ws = new WebSocket(url)
     wsRef.current = ws
@@ -184,7 +196,26 @@ export function TerminalView({
     const ro = new ResizeObserver(onWindowResize)
     ro.observe(hostRef.current)
 
+    // When the browser tab is backgrounded, xterm's renderer suspends and
+    // ResizeObserver stops firing for the hidden element. Refit on the next
+    // frame after the tab becomes visible so any size change that happened
+    // while hidden — or a stale renderer measurement — gets corrected.
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return
+      if (!isActiveRef.current) return
+      requestAnimationFrame(() => {
+        try {
+          fit.fit()
+        } catch {
+          /* noop */
+        }
+      })
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
     return () => {
+      cancelAnimationFrame(initialFitRaf)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
       window.removeEventListener('resize', onWindowResize)
       ro.disconnect()
       dataDisposer.dispose()
