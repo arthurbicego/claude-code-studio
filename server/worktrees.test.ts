@@ -111,5 +111,26 @@ describe('worktrees branch helpers', () => {
         fs.rmSync(wtPath, { recursive: true, force: true });
       }
     });
+
+    it('resolves a removed worktree via the .claude/worktrees convention', () => {
+      // The worktree was at <repo>/.claude/worktrees/<name> but has since been
+      // removed. Old sessions still record that cwd — we should derive the
+      // parent from the path even though nothing exists on disk anymore.
+      const ghost = path.join(repo, '.claude', 'worktrees', 'removed-feature');
+      const ref = projectWorktreeRef(ghost);
+      expect(ref).not.toBeNull();
+      expect(fs.realpathSync(ref?.parentCwd ?? '')).toBe(fs.realpathSync(repo));
+      expect(ref?.branch).toBeNull();
+    });
+
+    it('returns null for a ghost path whose derived parent is not a git repo', () => {
+      const bogus = fs.mkdtempSync(path.join(os.tmpdir(), 'ccs-nogit-'));
+      try {
+        const ghost = path.join(bogus, '.claude', 'worktrees', 'x');
+        expect(projectWorktreeRef(ghost)).toBeNull();
+      } finally {
+        fs.rmSync(bogus, { recursive: true, force: true });
+      }
+    });
   });
 });

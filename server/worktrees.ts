@@ -120,14 +120,27 @@ export function pickMainWorktree(entries: WorktreeEntry[]): WorktreeEntry | null
   return entries[0] || null;
 }
 
+const GHOST_WORKTREE_SEGMENT_RE = /(.+)\/\.claude\/worktrees\/[^/]+\/?$/;
+
 /**
  * If `cwd` is a linked worktree of another git repo, returns a ref pointing at
  * the main worktree path and the branch currently checked out in `cwd`.
+ *
+ * Handles two cases:
+ *   1. The worktree still exists on disk: asks git directly for the main
+ *      worktree path and current branch.
+ *   2. The worktree was removed (merged + cleaned up) but sessions recorded
+ *      its `cwd`: recognizes the app's `<parent>/.claude/worktrees/<name>`
+ *      convention, validates that `<parent>` is a git main worktree, and
+ *      returns it with a null branch (the branch is unrecoverable once the
+ *      worktree is gone).
+ *
  * Returns null when `cwd` is the main worktree itself, isn't a git repo, or
- * has vanished on disk.
+ * doesn't match the ghost pattern.
  */
 export function projectWorktreeRef(cwd: string): ProjectWorktreeRef | null {
-  if (!cwd || !fs.existsSync(cwd)) return null;
+  if (!cwd) return null;
+  if (!fs.existsSync(cwd)) return ghostWorktreeRef(cwd);
   const entries = listWorktrees(cwd);
   if (entries.length <= 1) return null;
   const main = pickMainWorktree(entries);
@@ -137,6 +150,20 @@ export function projectWorktreeRef(cwd: string): ProjectWorktreeRef | null {
   if (mainReal === ownReal) return null;
   const branch = runGitArgs(cwd, ['symbolic-ref', '--short', 'HEAD']).trim();
   return { parentCwd: main.path, branch: branch || null };
+}
+
+function ghostWorktreeRef(cwd: string): ProjectWorktreeRef | null {
+  const match = GHOST_WORKTREE_SEGMENT_RE.exec(cwd);
+  if (!match) return null;
+  const parent = match[1];
+  if (!fs.existsSync(parent)) return null;
+  const gitDir = runGitArgs(parent, ['rev-parse', '--git-dir']).trim();
+  const commonDir = runGitArgs(parent, ['rev-parse', '--git-common-dir']).trim();
+  if (!gitDir || !commonDir) return null;
+  const absGit = path.isAbsolute(gitDir) ? gitDir : path.resolve(parent, gitDir);
+  const absCommon = path.isAbsolute(commonDir) ? commonDir : path.resolve(parent, commonDir);
+  if (realpathSafe(absGit) !== realpathSafe(absCommon)) return null;
+  return { parentCwd: parent, branch: null };
 }
 
 export function branchUpstream(cwd: string, branch: string): string | null {
