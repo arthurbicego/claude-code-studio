@@ -5,7 +5,7 @@
 #   1. Reads the JSON payload from stdin.
 #   2. Persists it to ~/.cockpit-for-claude-code/statusline-cache/<session_id>.json
 #      and a global rate-limits snapshot — these feed the per-session footer
-#      shown in the Studio web UI.
+#      shown in the Cockpit web UI.
 #   3. Pipes the same stdin to the user's ~/.claude/statusline.sh (when it
 #      exists and is executable) and prints whatever it produces, so the
 #      visible statusLine inside the embedded PTY stays identical to what the

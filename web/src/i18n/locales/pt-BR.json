@@ -401,7 +401,7 @@
       },
       "maintenance": {
         "title": "Manutenção",
-        "description": "Identifique e remova sujeiras acumuladas pelo Claude Code e por este studio. Cada categoria lista itens antes de apagar; a ação é irreversível.",
+        "description": "Identifique e remova sujeiras acumuladas pelo Claude Code e pelo Cockpit. Cada categoria lista itens antes de apagar; a ação é irreversível.",
         "loading": "Analisando…",
         "error": "Falha ao analisar: {{message}}",
         "empty": "Nada a limpar nesta categoria.",

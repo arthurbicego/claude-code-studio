@@ -77,7 +77,7 @@ export function register(app: Express): void {
         if (typeof s.effortLevel === 'string') defaults.effort = s.effortLevel;
         // The Claude Code CLI reads the user's default permission mode from
         // `permissions.defaultMode`. Accept the legacy top-level `permissionMode` as a
-        // fallback, and give the nested key precedence so the studio matches CLI behaviour.
+        // fallback, and give the nested key precedence so Cockpit matches CLI behaviour.
         if (typeof s.permissionMode === 'string') defaults.permissionMode = s.permissionMode;
         if (typeof s.permissions === 'object' && s.permissions !== null) {
           const perms = s.permissions as Record<string, unknown>;
