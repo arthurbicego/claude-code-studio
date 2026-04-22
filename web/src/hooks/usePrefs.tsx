@@ -20,6 +20,7 @@ import type { ProjectSortBy, SessionSortBy } from '@/types'
 export type SectionPrefs = {
   groupByProject: boolean
   projectSortBy: ProjectSortBy | null
+  flatSessionSort: SessionSortBy
 }
 
 export type Prefs = {

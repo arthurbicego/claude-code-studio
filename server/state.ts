@@ -65,6 +65,7 @@ export function sanitizePrefs(raw: unknown): Prefs {
     sections[name] = {
       groupByProject: typeof v.groupByProject === 'boolean' ? v.groupByProject : true,
       projectSortBy: coerceProjectSortBy(v.projectSortBy),
+      flatSessionSort: coerceSessionSortBy(v.flatSessionSort) ?? 'lastResponse',
     };
   }
   const expanded = Array.isArray(rawObj.expanded)

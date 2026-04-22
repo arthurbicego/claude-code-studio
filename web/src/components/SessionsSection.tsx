@@ -184,10 +184,11 @@ export function SessionsSection({
 }: Props) {
   const { t } = useTranslation()
   const { isExpanded, toggle } = useExpanded()
-  const { prefs, toggleGrouping, setProjectSortBy } = useSectionPrefs(prefsKey)
+  const { prefs, toggleGrouping, setProjectSortBy, setFlatSessionSort } = useSectionPrefs(prefsKey)
   const { prefs: globalPrefs, setSessionSortForProject } = usePrefs()
   const sessionSortByProject = globalPrefs.sessionSortByProject
   const projectSortBy = prefs.projectSortBy
+  const flatSessionSort = prefs.flatSessionSort
   const [sectionOpen, setSectionOpen] = useState(!defaultCollapsed)
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
   const isSearching = !!searchQuery && searchQuery.length > 0
@@ -263,11 +264,16 @@ export function SessionsSection({
   const flat = useMemo(() => {
     const out: { project: Project; session: SessionMeta }[] = []
     for (const p of filteredProjects) {
-      const sort = sessionSortByProject[p.slug] ?? DEFAULT_SESSION_SORT
-      for (const s of sortSessions(p.sessions, sort)) out.push({ project: p, session: s })
+      for (const s of p.sessions) out.push({ project: p, session: s })
+    }
+    if (flatSessionSort === 'alphabetical') {
+      out.sort((a, b) => alphabeticalKey(a.session).localeCompare(alphabeticalKey(b.session)))
+    } else {
+      const key = flatSessionSort === 'createdAt' ? 'createdAt' : 'mtime'
+      out.sort((a, b) => b.session[key] - a.session[key])
     }
     return out
-  }, [filteredProjects, sessionSortByProject])
+  }, [filteredProjects, flatSessionSort])
 
   // Split filteredProjects into main projects and their worktree children.
   // A project counts as a worktree child only if its parent is also present in
@@ -329,14 +335,25 @@ export function SessionsSection({
                 {prefs.groupByProject ? <FolderTree size={12} /> : <List size={12} />}
               </button>
             </Tooltip>
-            <DropdownMenu
-              triggerIcon={ArrowDownAZ}
-              items={buildProjectSortMenuItems(t, projectSortBy, setProjectSortBy)}
-              ariaLabel={t('sessions.sortMenu')}
-              tooltip={t('sessions.sortBy', {
-                label: projectSortTooltipLabel(t, projectSortBy),
-              })}
-            />
+            {prefs.groupByProject ? (
+              <DropdownMenu
+                triggerIcon={ArrowDownAZ}
+                items={buildProjectSortMenuItems(t, projectSortBy, setProjectSortBy)}
+                ariaLabel={t('sessions.sortMenu')}
+                tooltip={t('sessions.sortBy', {
+                  label: projectSortTooltipLabel(t, projectSortBy),
+                })}
+              />
+            ) : (
+              <DropdownMenu
+                triggerIcon={ArrowDownAZ}
+                items={buildSessionSortMenuItems(t, flatSessionSort, setFlatSessionSort)}
+                ariaLabel={t('sessions.flatSortMenu')}
+                tooltip={t('sessions.flatSortBy', {
+                  label: sessionSortLabel(t, flatSessionSort),
+                })}
+              />
+            )}
           </>
         ) : null}
       </div>

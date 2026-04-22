@@ -51,6 +51,8 @@
     "toggleGrouping": "Alternar agrupación",
     "sortBy": "Ordenar proyectos: {{label}}",
     "sortMenu": "Opciones de ordenación de proyectos",
+    "flatSortBy": "Ordenar sesiones: {{label}}",
+    "flatSortMenu": "Opciones de ordenación de sesiones",
     "toggleSort": "Alternar orden",
     "sortLabel": {
       "lastResponse": "Última respuesta",

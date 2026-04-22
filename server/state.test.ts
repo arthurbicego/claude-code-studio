@@ -11,13 +11,30 @@ describe('sanitizePrefs', () => {
   it('preserves known section fields and fills defaults', () => {
     const prefs = sanitizePrefs({
       sections: {
-        open: { groupByProject: false, projectSortBy: 'alphabetical' },
+        open: {
+          groupByProject: false,
+          projectSortBy: 'alphabetical',
+          flatSessionSort: 'createdAt',
+        },
         history: {},
       },
     });
-    expect(prefs.sections.open).toEqual({ groupByProject: false, projectSortBy: 'alphabetical' });
-    // history: {} => groupByProject defaults to true, projectSortBy defaults to null (custom)
-    expect(prefs.sections.history).toEqual({ groupByProject: true, projectSortBy: null });
+    expect(prefs.sections.open).toEqual({
+      groupByProject: false,
+      projectSortBy: 'alphabetical',
+      flatSessionSort: 'createdAt',
+    });
+    // history: {} => groupByProject=true, projectSortBy=null (custom), flatSessionSort='lastResponse'
+    expect(prefs.sections.history).toEqual({
+      groupByProject: true,
+      projectSortBy: null,
+      flatSessionSort: 'lastResponse',
+    });
+  });
+
+  it('coerces invalid flatSessionSort values to lastResponse', () => {
+    const prefs = sanitizePrefs({ sections: { open: { flatSessionSort: 'garbage' } } });
+    expect(prefs.sections.open?.flatSessionSort).toBe('lastResponse');
   });
 
   it('drops sections whose value is not an object', () => {
