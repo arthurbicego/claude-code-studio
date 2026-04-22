@@ -78,6 +78,18 @@ export default function App() {
     })
     return set
   }, [liveSessions])
+  // Resolve the cwd for panels from the JSONL-backed project metadata. Falling back to
+  // `activeLaunch.cwd` alone is wrong for worktree launches: the PTY is spawned in the
+  // parent repo and the Claude CLI enters the worktree internally, so `entry.cwd` on the
+  // server stays pinned to the parent. The project list reflects the cwd Claude actually
+  // writes to its JSONL — the truth for where the session is operating now.
+  const activeCwd = useMemo(() => {
+    if (!activeSessionKey) return activeLaunch?.cwd ?? ''
+    for (const p of projects) {
+      if (p.sessions.some((s) => s.id === activeSessionKey)) return p.cwd
+    }
+    return activeLaunch?.cwd ?? ''
+  }, [projects, activeSessionKey, activeLaunch])
   const openPanelKinds = useMemo(() => new Set(openPanels.map((p) => p.kind)), [openPanels])
   const panelColumns = useMemo(() => layoutColumns(openPanels), [openPanels])
   const { columnWidths, rowRatios, setColumnWidth, setRowRatio } = usePanelLayout(
@@ -405,7 +417,7 @@ export default function App() {
               widths={columnWidths}
               ratios={rowRatios}
               sessionId={activeSessionKey}
-              cwd={activeLaunch.cwd}
+              cwd={activeCwd}
               onSetWidth={setColumnWidth}
               onSetRatio={setRowRatio}
               onClose={closePanel}
