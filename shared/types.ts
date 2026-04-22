@@ -199,6 +199,18 @@ export type WorktreesResult = {
   worktrees: Worktree[];
 };
 
+export type GhPrInfo = {
+  number: number;
+  url: string;
+  state: 'OPEN' | 'CLOSED' | 'MERGED';
+  mergedAt: string | null;
+};
+
+export type GhPrResult = {
+  supported: boolean;
+  pr: GhPrInfo | null;
+};
+
 export type WorktreeDiffResult = {
   cwd: string;
   branch: string | null;

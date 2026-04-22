@@ -180,6 +180,12 @@
       "confirm": "Delete"
     }
   },
+  "mergedPrBanner": {
+    "message": "Pull request #{{number}} was merged.",
+    "viewPr": "View PR",
+    "endWorktree": "End worktree…",
+    "dismiss": "Dismiss"
+  },
   "endWorktree": {
     "title": "End worktree",
     "confirm": "End worktree",

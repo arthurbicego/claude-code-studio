@@ -7,6 +7,7 @@ import { liveSessions, startIdleSweep } from './live-sessions';
 import { startArchivePurgeSchedule } from './purge';
 import * as agentsSkillsRoutes from './routes/agents-skills';
 import * as attachmentsRoutes from './routes/attachments';
+import * as githubRoutes from './routes/github';
 import * as maintenanceRoutes from './routes/maintenance';
 import * as memoryRoutes from './routes/memory';
 import * as miscRoutes from './routes/misc';
@@ -48,6 +49,7 @@ prefsRoutes.register(app);
 miscRoutes.register(app);
 attachmentsRoutes.register(app);
 maintenanceRoutes.register(app);
+githubRoutes.register(app);
 ptyRoutes.register(app);
 
 startIdleSweep();

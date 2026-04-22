@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AppDialogs, type PendingCloseWorktree } from '@/components/AppDialogs'
 import type { EndWorktreeOptions } from '@/components/EndWorktreeDialog'
+import { MergedPrBanner } from '@/components/MergedPrBanner'
 import { NewSessionModal } from '@/components/NewSessionModal'
 import { PanelColumns } from '@/components/PanelColumns'
 import { SessionActions } from '@/components/SessionActions'
@@ -11,6 +12,7 @@ import { TerminalView } from '@/components/Terminal'
 import { Toolbar } from '@/components/Toolbar'
 import type { WorktreeCloseChoice } from '@/components/WorktreeCloseDialog'
 import { useLiveSessions } from '@/hooks/useLiveSessions'
+import { useMergedPr } from '@/hooks/useMergedPr'
 import { usePanelLayout } from '@/hooks/usePanelLayout'
 import { useSessionDefaults } from '@/hooks/useSessionDefaults'
 import { useSessionFooter } from '@/hooks/useSessionFooter'
@@ -82,6 +84,11 @@ export default function App() {
   const [inputSignal, setInputSignal] = useState<{ seq: number; text: string } | null>(null)
 
   const footer = useSessionFooter(activeLaunch ? activeSessionKey : null)
+  const [dismissedMergedPrs, setDismissedMergedPrs] = useState<Set<string>>(new Set())
+  const mergedPr = useMergedPr(
+    activeLaunch && footer?.worktree ? footer.worktree.path : null,
+    activeLaunch ? (footer?.branch ?? null) : null,
+  )
   const liveCwds = useMemo(() => {
     const set = new Set<string>()
     liveSessions.forEach((s) => {
@@ -526,6 +533,22 @@ export default function App() {
           onTogglePanel={togglePanel}
           onOpenInVSCode={requestOpenInVSCode}
         />
+        {activeLaunch &&
+        mergedPr?.pr?.state === 'MERGED' &&
+        !dismissedMergedPrs.has(`${activeLaunch.sessionKey}:${mergedPr.pr.number}`) ? (
+          <MergedPrBanner
+            prNumber={mergedPr.pr.number}
+            prUrl={mergedPr.pr.url}
+            onEndWorktree={() => {
+              const project = projects.find((p) => p.cwd === activeLaunch.cwd)
+              if (project) requestEndWorktree(project)
+            }}
+            onDismiss={() => {
+              const key = `${activeLaunch.sessionKey}:${mergedPr.pr?.number}`
+              setDismissedMergedPrs((prev) => new Set(prev).add(key))
+            }}
+          />
+        ) : null}
         <div className="flex min-h-0 flex-1">
           <div className="relative flex min-w-0 flex-1">
             {Array.from(openSessions.values()).map((l) => {
