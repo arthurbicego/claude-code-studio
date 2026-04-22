@@ -145,7 +145,7 @@ export function scanStaleArchived(
 }
 
 /**
- * Lists files under the studio's statusline cache directory. They are regenerated on demand,
+ * Lists files under the Cockpit statusline cache directory. They are regenerated on demand,
  * so any present file is removable.
  */
 export function scanStatuslineCache(cacheDir: string): MaintenanceCategory {

@@ -401,7 +401,7 @@
       },
       "maintenance": {
         "title": "Maintenance",
-        "description": "Identify and remove clutter left by Claude Code and by this studio. Each category lists items before deletion; the action is irreversible.",
+        "description": "Identify and remove clutter left by Claude Code and by Cockpit. Each category lists items before deletion; the action is irreversible.",
         "loading": "Scanning…",
         "error": "Scan failed: {{message}}",
         "empty": "Nothing to clean in this category.",

@@ -401,7 +401,7 @@
       },
       "maintenance": {
         "title": "Mantenimiento",
-        "description": "Identifica y elimina residuos dejados por Claude Code y por este studio. Cada categoría lista los elementos antes de eliminarlos; la acción es irreversible.",
+        "description": "Identifica y elimina residuos dejados por Claude Code y por Cockpit. Cada categoría lista los elementos antes de eliminarlos; la acción es irreversible.",
         "loading": "Analizando…",
         "error": "Error en el análisis: {{message}}",
         "empty": "Nada que limpiar en esta categoría.",
