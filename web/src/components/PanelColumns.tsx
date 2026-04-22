@@ -22,6 +22,7 @@ export function PanelColumns({
   onClose,
   onLaunchInWorktree,
   onOpenCreateWorktree,
+  onEndWorktreeFromPanel,
 }: {
   columns: OpenPanel[][]
   widths: number[]
@@ -33,6 +34,7 @@ export function PanelColumns({
   onClose: (kind: PanelKind, id: string) => void
   onLaunchInWorktree: (path: string) => void
   onOpenCreateWorktree: (cwd: string) => void
+  onEndWorktreeFromPanel: (parentCwd: string, worktreePath: string) => void
 }) {
   return (
     <>
@@ -79,6 +81,7 @@ export function PanelColumns({
                         onClose={() => onClose(panel.kind, panel.id)}
                         onLaunchInWorktree={onLaunchInWorktree}
                         onOpenCreate={onOpenCreateWorktree}
+                        onEndWorktree={onEndWorktreeFromPanel}
                       />
                     )}
                   </div>

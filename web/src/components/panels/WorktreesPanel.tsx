@@ -1,5 +1,15 @@
 import type { TFunction } from 'i18next'
-import { FileDiff, GitBranch, GitMerge, Play, Plus, RefreshCw, Trash, Trash2 } from 'lucide-react'
+import {
+  FileDiff,
+  GitBranch,
+  GitMerge,
+  LogOut,
+  Play,
+  Plus,
+  RefreshCw,
+  Trash,
+  Trash2,
+} from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
@@ -17,6 +27,7 @@ type Props = {
   onLaunchInWorktree: (worktreePath: string) => void
   onOpenCreate: (cwd: string) => void
   onOpenDiff?: (worktree: Worktree) => void
+  onEndWorktree?: (parentCwd: string, worktreePath: string) => void
 }
 
 function formatRelative(fullPath: string, cwd: string): string {
@@ -43,6 +54,7 @@ export function WorktreesPanel({
   onLaunchInWorktree,
   onOpenCreate,
   onOpenDiff,
+  onEndWorktree,
 }: Props) {
   const { t } = useTranslation()
   const { data, loading, error, refresh } = useWorktrees(cwd)
@@ -202,6 +214,14 @@ export function WorktreesPanel({
         label: t('panels.worktrees.merge', { base: baseLabel }),
         icon: GitMerge,
         onSelect: () => setPendingMerge(wt),
+      })
+    }
+    if (onEndWorktree && cwd && !wt.isMain && wt.liveSessionCount === 0) {
+      items.push({
+        label: t('panels.worktrees.endWorktree'),
+        icon: LogOut,
+        destructive: true,
+        onSelect: () => onEndWorktree(cwd, wt.path),
       })
     }
     if (!removeDisabled) {

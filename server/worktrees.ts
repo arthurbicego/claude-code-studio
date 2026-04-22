@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ProjectWorktreeRef } from '../shared/types';
-import { type NumStat, parseNumstat, runGitArgs } from './git';
+import { type NumStat, parseNumstat, runGitArgs, runGitArgsOrThrow } from './git';
 import { realpathSafe } from './paths';
 
 export type WorktreeEntry = {
@@ -168,4 +168,33 @@ export function deleteLocalBranch(
   const flag = opts.force ? '-D' : '-d';
   runGitArgs(cwd, ['branch', flag, branch]);
   return !branchExists(cwd, branch);
+}
+
+/**
+ * Push `branch` to its tracked remote. When no upstream is set yet, sets one on
+ * `origin` with `-u`. Returns the remote it pushed to, or throws on failure.
+ */
+export function pushBranch(cwd: string, branch: string): { remote: string; ref: string } {
+  const upstream = branchUpstream(cwd, branch);
+  if (upstream) {
+    const [remote, ...rest] = upstream.split('/');
+    const ref = rest.join('/') || branch;
+    runGitArgsOrThrow(cwd, ['push', remote, `${branch}:${ref}`]);
+    return { remote, ref };
+  }
+  runGitArgsOrThrow(cwd, ['push', '-u', 'origin', branch]);
+  return { remote: 'origin', ref: branch };
+}
+
+/**
+ * Delete the remote-tracking branch on its upstream remote. Throws if there is
+ * no upstream set — caller should check with `branchUpstream` first.
+ */
+export function deleteRemoteBranch(cwd: string, branch: string): { remote: string; ref: string } {
+  const upstream = branchUpstream(cwd, branch);
+  if (!upstream) throw new Error('no upstream configured for this branch');
+  const [remote, ...rest] = upstream.split('/');
+  const ref = rest.join('/') || branch;
+  runGitArgsOrThrow(cwd, ['push', remote, '--delete', ref]);
+  return { remote, ref };
 }

@@ -77,6 +77,7 @@
       "openInVscode": "Abrir no VS Code",
       "archiveAll": "Arquivar sessões",
       "deleteAll": "Apagar sessões",
+      "endWorktree": "Encerrar worktree…",
       "showPath": "Mostrar caminho do projeto",
       "path": "Caminho do projeto",
       "copyPath": "Copiar caminho do projeto",
@@ -179,6 +180,40 @@
       "confirm": "Apagar"
     }
   },
+  "endWorktree": {
+    "title": "Encerrar worktree",
+    "confirm": "Encerrar worktree",
+    "clean": "limpo",
+    "modifiedCount_one": "{{count}} arquivo modificado",
+    "modifiedCount_other": "{{count}} arquivos modificados",
+    "baseLabel": "base: {{base}}",
+    "project": "Projeto:",
+    "commit": {
+      "title": "Commitar mudanças locais",
+      "hint": "Worktree tem mudanças não commitadas. Escreva uma mensagem para commitar antes de encerrar; deixe vazio para seguir sem commit (mudanças serão descartadas).",
+      "placeholder": "Mensagem do commit (opcional)"
+    },
+    "push": {
+      "label": "Publicar commits no upstream",
+      "hint": "git push {{upstream}} antes de remover a worktree.",
+      "disabled": "Nada a publicar — branch local em paridade com o remote."
+    },
+    "deleteLocal": {
+      "label": "Remover branch local",
+      "hint": "Deleta a branch localmente após remover a worktree. Desmarque se quiser manter os commits locais."
+    },
+    "deleteRemote": {
+      "label": "Deletar branch remota",
+      "hint": "git push --delete em {{upstream}}. Ação visível para colaboradores; preferencial fazer via merge de PR.",
+      "noUpstream": "Branch não tem upstream configurado."
+    },
+    "deleteSessions": {
+      "label_one": "Apagar a sessão associada ({{count}})",
+      "label_other": "Apagar as {{count}} sessões associadas",
+      "hint": "Remove os arquivos .jsonl das sessões desta worktree. Não afeta o remote.",
+      "none": "Nenhuma sessão associada a esta worktree."
+    }
+  },
   "worktreeClose": {
     "title": "Sessão em worktree com alterações",
     "cancel": "Cancelar",
@@ -230,6 +265,7 @@
     "waiting": "Aguardando dados da sessão…",
     "contextOver": ">200k",
     "worktreeAt": "Worktree em {{path}}",
+    "endWorktree": "Encerrar worktree…",
     "fields": {
       "dir": "dir",
       "git": "git",
@@ -337,6 +373,7 @@
       "merge": "Mergear em {{base}}",
       "mergeBaseFallback": "base",
       "removeWorktree": "Remover worktree",
+      "endWorktree": "Encerrar worktree…",
       "detached": "(detached)",
       "mainLabel": "principal",
       "activeCount_one": "{{count}} sessão ativa",
@@ -848,6 +885,9 @@
     "WORKTREE_BRANCH_NOT_DETECTED": "Branch do worktree não detectada.",
     "WORKTREE_NOT_CLEAN": "Worktree tem mudanças não commitadas — commite antes de mergear.",
     "WORKTREE_NOTHING_TO_MERGE": "Nada para mergear.",
+    "WORKTREE_PUSH_FAILED": "Falha ao publicar a branch: {{message}}",
+    "WORKTREE_REMOTE_DELETE_FAILED": "Falha ao deletar a branch remota: {{message}}",
+    "WORKTREE_NO_UPSTREAM": "Branch não tem upstream configurado.",
     "GIT_COMMAND_FAILED": "Comando git falhou: {{message}}",
     "ATTACHMENT_TYPE_UNSUPPORTED": "Tipo de arquivo não suportado.",
     "ATTACHMENT_TOO_LARGE": "Arquivo muito grande (máx. {{max}}).",

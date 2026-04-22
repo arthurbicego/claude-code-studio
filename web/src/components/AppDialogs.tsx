@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { DeleteProjectDialog } from '@/components/DeleteProjectDialog'
+import { EndWorktreeDialog, type EndWorktreeOptions } from '@/components/EndWorktreeDialog'
 import { type WorktreeCloseChoice, WorktreeCloseDialog } from '@/components/WorktreeCloseDialog'
 import type { Project, SessionMeta, Worktree } from '@/types'
 
@@ -11,6 +12,13 @@ export type PendingCloseWorktree = {
   worktree: Worktree
   base: string | null
   projectCwd: string
+}
+export type PendingEndWorktree = {
+  project: Project
+  worktree: Worktree
+  projectCwd: string
+  base: string | null
+  sessionCount: number
 }
 
 export function AppDialogs({
@@ -34,6 +42,11 @@ export function AppDialogs({
   pendingDelete,
   onConfirmDelete,
   onCloseDelete,
+  pendingEndWorktree,
+  endingBusy,
+  endingError,
+  onConfirmEndWorktree,
+  onCancelEndWorktree,
 }: {
   pendingArchive: PendingArchive | null
   onConfirmArchive: () => void | Promise<void>
@@ -63,6 +76,12 @@ export function AppDialogs({
   pendingDelete: SessionMeta | null
   onConfirmDelete: () => void | Promise<void>
   onCloseDelete: () => void
+
+  pendingEndWorktree: PendingEndWorktree | null
+  endingBusy: boolean
+  endingError: string | null
+  onConfirmEndWorktree: (opts: EndWorktreeOptions) => void | Promise<void>
+  onCancelEndWorktree: () => void
 }) {
   const { t } = useTranslation()
   return (
@@ -151,6 +170,19 @@ export function AppDialogs({
         destructive
         onConfirm={onConfirmDelete}
         onClose={onCloseDelete}
+      />
+
+      <EndWorktreeDialog
+        open={!!pendingEndWorktree}
+        worktree={pendingEndWorktree?.worktree ?? null}
+        projectCwd={pendingEndWorktree?.projectCwd ?? null}
+        base={pendingEndWorktree?.base ?? null}
+        upstream={pendingEndWorktree?.worktree?.upstream ?? null}
+        sessionCount={pendingEndWorktree?.sessionCount ?? 0}
+        pending={endingBusy}
+        error={endingError}
+        onConfirm={onConfirmEndWorktree}
+        onCancel={onCancelEndWorktree}
       />
     </>
   )

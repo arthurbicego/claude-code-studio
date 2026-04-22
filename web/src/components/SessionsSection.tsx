@@ -9,6 +9,7 @@ import {
   FolderCode,
   FolderTree,
   List,
+  LogOut,
   Trash2,
   X,
 } from 'lucide-react'
@@ -56,6 +57,7 @@ type Props = {
   onOpenProjectInVSCode: (project: Project) => void
   onArchiveProject: (project: Project) => void
   onDeleteProject: (project: Project) => void
+  onEndWorktree: (project: Project) => void
   renderState: (live: LiveSession | undefined) => React.ReactNode
   applyProjectOrder: <T extends { slug: string }>(items: T[]) => T[]
   onReorderProject: (fromSlug: string, toSlug: string, position: 'before' | 'after') => void
@@ -179,6 +181,7 @@ export function SessionsSection({
   onOpenProjectInVSCode,
   onArchiveProject,
   onDeleteProject,
+  onEndWorktree,
   renderState,
   applyProjectOrder,
   onReorderProject,
@@ -497,6 +500,7 @@ export function SessionsSection({
                         onUnarchive={onUnarchive}
                         onDelete={onDelete}
                         onCloseSession={onCloseSession}
+                        onEndWorktree={onEndWorktree}
                         renderState={renderState}
                       />
                     ))}
@@ -708,6 +712,7 @@ type WorktreeGroupProps = {
   onUnarchive: (id: string) => void
   onDelete: (session: SessionMeta) => void
   onCloseSession?: (sessionKey: string) => void
+  onEndWorktree: (project: Project) => void
   renderState: (live: LiveSession | undefined) => React.ReactNode
 }
 
@@ -725,6 +730,7 @@ function WorktreeGroup({
   onUnarchive,
   onDelete,
   onCloseSession,
+  onEndWorktree,
   renderState,
 }: WorktreeGroupProps) {
   const { t } = useTranslation()
@@ -779,6 +785,18 @@ function WorktreeGroup({
             tooltip={t('sessions.project.sortBy', {
               label: sessionSortLabel(t, effectiveSort),
             })}
+          />
+          <DropdownMenu
+            items={[
+              {
+                label: t('sessions.project.endWorktree'),
+                icon: LogOut,
+                destructive: true,
+                onSelect: () => onEndWorktree(project),
+              },
+            ]}
+            ariaLabel={t('sessions.project.actions')}
+            tooltip={t('sessions.project.actions')}
           />
         </div>
       </div>

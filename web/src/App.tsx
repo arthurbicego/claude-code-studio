@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AppDialogs, type PendingCloseWorktree } from '@/components/AppDialogs'
+import type { EndWorktreeOptions } from '@/components/EndWorktreeDialog'
 import { NewSessionModal } from '@/components/NewSessionModal'
 import { PanelColumns } from '@/components/PanelColumns'
 import { SessionActions } from '@/components/SessionActions'
@@ -23,6 +24,7 @@ import type {
   SessionFooter as SessionFooterData,
   SessionLaunch,
   SessionMeta,
+  Worktree,
   WorktreesResult,
 } from '@/types'
 
@@ -62,6 +64,15 @@ export default function App() {
     project: Project
     worktrees: Project[]
   } | null>(null)
+  const [pendingEndWorktree, setPendingEndWorktree] = useState<{
+    project: Project
+    worktree: Worktree
+    projectCwd: string
+    base: string | null
+    sessionCount: number
+  } | null>(null)
+  const [endingBusy, setEndingBusy] = useState(false)
+  const [endingError, setEndingError] = useState<string | null>(null)
   const [pendingVSCodeOpen, setPendingVSCodeOpen] = useState<{
     path: string
     label: string
@@ -348,6 +359,131 @@ export default function App() {
     refresh()
   }, [pendingDelete, openSessions, removeSessions, refresh])
 
+  const requestEndWorktree = useCallback(
+    async (project: Project) => {
+      const parentCwd = project.worktreeOf?.parentCwd
+      if (!parentCwd) return
+      setEndingError(null)
+      try {
+        const params = new URLSearchParams({ cwd: parentCwd })
+        const res = await fetch(`/api/worktrees?${params.toString()}`, { cache: 'no-store' })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const data = (await res.json()) as WorktreesResult
+        const worktree = data.worktrees.find((w) => w.path === project.cwd) ?? null
+        if (!worktree) {
+          setEndingError(t('errors.WORKTREE_PATH_INVALID'))
+          return
+        }
+        setPendingEndWorktree({
+          project,
+          worktree,
+          projectCwd: parentCwd,
+          base: data.base,
+          sessionCount: project.sessions.length,
+        })
+      } catch (err) {
+        setEndingError(err instanceof Error ? err.message : String(err))
+        setPendingEndWorktree(
+          (prev) =>
+            prev ?? {
+              project,
+              // Synthesize a minimal Worktree so the dialog can still render with an error.
+              worktree: {
+                path: project.cwd,
+                branch: project.worktreeOf?.branch ?? null,
+                head: null,
+                detached: false,
+                prunable: false,
+                isMain: false,
+                clean: true,
+                modifiedCount: 0,
+                ahead: 0,
+                behind: 0,
+                linesAdded: 0,
+                linesRemoved: 0,
+                liveSessionCount: 0,
+                mtime: null,
+                upstream: null,
+              },
+              projectCwd: parentCwd,
+              base: null,
+              sessionCount: project.sessions.length,
+            },
+        )
+      }
+    },
+    [t],
+  )
+
+  const confirmEndWorktree = useCallback(
+    async (opts: EndWorktreeOptions) => {
+      const target = pendingEndWorktree
+      if (!target) return
+      setEndingBusy(true)
+      setEndingError(null)
+      try {
+        const res = await fetch('/api/worktrees/end', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cwd: target.projectCwd,
+            path: target.worktree.path,
+            commitMessage: opts.commitMessage,
+            push: opts.push,
+            deleteRemote: opts.deleteRemote,
+            deleteLocalBranch: opts.deleteLocalBranch,
+            force: true,
+          }),
+        })
+        if (!res.ok) {
+          const apiErr = await readApiError(res)
+          throw new Error(translateApiError(t, apiErr))
+        }
+        if (opts.deleteSessions) {
+          const ids = target.project.sessions.map((s) => s.id)
+          for (const id of ids) {
+            try {
+              if (openSessions.has(id)) {
+                await fetch(`/api/sessions/${encodeURIComponent(id)}/close`, { method: 'POST' })
+              }
+              await fetch(`/api/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' })
+            } catch {
+              /* noop — best-effort per session */
+            }
+          }
+          removeSessions(ids)
+        }
+        setPendingEndWorktree(null)
+        refresh()
+      } catch (err) {
+        setEndingError(err instanceof Error ? err.message : String(err))
+      } finally {
+        setEndingBusy(false)
+      }
+    },
+    [pendingEndWorktree, openSessions, removeSessions, refresh, t],
+  )
+
+  const requestEndWorktreeFromPanel = useCallback(
+    (parentCwd: string, worktreePath: string) => {
+      const project = projects.find((p) => p.cwd === worktreePath)
+      if (project) {
+        requestEndWorktree(project)
+        return
+      }
+      // Worktree exists on disk but has no session yet — synthesize a Project so
+      // the dialog can still drive the unified end-worktree flow.
+      requestEndWorktree({
+        slug: worktreePath,
+        cwd: worktreePath,
+        cwdResolved: true,
+        sessions: [],
+        worktreeOf: { parentCwd, branch: null },
+      })
+    },
+    [projects, requestEndWorktree],
+  )
+
   return (
     <div className="flex h-full">
       <Sidebar
@@ -372,6 +508,7 @@ export default function App() {
           )
         }
         onArchiveProject={(project) => setPendingProjectArchive(project)}
+        onEndWorktree={requestEndWorktree}
         onDeleteProject={(project) => {
           const worktrees = projects.filter(
             (p) => p.worktreeOf?.parentCwd === project.cwd && p.sessions.length > 0,
@@ -423,6 +560,7 @@ export default function App() {
               onClose={closePanel}
               onLaunchInWorktree={launchInWorktree}
               onOpenCreateWorktree={openCreateWorktreeModal}
+              onEndWorktreeFromPanel={requestEndWorktreeFromPanel}
             />
           ) : null}
         </div>
@@ -433,7 +571,20 @@ export default function App() {
               onSendInput={sendInput}
               onInterrupt={() => setInterruptSignal((x) => x + 1)}
             />
-            <SessionFooter key={activeLaunch.sessionKey} data={footer} />
+            <SessionFooter
+              key={activeLaunch.sessionKey}
+              data={footer}
+              onEndWorktree={
+                footer?.worktree
+                  ? () => {
+                      const wtPath = footer.worktree?.path
+                      if (!wtPath) return
+                      const project = projects.find((p) => p.cwd === wtPath)
+                      if (project) requestEndWorktree(project)
+                    }
+                  : undefined
+              }
+            />
           </>
         ) : null}
       </main>
@@ -477,6 +628,14 @@ export default function App() {
         pendingDelete={pendingDelete}
         onConfirmDelete={confirmDelete}
         onCloseDelete={() => setPendingDelete(null)}
+        pendingEndWorktree={pendingEndWorktree}
+        endingBusy={endingBusy}
+        endingError={endingError}
+        onConfirmEndWorktree={confirmEndWorktree}
+        onCancelEndWorktree={() => {
+          setPendingEndWorktree(null)
+          setEndingError(null)
+        }}
       />
     </div>
   )

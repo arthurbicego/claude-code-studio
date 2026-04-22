@@ -39,6 +39,7 @@ type Props = {
   onOpenProjectInVSCode: (project: Project) => void
   onArchiveProject: (project: Project) => void
   onDeleteProject: (project: Project) => void
+  onEndWorktree: (project: Project) => void
 }
 
 function StateIndicator({ state }: { state: LiveSessionState }) {
@@ -94,6 +95,7 @@ export function Sidebar({
   onOpenProjectInVSCode,
   onArchiveProject,
   onDeleteProject,
+  onEndWorktree,
 }: Props) {
   const { t } = useTranslation()
   const formatTime = useFormatTime()
@@ -204,6 +206,7 @@ export function Sidebar({
               onOpenProjectInVSCode={onOpenProjectInVSCode}
               onArchiveProject={onArchiveProject}
               onDeleteProject={onDeleteProject}
+              onEndWorktree={onEndWorktree}
               renderState={renderState}
               applyProjectOrder={applyOrder}
               onReorderProject={moveSlug}
@@ -238,6 +241,7 @@ export function Sidebar({
           onOpenProjectInVSCode={onOpenProjectInVSCode}
           onArchiveProject={onArchiveProject}
           onDeleteProject={onDeleteProject}
+          onEndWorktree={onEndWorktree}
           renderState={renderState}
           applyProjectOrder={applyOrder}
           onReorderProject={moveSlug}
@@ -261,6 +265,7 @@ export function Sidebar({
               onOpenProjectInVSCode={onOpenProjectInVSCode}
               onArchiveProject={onArchiveProject}
               onDeleteProject={onDeleteProject}
+              onEndWorktree={onEndWorktree}
               renderState={renderState}
               applyProjectOrder={applyOrder}
               onReorderProject={moveSlug}

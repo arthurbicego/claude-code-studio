@@ -10,9 +10,11 @@ import { BRANCH_NAME_RE } from '../validators';
 import {
   branchUpstream,
   deleteLocalBranch,
+  deleteRemoteBranch,
   guessDefaultBranch,
   listWorktrees,
   pickMainWorktree,
+  pushBranch,
   worktreeAheadBehind,
   worktreeDiffStat,
   worktreeStatus,
@@ -53,6 +55,8 @@ export function register(app: Express): void {
       } catch {
         // Worktree directory may have been removed externally.
       }
+      const upstream =
+        e.branch && BRANCH_NAME_RE.test(e.branch) ? branchUpstream(e.path, e.branch) : null;
       return {
         path: e.path,
         branch: e.branch,
@@ -68,6 +72,7 @@ export function register(app: Express): void {
         linesRemoved,
         liveSessionCount: workspaceCounts.get(realPath) || 0,
         mtime,
+        upstream,
       };
     });
 
@@ -226,6 +231,122 @@ export function register(app: Express): void {
     // Discard is explicitly destructive, so force-delete any local commits too.
     const branchDeleted = branch ? deleteLocalBranch(cwd, branch, { force: true }) : false;
     res.json({ ok: true, branch, branchDeleted, upstream });
+  });
+
+  app.post('/api/worktrees/end', (req: Request, res: Response) => {
+    const cwd = isAllowedProjectCwd(req.body?.cwd);
+    if (!cwd) return sendError(res, 400, ERR.CWD_INVALID, 'invalid cwd');
+    const rawPath = typeof req.body?.path === 'string' ? req.body.path : '';
+    const resolved = path.resolve(rawPath);
+    if (!isPathWithinCwd(resolved, cwd) || !fs.existsSync(resolved)) {
+      return sendError(res, 400, ERR.WORKTREE_PATH_INVALID, 'invalid worktree path');
+    }
+    const entries = listWorktrees(cwd);
+    const main = pickMainWorktree(entries);
+    if (main && realpathSafe(main.path) === realpathSafe(resolved)) {
+      return sendError(
+        res,
+        400,
+        ERR.WORKTREE_MAIN_REMOVE_FORBIDDEN,
+        'cannot remove the main worktree',
+      );
+    }
+    const counts = liveSessionWorkspaces();
+    if ((counts.get(realpathSafe(resolved)) || 0) > 0) {
+      return sendError(
+        res,
+        409,
+        ERR.WORKTREE_HAS_ACTIVE_SESSIONS,
+        'there are active sessions in this worktree',
+      );
+    }
+
+    const entry = entries.find((e) => realpathSafe(e.path) === realpathSafe(resolved)) ?? null;
+    const branch = entry?.branch && BRANCH_NAME_RE.test(entry.branch) ? entry.branch : null;
+    const upstream = branch ? branchUpstream(cwd, branch) : null;
+
+    const commitMessageRaw =
+      typeof req.body?.commitMessage === 'string' ? req.body.commitMessage.trim() : '';
+    const wantsCommit = commitMessageRaw.length > 0;
+    if (wantsCommit && commitMessageRaw.length > 4096) {
+      return sendError(
+        res,
+        400,
+        ERR.WORKTREE_COMMIT_MESSAGE_REQUIRED,
+        'commit message is required (max 4096 chars)',
+      );
+    }
+    const wantsPush = req.body?.push === true;
+    const wantsDeleteRemote = req.body?.deleteRemote === true;
+    const wantsDeleteLocal = req.body?.deleteLocalBranch !== false;
+    const force = req.body?.force === true;
+
+    if (wantsDeleteRemote && !upstream) {
+      return sendError(
+        res,
+        400,
+        ERR.WORKTREE_NO_UPSTREAM,
+        'branch has no upstream configured — cannot delete remote',
+      );
+    }
+
+    const result = {
+      ok: true as const,
+      branch,
+      committed: false,
+      pushed: null as null | { remote: string; ref: string },
+      remoteDeleted: null as null | { remote: string; ref: string },
+      worktreeRemoved: false,
+      branchDeleted: false,
+      upstream,
+    };
+
+    try {
+      if (wantsCommit) {
+        const status = worktreeStatus(resolved);
+        if (!status.clean) {
+          runGitArgsOrThrow(resolved, ['add', '-A']);
+          runGitArgsOrThrow(resolved, ['commit', '-m', commitMessageRaw]);
+          result.committed = true;
+        }
+      }
+      if (wantsPush) {
+        if (!branch) {
+          return sendError(
+            res,
+            400,
+            ERR.WORKTREE_BRANCH_NOT_DETECTED,
+            'cannot push — worktree branch could not be detected',
+          );
+        }
+        result.pushed = pushBranch(resolved, branch);
+      }
+      if (wantsDeleteRemote && branch) {
+        result.remoteDeleted = deleteRemoteBranch(cwd, branch);
+      }
+      const removeArgs = ['worktree', 'remove'];
+      if (force) removeArgs.push('--force');
+      removeArgs.push(resolved);
+      runGitArgsOrThrow(cwd, removeArgs);
+      result.worktreeRemoved = true;
+      if (wantsDeleteLocal && branch) {
+        result.branchDeleted = deleteLocalBranch(cwd, branch, { force });
+      }
+    } catch (err) {
+      const e = err as { stderr?: Buffer; message?: string };
+      const stderr = e.stderr?.toString() || e.message || 'git command failed';
+      let code: string = ERR.GIT_COMMAND_FAILED;
+      // Tag the step that failed so the client can show a precise message. The
+      // partial `result` fields already encode how far we got.
+      if (wantsPush && !result.pushed && result.committed === wantsCommit) {
+        code = ERR.WORKTREE_PUSH_FAILED;
+      } else if (wantsDeleteRemote && !result.remoteDeleted && (!wantsPush || result.pushed)) {
+        code = ERR.WORKTREE_REMOTE_DELETE_FAILED;
+      }
+      return sendError(res, 500, code, stderr, { partial: result });
+    }
+
+    res.json(result);
   });
 
   app.post('/api/worktrees/merge', (req: Request, res: Response) => {
