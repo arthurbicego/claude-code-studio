@@ -61,10 +61,24 @@ export default function App() {
     id: string
     action: 'archive' | 'unarchive'
   } | null>(null)
-  const [pendingProjectArchive, setPendingProjectArchive] = useState<Project | null>(null)
+  const [pendingProjectArchive, setPendingProjectArchive] = useState<{
+    project: Project
+    action: 'archive' | 'unarchive'
+  } | null>(null)
   const [pendingProjectDelete, setPendingProjectDelete] = useState<{
     project: Project
     worktrees: Project[]
+  } | null>(null)
+  const [pendingSectionArchive, setPendingSectionArchive] = useState<{
+    ids: string[]
+    sectionTitle: string
+    action: 'archive' | 'unarchive'
+    filtered: boolean
+  } | null>(null)
+  const [pendingSectionDelete, setPendingSectionDelete] = useState<{
+    ids: string[]
+    sectionTitle: string
+    filtered: boolean
   } | null>(null)
   const [pendingEndWorktree, setPendingEndWorktree] = useState<{
     project: Project
@@ -314,10 +328,14 @@ export default function App() {
   const confirmProjectArchive = useCallback(async () => {
     const target = pendingProjectArchive
     if (!target) return
-    const ids = target.sessions.filter((s) => !s.archived).map((s) => s.id)
+    const action = target.action
+    const endpoint = action === 'unarchive' ? 'unarchive' : 'archive'
+    const ids = target.project.sessions
+      .filter((s) => (action === 'unarchive' ? s.archived : !s.archived))
+      .map((s) => s.id)
     await Promise.all(
       ids.map((id) =>
-        fetch(`/api/sessions/${encodeURIComponent(id)}/archive`, { method: 'POST' }).catch(
+        fetch(`/api/sessions/${encodeURIComponent(id)}/${endpoint}`, { method: 'POST' }).catch(
           () => null,
         ),
       ),
@@ -365,6 +383,37 @@ export default function App() {
     removeSessions([target.id])
     refresh()
   }, [pendingDelete, openSessions, removeSessions, refresh])
+
+  const confirmSectionArchive = useCallback(async () => {
+    const target = pendingSectionArchive
+    if (!target) return
+    const endpoint = target.action === 'unarchive' ? 'unarchive' : 'archive'
+    await Promise.all(
+      target.ids.map((id) =>
+        fetch(`/api/sessions/${encodeURIComponent(id)}/${endpoint}`, { method: 'POST' }).catch(
+          () => null,
+        ),
+      ),
+    )
+    refresh()
+  }, [pendingSectionArchive, refresh])
+
+  const confirmSectionDelete = useCallback(async () => {
+    const target = pendingSectionDelete
+    if (!target) return
+    for (const id of target.ids) {
+      try {
+        if (openSessions.has(id)) {
+          await fetch(`/api/sessions/${encodeURIComponent(id)}/close`, { method: 'POST' })
+        }
+        await fetch(`/api/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' })
+      } catch {
+        /* noop */
+      }
+    }
+    removeSessions(target.ids)
+    refresh()
+  }, [pendingSectionDelete, openSessions, removeSessions, refresh])
 
   const requestEndWorktree = useCallback(
     async (project: Project) => {
@@ -514,7 +563,8 @@ export default function App() {
             project.cwd.split('/').filter(Boolean).pop() || project.cwd,
           )
         }
-        onArchiveProject={(project) => setPendingProjectArchive(project)}
+        onArchiveProject={(project) => setPendingProjectArchive({ project, action: 'archive' })}
+        onUnarchiveProject={(project) => setPendingProjectArchive({ project, action: 'unarchive' })}
         onEndWorktree={requestEndWorktree}
         onDeleteProject={(project) => {
           const worktrees = projects.filter(
@@ -522,6 +572,12 @@ export default function App() {
           )
           setPendingProjectDelete({ project, worktrees })
         }}
+        onSectionArchive={(ids, sectionTitle, action, filtered) =>
+          setPendingSectionArchive({ ids, sectionTitle, action, filtered })
+        }
+        onSectionDelete={(ids, sectionTitle, filtered) =>
+          setPendingSectionDelete({ ids, sectionTitle, filtered })
+        }
       />
       <main className="flex min-w-0 flex-1 flex-col">
         <Toolbar
@@ -659,6 +715,12 @@ export default function App() {
           setPendingEndWorktree(null)
           setEndingError(null)
         }}
+        pendingSectionArchive={pendingSectionArchive}
+        onConfirmSectionArchive={confirmSectionArchive}
+        onCloseSectionArchive={() => setPendingSectionArchive(null)}
+        pendingSectionDelete={pendingSectionDelete}
+        onConfirmSectionDelete={confirmSectionDelete}
+        onCloseSectionDelete={() => setPendingSectionDelete(null)}
       />
     </div>
   )

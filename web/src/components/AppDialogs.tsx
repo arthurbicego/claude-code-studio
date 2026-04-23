@@ -20,6 +20,14 @@ export type PendingEndWorktree = {
   base: string | null
   sessionCount: number
 }
+export type PendingProjectArchive = { project: Project; action: 'archive' | 'unarchive' }
+export type PendingSectionArchive = {
+  ids: string[]
+  sectionTitle: string
+  action: 'archive' | 'unarchive'
+  filtered: boolean
+}
+export type PendingSectionDelete = { ids: string[]; sectionTitle: string; filtered: boolean }
 
 export function AppDialogs({
   pendingArchive,
@@ -47,6 +55,12 @@ export function AppDialogs({
   endingError,
   onConfirmEndWorktree,
   onCancelEndWorktree,
+  pendingSectionArchive,
+  onConfirmSectionArchive,
+  onCloseSectionArchive,
+  pendingSectionDelete,
+  onConfirmSectionDelete,
+  onCloseSectionDelete,
 }: {
   pendingArchive: PendingArchive | null
   onConfirmArchive: () => void | Promise<void>
@@ -65,7 +79,7 @@ export function AppDialogs({
   onConfirmVSCode: () => void
   onCloseVSCode: () => void
 
-  pendingProjectArchive: Project | null
+  pendingProjectArchive: PendingProjectArchive | null
   onConfirmProjectArchive: () => void | Promise<void>
   onCloseProjectArchive: () => void
 
@@ -82,6 +96,14 @@ export function AppDialogs({
   endingError: string | null
   onConfirmEndWorktree: (opts: EndWorktreeOptions) => void | Promise<void>
   onCancelEndWorktree: () => void
+
+  pendingSectionArchive: PendingSectionArchive | null
+  onConfirmSectionArchive: () => void | Promise<void>
+  onCloseSectionArchive: () => void
+
+  pendingSectionDelete: PendingSectionDelete | null
+  onConfirmSectionDelete: () => void | Promise<void>
+  onCloseSectionDelete: () => void
 }) {
   const { t } = useTranslation()
   return (
@@ -133,21 +155,35 @@ export function AppDialogs({
 
       <ConfirmDialog
         open={!!pendingProjectArchive}
-        title={t('dialogs.archiveProject.title')}
+        title={
+          pendingProjectArchive?.action === 'unarchive'
+            ? t('dialogs.archiveProject.unarchiveTitle')
+            : t('dialogs.archiveProject.title')
+        }
         description={
           pendingProjectArchive
             ? (() => {
-                const count = pendingProjectArchive.sessions.filter((s) => !s.archived).length
-                const name =
-                  pendingProjectArchive.cwd.split('/').filter(Boolean).pop() ||
-                  pendingProjectArchive.cwd
+                const { project, action } = pendingProjectArchive
+                const count = project.sessions.filter((s) =>
+                  action === 'unarchive' ? s.archived : !s.archived,
+                ).length
+                const name = project.cwd.split('/').filter(Boolean).pop() || project.cwd
+                if (action === 'unarchive') {
+                  return count === 0
+                    ? t('dialogs.archiveProject.unarchiveEmpty', { name })
+                    : t('dialogs.archiveProject.unarchiveBody', { count, name })
+                }
                 return count === 0
                   ? t('dialogs.archiveProject.empty', { name })
                   : t('dialogs.archiveProject.body', { count, name })
               })()
             : ''
         }
-        confirmLabel={t('dialogs.archiveProject.confirm')}
+        confirmLabel={
+          pendingProjectArchive?.action === 'unarchive'
+            ? t('dialogs.archiveProject.unarchiveConfirm')
+            : t('dialogs.archiveProject.confirm')
+        }
         onConfirm={onConfirmProjectArchive}
         onClose={onCloseProjectArchive}
       />
@@ -183,6 +219,53 @@ export function AppDialogs({
         error={endingError}
         onConfirm={onConfirmEndWorktree}
         onCancel={onCancelEndWorktree}
+      />
+
+      <ConfirmDialog
+        open={!!pendingSectionArchive}
+        title={
+          pendingSectionArchive?.action === 'unarchive'
+            ? t('dialogs.sectionArchive.unarchiveTitle')
+            : t('dialogs.sectionArchive.title')
+        }
+        description={
+          pendingSectionArchive
+            ? (() => {
+                const { ids, sectionTitle, action, filtered } = pendingSectionArchive
+                const base = action === 'unarchive' ? 'unarchive' : 'archive'
+                const suffix = filtered ? 'Filtered' : 'All'
+                const key = `dialogs.sectionArchive.${base}Body${suffix}`
+                return t(key, { count: ids.length, section: sectionTitle })
+              })()
+            : ''
+        }
+        confirmLabel={
+          pendingSectionArchive?.action === 'unarchive'
+            ? t('dialogs.sectionArchive.unarchiveConfirm')
+            : t('dialogs.sectionArchive.confirm')
+        }
+        onConfirm={onConfirmSectionArchive}
+        onClose={onCloseSectionArchive}
+      />
+
+      <ConfirmDialog
+        open={!!pendingSectionDelete}
+        title={t('dialogs.sectionDelete.title')}
+        description={
+          pendingSectionDelete
+            ? (() => {
+                const { ids, sectionTitle, filtered } = pendingSectionDelete
+                const key = filtered
+                  ? 'dialogs.sectionDelete.bodyFiltered'
+                  : 'dialogs.sectionDelete.bodyAll'
+                return t(key, { count: ids.length, section: sectionTitle })
+              })()
+            : ''
+        }
+        confirmLabel={t('dialogs.sectionDelete.confirm')}
+        destructive
+        onConfirm={onConfirmSectionDelete}
+        onClose={onCloseSectionDelete}
       />
     </>
   )

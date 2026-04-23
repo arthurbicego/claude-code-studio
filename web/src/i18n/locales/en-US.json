@@ -76,6 +76,7 @@
       "actions": "Project actions",
       "openInVscode": "Open in VS Code",
       "archiveAll": "Archive sessions",
+      "unarchiveAll": "Unarchive sessions",
       "deleteAll": "Delete sessions",
       "endWorktree": "End worktree…",
       "showPath": "Show project path",
@@ -83,6 +84,15 @@
       "copyPath": "Copy project path",
       "sortMenu": "Sort sessions in this project",
       "sortBy": "Sort sessions: {{label}}"
+    },
+    "section": {
+      "actions": "Section actions",
+      "archiveAll": "Archive all",
+      "archiveFiltered": "Archive filtered",
+      "unarchiveAll": "Unarchive all",
+      "unarchiveFiltered": "Unarchive filtered",
+      "deleteAll": "Delete all",
+      "deleteFiltered": "Delete filtered"
     }
   },
   "newSession": {
@@ -157,7 +167,12 @@
       "empty": "No active sessions to archive in \"{{name}}\".",
       "body_one": "{{count}} active session will be moved to Archived (project: {{name}}).",
       "body_other": "{{count}} active sessions will be moved to Archived (project: {{name}}).",
-      "confirm": "Archive all"
+      "confirm": "Archive all",
+      "unarchiveTitle": "Unarchive project sessions",
+      "unarchiveEmpty": "No archived sessions to restore in \"{{name}}\".",
+      "unarchiveBody_one": "{{count}} archived session will return to History (project: {{name}}).",
+      "unarchiveBody_other": "{{count}} archived sessions will return to History (project: {{name}}).",
+      "unarchiveConfirm": "Unarchive all"
     },
     "deleteProject": {
       "title": "Permanently delete project sessions",
@@ -178,6 +193,28 @@
       "title": "Permanently delete session",
       "body": "This action removes the session file ({{id}}…) from disk. Cannot be undone.",
       "confirm": "Delete"
+    },
+    "sectionArchive": {
+      "title": "Archive sessions in section",
+      "unarchiveTitle": "Unarchive sessions in section",
+      "archiveBodyAll_one": "{{count}} session in \"{{section}}\" will be moved to Archived.",
+      "archiveBodyAll_other": "{{count}} sessions in \"{{section}}\" will be moved to Archived.",
+      "archiveBodyFiltered_one": "{{count}} filtered session in \"{{section}}\" will be moved to Archived.",
+      "archiveBodyFiltered_other": "{{count}} filtered sessions in \"{{section}}\" will be moved to Archived.",
+      "unarchiveBodyAll_one": "{{count}} session in \"{{section}}\" will return to History.",
+      "unarchiveBodyAll_other": "{{count}} sessions in \"{{section}}\" will return to History.",
+      "unarchiveBodyFiltered_one": "{{count}} filtered session in \"{{section}}\" will return to History.",
+      "unarchiveBodyFiltered_other": "{{count}} filtered sessions in \"{{section}}\" will return to History.",
+      "confirm": "Archive all",
+      "unarchiveConfirm": "Unarchive all"
+    },
+    "sectionDelete": {
+      "title": "Permanently delete sessions",
+      "bodyAll_one": "{{count}} session in \"{{section}}\" will be permanently removed from disk. Cannot be undone.",
+      "bodyAll_other": "{{count}} sessions in \"{{section}}\" will be permanently removed from disk. Cannot be undone.",
+      "bodyFiltered_one": "{{count}} filtered session in \"{{section}}\" will be permanently removed from disk. Cannot be undone.",
+      "bodyFiltered_other": "{{count}} filtered sessions in \"{{section}}\" will be permanently removed from disk. Cannot be undone.",
+      "confirm": "Delete all"
     }
   },
   "mergedPrBanner": {

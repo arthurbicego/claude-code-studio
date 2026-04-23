@@ -76,6 +76,7 @@
       "actions": "Acciones del proyecto",
       "openInVscode": "Abrir en VS Code",
       "archiveAll": "Archivar sesiones",
+      "unarchiveAll": "Desarchivar sesiones",
       "deleteAll": "Eliminar sesiones",
       "endWorktree": "Cerrar worktree…",
       "showPath": "Mostrar ruta del proyecto",
@@ -83,6 +84,15 @@
       "copyPath": "Copiar ruta del proyecto",
       "sortMenu": "Ordenar sesiones de este proyecto",
       "sortBy": "Ordenar sesiones: {{label}}"
+    },
+    "section": {
+      "actions": "Acciones de la sección",
+      "archiveAll": "Archivar todas",
+      "archiveFiltered": "Archivar filtradas",
+      "unarchiveAll": "Desarchivar todas",
+      "unarchiveFiltered": "Desarchivar filtradas",
+      "deleteAll": "Eliminar todas",
+      "deleteFiltered": "Eliminar filtradas"
     }
   },
   "newSession": {
@@ -157,7 +167,12 @@
       "empty": "No hay sesiones activas para archivar en \"{{name}}\".",
       "body_one": "{{count}} sesión activa se moverá a Archivadas (proyecto: {{name}}).",
       "body_other": "{{count}} sesiones activas se moverán a Archivadas (proyecto: {{name}}).",
-      "confirm": "Archivar todas"
+      "confirm": "Archivar todas",
+      "unarchiveTitle": "Desarchivar sesiones del proyecto",
+      "unarchiveEmpty": "No hay sesiones archivadas para restaurar en \"{{name}}\".",
+      "unarchiveBody_one": "{{count}} sesión archivada volverá al Historial (proyecto: {{name}}).",
+      "unarchiveBody_other": "{{count}} sesiones archivadas volverán al Historial (proyecto: {{name}}).",
+      "unarchiveConfirm": "Desarchivar todas"
     },
     "deleteProject": {
       "title": "Eliminar sesiones del proyecto definitivamente",
@@ -178,6 +193,28 @@
       "title": "Eliminar sesión definitivamente",
       "body": "Esta acción elimina del disco el archivo de la sesión ({{id}}…). No se puede deshacer.",
       "confirm": "Eliminar"
+    },
+    "sectionArchive": {
+      "title": "Archivar sesiones de la sección",
+      "unarchiveTitle": "Desarchivar sesiones de la sección",
+      "archiveBodyAll_one": "{{count}} sesión en \"{{section}}\" se moverá a Archivadas.",
+      "archiveBodyAll_other": "{{count}} sesiones en \"{{section}}\" se moverán a Archivadas.",
+      "archiveBodyFiltered_one": "{{count}} sesión filtrada en \"{{section}}\" se moverá a Archivadas.",
+      "archiveBodyFiltered_other": "{{count}} sesiones filtradas en \"{{section}}\" se moverán a Archivadas.",
+      "unarchiveBodyAll_one": "{{count}} sesión en \"{{section}}\" volverá al Historial.",
+      "unarchiveBodyAll_other": "{{count}} sesiones en \"{{section}}\" volverán al Historial.",
+      "unarchiveBodyFiltered_one": "{{count}} sesión filtrada en \"{{section}}\" volverá al Historial.",
+      "unarchiveBodyFiltered_other": "{{count}} sesiones filtradas en \"{{section}}\" volverán al Historial.",
+      "confirm": "Archivar todas",
+      "unarchiveConfirm": "Desarchivar todas"
+    },
+    "sectionDelete": {
+      "title": "Eliminar sesiones definitivamente",
+      "bodyAll_one": "{{count}} sesión en \"{{section}}\" se eliminará del disco. No se puede deshacer.",
+      "bodyAll_other": "{{count}} sesiones en \"{{section}}\" se eliminarán del disco. No se puede deshacer.",
+      "bodyFiltered_one": "{{count}} sesión filtrada en \"{{section}}\" se eliminará del disco. No se puede deshacer.",
+      "bodyFiltered_other": "{{count}} sesiones filtradas en \"{{section}}\" se eliminarán del disco. No se puede deshacer.",
+      "confirm": "Eliminar todas"
     }
   },
   "mergedPrBanner": {

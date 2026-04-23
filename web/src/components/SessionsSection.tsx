@@ -37,6 +37,13 @@ import type {
 
 const DEFAULT_SESSION_SORT: SessionSortBy = 'lastResponse'
 
+// Section-header action buttons use a "subtle" hover (icon tint only, no bg pill)
+// because the header itself has no hover background. On project/session rows, the
+// bg pill makes sense — the row is already a hover surface. `hover:bg-transparent`
+// cancels the DropdownMenu's default `hover:bg-accent` via tailwind-merge.
+const SECTION_HEADER_BUTTON_CLASS =
+  'text-muted-foreground hover:bg-transparent hover:text-foreground'
+
 type Variant = 'history' | 'archived' | 'open'
 
 type Props = {
@@ -56,8 +63,16 @@ type Props = {
   onCloseSession?: (sessionKey: string) => void
   onOpenProjectInVSCode: (project: Project) => void
   onArchiveProject: (project: Project) => void
+  onUnarchiveProject: (project: Project) => void
   onDeleteProject: (project: Project) => void
   onEndWorktree: (project: Project) => void
+  onSectionArchive?: (
+    ids: string[],
+    sectionTitle: string,
+    action: 'archive' | 'unarchive',
+    filtered: boolean,
+  ) => void
+  onSectionDelete?: (ids: string[], sectionTitle: string, filtered: boolean) => void
   renderState: (live: LiveSession | undefined) => React.ReactNode
   applyProjectOrder: <T extends { slug: string }>(items: T[]) => T[]
   onReorderProject: (fromSlug: string, toSlug: string, position: 'before' | 'after') => void
@@ -180,8 +195,11 @@ export function SessionsSection({
   onCloseSession,
   onOpenProjectInVSCode,
   onArchiveProject,
+  onUnarchiveProject,
   onDeleteProject,
   onEndWorktree,
+  onSectionArchive,
+  onSectionDelete,
   renderState,
   applyProjectOrder,
   onReorderProject,
@@ -303,6 +321,52 @@ export function SessionsSection({
 
   const total = flat.length
 
+  const sectionMenuItems = useMemo<DropdownMenuItem[]>(() => {
+    if (total === 0) return []
+    const items: DropdownMenuItem[] = []
+    const filtered = isSearching
+    // In Open/History, `flat` may include sessions already archived (open sessions
+    // stay visible in Open even when archived). Filter those out so the archive
+    // action is a no-op-free and the dialog count matches reality. In Archived,
+    // every item is archived — use all of them for the unarchive action.
+    const archiveCandidateIds =
+      variant === 'archived'
+        ? flat.map(({ session }) => session.id)
+        : flat.filter(({ session }) => !session.archived).map(({ session }) => session.id)
+    const allIds = flat.map(({ session }) => session.id)
+
+    if (variant === 'archived') {
+      if (onSectionArchive && archiveCandidateIds.length > 0) {
+        items.push({
+          label: filtered
+            ? t('sessions.section.unarchiveFiltered')
+            : t('sessions.section.unarchiveAll'),
+          icon: ArchiveRestore,
+          onSelect: () => onSectionArchive(archiveCandidateIds, title, 'unarchive', filtered),
+        })
+      }
+    } else {
+      if (onSectionArchive && archiveCandidateIds.length > 0) {
+        items.push({
+          label: filtered
+            ? t('sessions.section.archiveFiltered')
+            : t('sessions.section.archiveAll'),
+          icon: Archive,
+          onSelect: () => onSectionArchive(archiveCandidateIds, title, 'archive', filtered),
+        })
+      }
+    }
+    if (onSectionDelete && allIds.length > 0) {
+      items.push({
+        label: filtered ? t('sessions.section.deleteFiltered') : t('sessions.section.deleteAll'),
+        icon: Trash2,
+        destructive: true,
+        onSelect: () => onSectionDelete(allIds, title, filtered),
+      })
+    }
+    return items
+  }, [variant, total, flat, onSectionArchive, onSectionDelete, title, t, isSearching])
+
   if (isSearching && total === 0) return null
 
   const effectiveSectionOpen = isSearching ? true : sectionOpen
@@ -334,7 +398,7 @@ export function SessionsSection({
               <button
                 type="button"
                 onClick={toggleGrouping}
-                className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"
+                className={cn('rounded p-1 cursor-pointer', SECTION_HEADER_BUTTON_CLASS)}
                 aria-label={t('sessions.toggleGrouping')}
               >
                 {prefs.groupByProject ? <FolderTree size={12} /> : <List size={12} />}
@@ -343,6 +407,7 @@ export function SessionsSection({
             {prefs.groupByProject ? (
               <DropdownMenu
                 triggerIcon={ArrowDownAZ}
+                triggerClassName={SECTION_HEADER_BUTTON_CLASS}
                 items={buildProjectSortMenuItems(t, projectSortBy, setProjectSortBy)}
                 ariaLabel={t('sessions.sortMenu')}
                 tooltip={t('sessions.sortBy', {
@@ -352,6 +417,7 @@ export function SessionsSection({
             ) : (
               <DropdownMenu
                 triggerIcon={ArrowDownAZ}
+                triggerClassName={SECTION_HEADER_BUTTON_CLASS}
                 items={buildSessionSortMenuItems(t, flatSessionSort, setFlatSessionSort)}
                 ariaLabel={t('sessions.flatSortMenu')}
                 tooltip={t('sessions.flatSortBy', {
@@ -359,6 +425,14 @@ export function SessionsSection({
                 })}
               />
             )}
+            {sectionMenuItems.length > 0 ? (
+              <DropdownMenu
+                items={sectionMenuItems}
+                triggerClassName={SECTION_HEADER_BUTTON_CLASS}
+                ariaLabel={t('sessions.section.actions')}
+                tooltip={t('sessions.section.actions')}
+              />
+            ) : null}
           </>
         ) : null}
       </div>
@@ -465,11 +539,17 @@ export function SessionsSection({
                           icon: FolderCode,
                           onSelect: () => onOpenProjectInVSCode(p),
                         },
-                        {
-                          label: t('sessions.project.archiveAll'),
-                          icon: Archive,
-                          onSelect: () => onArchiveProject(p),
-                        },
+                        variant === 'archived'
+                          ? {
+                              label: t('sessions.project.unarchiveAll'),
+                              icon: ArchiveRestore,
+                              onSelect: () => onUnarchiveProject(p),
+                            }
+                          : {
+                              label: t('sessions.project.archiveAll'),
+                              icon: Archive,
+                              onSelect: () => onArchiveProject(p),
+                            },
                         {
                           label: t('sessions.project.deleteAll'),
                           icon: Trash2,
@@ -547,6 +627,7 @@ export function SessionsSection({
               onCloseSession={onCloseSession}
               onOpenProjectInVSCode={onOpenProjectInVSCode}
               onArchiveProject={onArchiveProject}
+              onUnarchiveProject={onUnarchiveProject}
               onDeleteProject={onDeleteProject}
               onEndWorktree={onEndWorktree}
               renderState={renderState}
@@ -572,6 +653,7 @@ type RowProps = {
   onCloseSession?: (sessionKey: string) => void
   onOpenProjectInVSCode?: (project: Project) => void
   onArchiveProject?: (project: Project) => void
+  onUnarchiveProject?: (project: Project) => void
   onDeleteProject?: (project: Project) => void
   onEndWorktree?: (project: Project) => void
   renderState: (live: LiveSession | undefined) => React.ReactNode
@@ -591,6 +673,7 @@ function SessionRow({
   onCloseSession,
   onOpenProjectInVSCode,
   onArchiveProject,
+  onUnarchiveProject,
   onDeleteProject,
   onEndWorktree,
   renderState,
@@ -644,8 +727,10 @@ function SessionRow({
         {showProject ? (
           <ProjectChip
             project={project}
+            isArchivedSection={isArchived}
             onOpenProjectInVSCode={onOpenProjectInVSCode}
             onArchiveProject={onArchiveProject}
+            onUnarchiveProject={onUnarchiveProject}
             onDeleteProject={onDeleteProject}
             onEndWorktree={onEndWorktree}
           />
@@ -687,16 +772,20 @@ function SessionRow({
 
 type ProjectChipProps = {
   project: Project
+  isArchivedSection?: boolean
   onOpenProjectInVSCode?: (project: Project) => void
   onArchiveProject?: (project: Project) => void
+  onUnarchiveProject?: (project: Project) => void
   onDeleteProject?: (project: Project) => void
   onEndWorktree?: (project: Project) => void
 }
 
 function ProjectChip({
   project,
+  isArchivedSection,
   onOpenProjectInVSCode,
   onArchiveProject,
+  onUnarchiveProject,
   onDeleteProject,
   onEndWorktree,
 }: ProjectChipProps) {
@@ -733,7 +822,7 @@ function ProjectChip({
         ]
       : []
     : // Main projects expose the same actions as the 3-dots menu on grouped
-      // project rows: open in VS Code, archive all, delete all.
+      // project rows: open in VS Code, archive/unarchive all, delete all.
       [
         ...(onOpenProjectInVSCode
           ? [
@@ -744,15 +833,25 @@ function ProjectChip({
               },
             ]
           : []),
-        ...(onArchiveProject
-          ? [
-              {
-                label: t('sessions.project.archiveAll'),
-                icon: Archive,
-                onSelect: () => onArchiveProject(project),
-              },
-            ]
-          : []),
+        ...(isArchivedSection
+          ? onUnarchiveProject
+            ? [
+                {
+                  label: t('sessions.project.unarchiveAll'),
+                  icon: ArchiveRestore,
+                  onSelect: () => onUnarchiveProject(project),
+                },
+              ]
+            : []
+          : onArchiveProject
+            ? [
+                {
+                  label: t('sessions.project.archiveAll'),
+                  icon: Archive,
+                  onSelect: () => onArchiveProject(project),
+                },
+              ]
+            : []),
         ...(onDeleteProject
           ? [
               {

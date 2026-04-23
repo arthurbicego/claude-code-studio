@@ -38,8 +38,16 @@ type Props = {
   onDeleteSession: (session: SessionMeta) => void
   onOpenProjectInVSCode: (project: Project) => void
   onArchiveProject: (project: Project) => void
+  onUnarchiveProject: (project: Project) => void
   onDeleteProject: (project: Project) => void
   onEndWorktree: (project: Project) => void
+  onSectionArchive: (
+    ids: string[],
+    sectionTitle: string,
+    action: 'archive' | 'unarchive',
+    filtered: boolean,
+  ) => void
+  onSectionDelete: (ids: string[], sectionTitle: string, filtered: boolean) => void
 }
 
 function StateIndicator({ state }: { state: LiveSessionState }) {
@@ -94,8 +102,11 @@ export function Sidebar({
   onDeleteSession,
   onOpenProjectInVSCode,
   onArchiveProject,
+  onUnarchiveProject,
   onDeleteProject,
   onEndWorktree,
+  onSectionArchive,
+  onSectionDelete,
 }: Props) {
   const { t } = useTranslation()
   const formatTime = useFormatTime()
@@ -205,8 +216,11 @@ export function Sidebar({
               onCloseSession={onCloseSession}
               onOpenProjectInVSCode={onOpenProjectInVSCode}
               onArchiveProject={onArchiveProject}
+              onUnarchiveProject={onUnarchiveProject}
               onDeleteProject={onDeleteProject}
               onEndWorktree={onEndWorktree}
+              onSectionArchive={onSectionArchive}
+              onSectionDelete={onSectionDelete}
               renderState={renderState}
               applyProjectOrder={applyOrder}
               onReorderProject={moveSlug}
@@ -240,8 +254,11 @@ export function Sidebar({
           onDelete={onDeleteSession}
           onOpenProjectInVSCode={onOpenProjectInVSCode}
           onArchiveProject={onArchiveProject}
+          onUnarchiveProject={onUnarchiveProject}
           onDeleteProject={onDeleteProject}
           onEndWorktree={onEndWorktree}
+          onSectionArchive={onSectionArchive}
+          onSectionDelete={onSectionDelete}
           renderState={renderState}
           applyProjectOrder={applyOrder}
           onReorderProject={moveSlug}
@@ -264,8 +281,11 @@ export function Sidebar({
               onDelete={onDeleteSession}
               onOpenProjectInVSCode={onOpenProjectInVSCode}
               onArchiveProject={onArchiveProject}
+              onUnarchiveProject={onUnarchiveProject}
               onDeleteProject={onDeleteProject}
               onEndWorktree={onEndWorktree}
+              onSectionArchive={onSectionArchive}
+              onSectionDelete={onSectionDelete}
               renderState={renderState}
               applyProjectOrder={applyOrder}
               onReorderProject={moveSlug}

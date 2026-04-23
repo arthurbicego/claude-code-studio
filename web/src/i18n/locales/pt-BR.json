@@ -76,6 +76,7 @@
       "actions": "Ações do projeto",
       "openInVscode": "Abrir no VS Code",
       "archiveAll": "Arquivar sessões",
+      "unarchiveAll": "Desarquivar sessões",
       "deleteAll": "Apagar sessões",
       "endWorktree": "Encerrar worktree…",
       "showPath": "Mostrar caminho do projeto",
@@ -83,6 +84,15 @@
       "copyPath": "Copiar caminho do projeto",
       "sortMenu": "Ordenar sessões deste projeto",
       "sortBy": "Ordenar sessões: {{label}}"
+    },
+    "section": {
+      "actions": "Ações da seção",
+      "archiveAll": "Arquivar todas",
+      "archiveFiltered": "Arquivar filtradas",
+      "unarchiveAll": "Desarquivar todas",
+      "unarchiveFiltered": "Desarquivar filtradas",
+      "deleteAll": "Apagar todas",
+      "deleteFiltered": "Apagar filtradas"
     }
   },
   "newSession": {
@@ -157,7 +167,12 @@
       "empty": "Não há sessões ativas para arquivar em \"{{name}}\".",
       "body_one": "{{count}} sessão ativa será movida para Arquivadas (projeto: {{name}}).",
       "body_other": "{{count}} sessões ativas serão movidas para Arquivadas (projeto: {{name}}).",
-      "confirm": "Arquivar todas"
+      "confirm": "Arquivar todas",
+      "unarchiveTitle": "Desarquivar sessões do projeto",
+      "unarchiveEmpty": "Não há sessões arquivadas para restaurar em \"{{name}}\".",
+      "unarchiveBody_one": "{{count}} sessão arquivada voltará para o Histórico (projeto: {{name}}).",
+      "unarchiveBody_other": "{{count}} sessões arquivadas voltarão para o Histórico (projeto: {{name}}).",
+      "unarchiveConfirm": "Desarquivar todas"
     },
     "deleteProject": {
       "title": "Apagar sessões do projeto definitivamente",
@@ -178,6 +193,28 @@
       "title": "Apagar sessão definitivamente",
       "body": "Esta ação remove o arquivo da sessão ({{id}}…) do disco. Não pode ser desfeita.",
       "confirm": "Apagar"
+    },
+    "sectionArchive": {
+      "title": "Arquivar sessões da seção",
+      "unarchiveTitle": "Desarquivar sessões da seção",
+      "archiveBodyAll_one": "{{count}} sessão em \"{{section}}\" será movida para Arquivadas.",
+      "archiveBodyAll_other": "{{count}} sessões em \"{{section}}\" serão movidas para Arquivadas.",
+      "archiveBodyFiltered_one": "{{count}} sessão filtrada em \"{{section}}\" será movida para Arquivadas.",
+      "archiveBodyFiltered_other": "{{count}} sessões filtradas em \"{{section}}\" serão movidas para Arquivadas.",
+      "unarchiveBodyAll_one": "{{count}} sessão em \"{{section}}\" voltará para o Histórico.",
+      "unarchiveBodyAll_other": "{{count}} sessões em \"{{section}}\" voltarão para o Histórico.",
+      "unarchiveBodyFiltered_one": "{{count}} sessão filtrada em \"{{section}}\" voltará para o Histórico.",
+      "unarchiveBodyFiltered_other": "{{count}} sessões filtradas em \"{{section}}\" voltarão para o Histórico.",
+      "confirm": "Arquivar todas",
+      "unarchiveConfirm": "Desarquivar todas"
+    },
+    "sectionDelete": {
+      "title": "Apagar sessões definitivamente",
+      "bodyAll_one": "{{count}} sessão em \"{{section}}\" será removida do disco. Não pode ser desfeita.",
+      "bodyAll_other": "{{count}} sessões em \"{{section}}\" serão removidas do disco. Não pode ser desfeita.",
+      "bodyFiltered_one": "{{count}} sessão filtrada em \"{{section}}\" será removida do disco. Não pode ser desfeita.",
+      "bodyFiltered_other": "{{count}} sessões filtradas em \"{{section}}\" serão removidas do disco. Não pode ser desfeita.",
+      "confirm": "Apagar todas"
     }
   },
   "mergedPrBanner": {
