@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AppDialogs, type PendingCloseWorktree } from '@/components/AppDialogs'
 import type { EndWorktreeOptions } from '@/components/EndWorktreeDialog'
@@ -286,13 +286,9 @@ export default function App() {
     [pendingCloseWorktree, closeSession, t],
   )
 
-  useEffect(() => {
-    if (!activeSessionKey) return
-    const live = liveSessions.get(activeSessionKey)
-    if (!live && openSessions.has(activeSessionKey)) {
-      // Sessão finalizada no servidor (auto-kill ou exit) — podemos manter aberta; usuário decide fechar.
-    }
-  }, [liveSessions, activeSessionKey, openSessions])
+  // Sessions auto-killed by the server (idle sweep, exit) stay in `openSessions` on purpose
+  // so the user can read the final terminal output and dismiss them explicitly. No effect
+  // is needed for that — the previous useEffect with only a comment was dead code.
 
   const archiveSession = useCallback(async (id: string) => {
     try {

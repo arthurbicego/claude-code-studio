@@ -89,6 +89,7 @@ export function useSessionLifecycle(liveSessions: LiveSessionsMap) {
       } catch {
         /* noop */
       }
+      reconciledKeysRef.current.delete(sessionKey)
       setOpenSessions((prev) => {
         const next = new Map(prev)
         next.delete(sessionKey)
@@ -142,26 +143,38 @@ export function useSessionLifecycle(liveSessions: LiveSessionsMap) {
     [activeSessionKey],
   )
 
-  const removeSessions = useCallback((ids: Iterable<string>) => {
-    const idSet = new Set(ids)
-    setOpenSessions((prev) => {
-      let changed = false
-      const next = new Map(prev)
-      for (const id of idSet) {
-        if (next.delete(id)) changed = true
-      }
-      return changed ? next : prev
-    })
-    setOpenPanelsBySession((prev) => {
-      let changed = false
-      const next = new Map(prev)
-      for (const id of idSet) {
-        if (next.delete(id)) changed = true
-      }
-      return changed ? next : prev
-    })
-    setActiveSessionKey((prev) => (prev && idSet.has(prev) ? null : prev))
-  }, [])
+  const removeSessions = useCallback(
+    (ids: Iterable<string>) => {
+      const idSet = new Set(ids)
+      setOpenSessions((prev) => {
+        let changed = false
+        const next = new Map(prev)
+        for (const id of idSet) {
+          if (next.delete(id)) changed = true
+          reconciledKeysRef.current.delete(id)
+        }
+        return changed ? next : prev
+      })
+      setOpenPanelsBySession((prev) => {
+        let changed = false
+        const next = new Map(prev)
+        for (const id of idSet) {
+          if (next.delete(id)) changed = true
+        }
+        return changed ? next : prev
+      })
+      setActiveSessionKey((prev) => {
+        if (prev === null || !idSet.has(prev)) return prev
+        // Pick the next remaining session in insertion order so a bulk delete that included
+        // the active key doesn't leave the UI on a phantom selection.
+        for (const key of openSessions.keys()) {
+          if (!idSet.has(key)) return key
+        }
+        return null
+      })
+    },
+    [openSessions],
+  )
 
   return {
     openSessions,
