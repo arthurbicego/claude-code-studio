@@ -148,8 +148,16 @@ export function saveState(state: AppState): void {
       prefs: state.prefs,
     };
     const tmp = `${STATE_FILE}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify(payload, null, 2));
+    // Set 0600 explicitly so the rename does not promote the tmp's umask-default permissions
+    // (typically 0644) onto state.json — which carries archived ids and user prefs and lives
+    // under $HOME, readable by other users on shared machines without this clamp.
+    fs.writeFileSync(tmp, JSON.stringify(payload, null, 2), { mode: 0o600 });
     fs.renameSync(tmp, STATE_FILE);
+    try {
+      fs.chmodSync(STATE_FILE, 0o600);
+    } catch {
+      // Best-effort — chmod may fail on some filesystems but the rename succeeded.
+    }
   } catch (err) {
     console.warn(`[state] save failed: ${(err as Error).message}`);
   }
