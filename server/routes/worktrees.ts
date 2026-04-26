@@ -398,15 +398,22 @@ export function register(app: Express): void {
       );
     }
 
+    // base passes BRANCH_NAME_RE (which allows things like "origin//-X"), but stripping the
+    // "origin/" prefix can leave a string starting with "-" or "/", and that string is then
+    // handed to `git switch` / `git merge`. Re-validate after the strip so a crafted base
+    // cannot smuggle a flag-like ref through. Also use `--` so git treats it as a positional.
     const baseLocal = base.replace(/^origin\//, '');
+    if (!BRANCH_NAME_RE.test(baseLocal)) {
+      return sendError(res, 400, ERR.WORKTREE_BASE_NOT_DETECTED, 'invalid base branch name');
+    }
     const mainBranch = runGitArgs(mainPath, ['symbolic-ref', '--short', 'HEAD']).trim();
     let switched = false;
     try {
       if (mainBranch !== baseLocal) {
-        runGitArgsOrThrow(mainPath, ['switch', baseLocal]);
+        runGitArgsOrThrow(mainPath, ['switch', '--', baseLocal]);
         switched = true;
       }
-      runGitArgsOrThrow(mainPath, ['merge', '--ff-only', branch]);
+      runGitArgsOrThrow(mainPath, ['merge', '--ff-only', '--', branch]);
       res.json({ ok: true, base: baseLocal, branch, switched });
     } catch (err) {
       const e = err as { stderr?: Buffer; message?: string };
