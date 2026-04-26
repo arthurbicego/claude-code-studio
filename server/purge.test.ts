@@ -122,4 +122,33 @@ describe('purgeExpiredArchived', () => {
     expect(onPurged).toHaveBeenCalledWith('old-1');
     expect(onPurged).toHaveBeenCalledWith('old-2');
   });
+
+  it('skips ids that are live again at unlink time', () => {
+    const now = 1_000_000_000_000;
+    const archived = new Map([
+      ['re-spawned', now - 90 * DAY],
+      ['truly-old', now - 90 * DAY],
+    ]);
+    const unlink = vi.fn();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const purged = purgeExpiredArchived(
+        makeDeps({
+          archived,
+          days: 30,
+          nowMs: now,
+          findSessionFile: (id) => `/tmp/${id}.jsonl`,
+          unlink,
+          isLive: (id) => id === 're-spawned',
+        }),
+      );
+      expect(purged).toEqual(['truly-old']);
+      expect(archived.has('re-spawned')).toBe(true);
+      expect(archived.has('truly-old')).toBe(false);
+      expect(unlink).toHaveBeenCalledTimes(1);
+      expect(unlink).toHaveBeenCalledWith('/tmp/truly-old.jsonl');
+    } finally {
+      warn.mockRestore();
+    }
+  });
 });

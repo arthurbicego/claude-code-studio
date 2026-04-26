@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { removeFooterCacheFor } from './footer';
-import { terminateLiveSession } from './live-sessions';
+import { liveSessions, terminateLiveSession } from './live-sessions';
 import { cleanupAttachmentsForSession } from './routes/attachments';
 import { findSessionFile } from './sessions-meta';
 import { broadcastInvalidate } from './sse';
@@ -16,6 +16,9 @@ export type PurgeDeps = {
   nowMs: number;
   findSessionFile: (id: string) => string | null;
   unlink: (fpath: string) => void;
+  /** Returns true when the id is currently live — used to abort the unlink if a session was
+   *  re-spawned after the terminate-live pre-pass. */
+  isLive?: (id: string) => boolean;
   onPurged?: (id: string) => void;
 };
 
@@ -30,6 +33,13 @@ export function purgeExpiredArchived(deps: PurgeDeps): string[] {
   const purged: string[] = [];
   for (const [id, archivedAt] of deps.archived.entries()) {
     if (deps.nowMs - archivedAt < retentionMs) continue;
+    // The terminate-live pre-pass in runArchivePurge has a 3 s timeout; if a PTY did not
+    // exit in time and a new session with the same id was started since, skip the unlink so
+    // we do not destroy the freshly recreated .jsonl.
+    if (deps.isLive?.(id)) {
+      console.warn(`[purge] skipping ${id} — session is live again`);
+      continue;
+    }
     const fpath = deps.findSessionFile(id);
     if (fpath) {
       try {
@@ -71,6 +81,7 @@ export async function runArchivePurge(nowMs: number = Date.now()): Promise<strin
     nowMs,
     findSessionFile,
     unlink: fs.unlinkSync,
+    isLive: (id) => liveSessions.has(id),
     onPurged: (id) => {
       removeFooterCacheFor(id);
       cleanupAttachmentsForSession(id);
