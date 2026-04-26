@@ -41,11 +41,22 @@ export function register(app: Express): void {
       return;
     }
 
+    // Containment: reject any cwd that is not inside $HOME so a stray caller cannot spawn
+    // `claude` rooted at `/etc`, `/var/log`, or another mount. /pty/shell already does this;
+    // /pty was the missing half. An undefined cwd is fine — spawnClaudePty falls back to $HOME.
+    const rawCwd = typeof req.query.cwd === 'string' ? req.query.cwd : undefined;
+    const validatedCwd = rawCwd ? (isAllowedProjectCwd(rawCwd) ?? null) : null;
+    if (rawCwd && !validatedCwd) {
+      safeSend(ws, { type: 'error', message: 'cwd must be a path inside $HOME' });
+      closeSilently(ws);
+      return;
+    }
+
     const args = buildPtyArgs({ ...req.query, sessionId: sessionKey });
     let entry: ReturnType<typeof getOrCreateLiveSession>;
     try {
       entry = getOrCreateLiveSession(sessionKey, {
-        cwd: typeof req.query.cwd === 'string' ? req.query.cwd : undefined,
+        cwd: validatedCwd ?? undefined,
         args,
       });
     } catch (err) {
