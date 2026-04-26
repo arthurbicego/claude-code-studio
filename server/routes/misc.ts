@@ -161,5 +161,15 @@ export function register(app: Express): void {
 }
 
 function quoteApplescriptString(value: string): string {
-  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+  // Backslash and double-quote are obvious. Newline / carriage-return / tab inside a path
+  // are unusual on macOS but legal — without escaping them they would break out of the
+  // surrounding "..." in the AppleScript and shift the rest of the script. Use AppleScript's
+  // string concatenation with `& <token> &` for line breaks; for tabs, the literal `\t`
+  // works inside an AppleScript "..." string.
+  return `"${value
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\r/g, '" & return & "')
+    .replace(/\n/g, '" & linefeed & "')
+    .replace(/\t/g, '\\t')}"`;
 }
