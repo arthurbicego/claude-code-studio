@@ -3,7 +3,14 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { branchExists, branchUpstream, deleteLocalBranch, projectWorktreeRef } from './worktrees';
+import {
+  branchExists,
+  branchUpstream,
+  deleteLocalBranch,
+  listWorktrees,
+  pickMainWorktree,
+  projectWorktreeRef,
+} from './worktrees';
 
 function git(cwd: string, ...args: string[]): string {
   return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
@@ -130,6 +137,26 @@ describe('worktrees branch helpers', () => {
         expect(projectWorktreeRef(ghost)).toBeNull();
       } finally {
         fs.rmSync(bogus, { recursive: true, force: true });
+      }
+    });
+  });
+
+  describe('pickMainWorktree', () => {
+    it('returns the main worktree even when its HEAD is detached', () => {
+      // Detach HEAD on the main worktree (simulates mid-rebase / mid-bisect). Then add a
+      // linked worktree on a normal branch. The previous heuristic ("first non-detached")
+      // would return the linked worktree as main here.
+      const headSha = git(repo, 'rev-parse', 'HEAD').trim();
+      git(repo, 'checkout', '--detach', headSha);
+      const wtPath = path.join(path.dirname(repo), `ccs-wt-pick-${path.basename(repo)}`);
+      try {
+        git(repo, 'worktree', 'add', '-b', 'feature-pick', wtPath);
+        const entries = listWorktrees(repo);
+        const main = pickMainWorktree(entries, repo);
+        expect(main).not.toBeNull();
+        expect(fs.realpathSync(main?.path ?? '')).toBe(fs.realpathSync(repo));
+      } finally {
+        fs.rmSync(wtPath, { recursive: true, force: true });
       }
     });
   });

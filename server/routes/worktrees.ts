@@ -29,7 +29,7 @@ export function register(app: Express): void {
     const base = rawBase && BRANCH_NAME_RE.test(rawBase) ? rawBase : guessDefaultBranch(cwd);
 
     const entries = listWorktrees(cwd);
-    const main = pickMainWorktree(entries);
+    const main = pickMainWorktree(entries, cwd);
     const mainRealPath = main ? realpathSafe(main.path) : realpathSafe(cwd);
     const workspaceCounts = liveSessionWorkspaces();
 
@@ -114,7 +114,7 @@ export function register(app: Express): void {
     const confirmDirty =
       req.query.confirmDirty === '1' || req.query.confirmDirty === 'true';
     const entries = listWorktrees(cwd);
-    const main = pickMainWorktree(entries);
+    const main = pickMainWorktree(entries, cwd);
     if (main && realpathSafe(main.path) === realpathSafe(resolved)) {
       return sendError(
         res,
@@ -211,7 +211,7 @@ export function register(app: Express): void {
       return sendError(res, 400, ERR.WORKTREE_PATH_INVALID, 'invalid worktree path');
     }
     const entries = listWorktrees(cwd);
-    const main = pickMainWorktree(entries);
+    const main = pickMainWorktree(entries, cwd);
     if (main && realpathSafe(main.path) === realpathSafe(resolved)) {
       return sendError(
         res,
@@ -259,7 +259,7 @@ export function register(app: Express): void {
       return sendError(res, 400, ERR.WORKTREE_PATH_INVALID, 'invalid worktree path');
     }
     const entries = listWorktrees(cwd);
-    const main = pickMainWorktree(entries);
+    const main = pickMainWorktree(entries, cwd);
     if (main && realpathSafe(main.path) === realpathSafe(resolved)) {
       return sendError(
         res,
@@ -380,7 +380,7 @@ export function register(app: Express): void {
       return sendError(res, 400, ERR.WORKTREE_BASE_NOT_DETECTED, 'could not determine base branch');
 
     const entries = listWorktrees(cwd);
-    const main = pickMainWorktree(entries);
+    const main = pickMainWorktree(entries, cwd);
     if (!main) return sendError(res, 400, ERR.WORKTREE_MAIN_NOT_FOUND, 'main worktree not found');
     const mainPath = main.path;
 

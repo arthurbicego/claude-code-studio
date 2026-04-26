@@ -113,7 +113,34 @@ export function detectWorktree(cwd: string | null): WorktreeRefDetected | null {
   return { path: top, name: path.basename(top) };
 }
 
-export function pickMainWorktree(entries: WorktreeEntry[]): WorktreeEntry | null {
+/**
+ * Identify which entry from `git worktree list` is the main worktree.
+ *
+ * Asks git directly for the common `.git` directory whose parent is, by definition, the main
+ * worktree. The previous "first non-detached, non-bare, non-prunable" heuristic mis-classified
+ * the main worktree as a linked one whenever the user was mid-rebase / mid-bisect there
+ * (HEAD detached), and could lead to operations like delete-main being silently allowed.
+ *
+ * `probeCwd` should be any cwd inside the same repo (most callers pass the cwd that produced
+ * `entries` already). Falls back to entries[0].path if not supplied. Falls back to the old
+ * heuristic if the git probe fails (unusual repo layout, bare repo edge case).
+ */
+export function pickMainWorktree(
+  entries: WorktreeEntry[],
+  probeCwd?: string,
+): WorktreeEntry | null {
+  if (entries.length === 0) return null;
+  const probe = probeCwd ?? entries[0]?.path;
+  if (probe) {
+    const commonDir = runGitArgs(probe, ['rev-parse', '--git-common-dir']).trim();
+    if (commonDir) {
+      const absCommon = path.isAbsolute(commonDir) ? commonDir : path.resolve(probe, commonDir);
+      const mainReal = realpathSafe(path.dirname(realpathSafe(absCommon)));
+      for (const e of entries) {
+        if (realpathSafe(e.path) === mainReal) return e;
+      }
+    }
+  }
   for (const e of entries) {
     if (!e.detached && !e.bare && !e.prunable) return e;
   }
@@ -143,7 +170,7 @@ export function projectWorktreeRef(cwd: string): ProjectWorktreeRef | null {
   if (!fs.existsSync(cwd)) return ghostWorktreeRef(cwd);
   const entries = listWorktrees(cwd);
   if (entries.length <= 1) return null;
-  const main = pickMainWorktree(entries);
+  const main = pickMainWorktree(entries, cwd);
   if (!main) return null;
   const mainReal = realpathSafe(main.path);
   const ownReal = realpathSafe(cwd);
