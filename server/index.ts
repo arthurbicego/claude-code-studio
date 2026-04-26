@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import express from 'express';
 import expressWs from 'express-ws';
+import { getBootToken } from './auth';
 import { CLAUDE_BIN } from './claude-bin';
 import { liveSessions, startIdleSweep } from './live-sessions';
 import { startArchivePurgeSchedule } from './purge';
@@ -24,6 +25,10 @@ if (!CLAUDE_BIN) {
   process.exit(1);
 }
 console.log(`Using claude binary: ${CLAUDE_BIN}`);
+
+// Warm the boot token cache before the listener accepts connections so the first WS
+// upgrade does not race with verifyBootToken's lazy file I/O.
+getBootToken();
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = '127.0.0.1';

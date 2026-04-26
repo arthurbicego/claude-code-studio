@@ -17,36 +17,52 @@ let cachedToken: string | null = null;
  * by guessing the sessionKey" path: cross-origin pages cannot read the token thanks to SOP,
  * and the WS upgrade now needs the token in addition to the host/origin checks.
  */
-export function getBootToken(): string {
-  if (cachedToken) return cachedToken;
+function readExistingToken(): string | null {
   try {
     const existing = fs.readFileSync(BOOT_TOKEN_FILE, 'utf8').trim();
-    if (existing && existing.length >= 32) {
-      cachedToken = existing;
-      return cachedToken;
-    }
+    if (existing && existing.length >= 32) return existing;
   } catch {
-    // Token file is missing or unreadable — fall through and generate a fresh one.
+    // Missing or unreadable — caller decides whether to generate.
   }
-  cachedToken = crypto.randomBytes(32).toString('hex');
+  return null;
+}
+
+export function getBootToken(): string {
+  if (cachedToken) return cachedToken;
+  const existing = readExistingToken();
+  if (existing) {
+    cachedToken = existing;
+    return cachedToken;
+  }
   fs.mkdirSync(CONFIG_DIR, { recursive: true });
-  fs.writeFileSync(BOOT_TOKEN_FILE, cachedToken, { mode: 0o600 });
-  // Re-apply mode in case the file already existed with looser perms.
+  // Race-safe create: 'wx' fails atomically if another process already wrote the file
+  // between readExistingToken above and this open. Falling back to a fresh read in that
+  // case lets all racing processes converge on the first-writer's token.
+  const candidate = crypto.randomBytes(32).toString('hex');
   try {
-    fs.chmodSync(BOOT_TOKEN_FILE, 0o600);
-  } catch {
-    // Best-effort — chmod may fail on some filesystems but the write succeeded.
+    fs.writeFileSync(BOOT_TOKEN_FILE, candidate, { mode: 0o600, flag: 'wx' });
+    cachedToken = candidate;
+    return cachedToken;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'EEXIST') {
+      const winner = readExistingToken();
+      if (winner) {
+        cachedToken = winner;
+        return cachedToken;
+      }
+    }
+    throw err;
   }
-  return cachedToken;
 }
 
 export function verifyBootToken(provided: string | undefined | null): boolean {
   if (!provided || typeof provided !== 'string') return false;
   const expected = getBootToken();
-  if (provided.length !== expected.length) return false;
-  try {
-    return crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
-  } catch {
-    return false;
-  }
+  // Compare byte buffers of equal length so timingSafeEqual cannot throw on multi-byte
+  // input. The expected token is 64 hex chars (always ASCII), but `provided` is
+  // attacker-controlled and can contain anything UTF-8.
+  const providedBuf = Buffer.from(provided, 'utf8');
+  const expectedBuf = Buffer.from(expected, 'utf8');
+  if (providedBuf.length !== expectedBuf.length) return false;
+  return crypto.timingSafeEqual(providedBuf, expectedBuf);
 }
