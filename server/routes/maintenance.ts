@@ -25,7 +25,7 @@ import { ATTACHMENTS_DIR, CLAUDE_PROJECTS, STATUSLINE_CACHE_DIR } from '../paths
 import { findSessionFile, readSessionMeta } from '../sessions-meta';
 import { broadcastInvalidate } from '../sse';
 import { appState, saveState } from '../state';
-import { UUID_RE } from '../validators';
+import { FOOTER_ID_RE, UUID_RE } from '../validators';
 
 /** Set of slugs derived from live-session cwds. Prevents deleting a project folder whose
  * session is actively writing to `.jsonl` — a race we cannot fully close with filesystem
@@ -95,8 +95,10 @@ function cleanAttachmentDir(sessionKey: string): string {
 }
 
 function dropArchivedId(id: string): string {
-  if (id.length === 0 || id.length > 128) throw new Error('invalid id');
-  if (!/^[A-Za-z0-9._-]+$/.test(id)) throw new Error('invalid id');
+  // Use the same regex the entry routes (archive/unarchive/delete) apply, so anything that
+  // can sit in appState.archived can also be cleaned up. The previous regex was less strict
+  // (accepted '.', '..') and could leave entries permanently stuck in the Map.
+  if (!FOOTER_ID_RE.test(id)) throw new Error('invalid id');
   if (findSessionFile(id)) throw new Error('session .jsonl still exists');
   if (!appState.archived.has(id)) throw new Error('not archived');
   appState.archived.delete(id);
