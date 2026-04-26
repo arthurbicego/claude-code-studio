@@ -12,6 +12,27 @@ import {
 import { isAllowedProjectCwd } from '../paths';
 import { isWsUpgradeAllowed } from '../security';
 
+// Names that are very likely to carry secrets or auth material. The shell PTY is meant for
+// running shell commands inside a project, not for inheriting the credentials the parent
+// process happens to have on its env. Strip these before spawn so an `env` in the WebSocket
+// shell does not dump tokens, even though a determined caller can still read files via the
+// shell — defense in depth, not a containment boundary.
+const SENSITIVE_ENV_NAME_RE =
+  /TOKEN|SECRET|API_?KEY|CREDENTIAL|PASSWORD|PASSWD|BEARER|PRIVATE_KEY|SIGNING_KEY|SESSION_KEY|AUTH_HEADER|ACCESS_KEY/i;
+
+const EXPLICIT_SENSITIVE_ENV = new Set(['AWS_SESSION_TOKEN', 'AWS_SECURITY_TOKEN']);
+
+function sanitizedShellEnv(): NodeJS.ProcessEnv {
+  const out: NodeJS.ProcessEnv = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    if (EXPLICIT_SENSITIVE_ENV.has(k)) continue;
+    if (SENSITIVE_ENV_NAME_RE.test(k)) continue;
+    out[k] = v;
+  }
+  out.TERM = 'xterm-256color';
+  return out;
+}
+
 type WsHandler = (ws: WebSocket, req: Request) => void;
 type AppWithWs = Express & { ws: (path: string, handler: WsHandler) => void };
 
@@ -123,7 +144,7 @@ export function register(app: Express): void {
         cols: 80,
         rows: 24,
         cwd: targetCwd,
-        env: { ...process.env, TERM: 'xterm-256color' },
+        env: sanitizedShellEnv(),
       });
     } catch (err) {
       safeSend(ws, { type: 'error', message: `shell spawn falhou: ${(err as Error).message}` });
