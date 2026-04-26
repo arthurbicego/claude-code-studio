@@ -2,6 +2,7 @@ import os from 'node:os';
 import type { Express, Request } from 'express';
 import * as pty from 'node-pty';
 import type { WebSocket } from 'ws';
+import { verifyBootToken } from '../auth';
 import { USER_SHELL } from '../claude-bin';
 import {
   buildPtyArgs,
@@ -52,6 +53,16 @@ export function register(app: Express): void {
       console.warn(
         `[pty] ws upgrade rejected · host=${String(req.headers.host ?? '')} origin=${String(req.headers.origin ?? '')}`,
       );
+      closeSilently(ws);
+      return;
+    }
+    // Boot-token check: sessionKey leaks via the SSE stream, so without this any localhost
+    // caller that passed the host/origin guards could subscribe to (and inject input into)
+    // an active PTY by guessing the key. The token sits in a 0600 file under ~/.cockpit-* and
+    // is fetched same-origin by the frontend, so cross-origin pages cannot read it under SOP.
+    const tokenParam = typeof req.query.token === 'string' ? req.query.token : '';
+    if (!verifyBootToken(tokenParam)) {
+      safeSend(ws, { type: 'error', message: 'invalid or missing boot token' });
       closeSilently(ws);
       return;
     }
@@ -130,6 +141,12 @@ export function register(app: Express): void {
 
   wsApp.ws('/pty/shell', (ws, req) => {
     if (!isWsUpgradeAllowed(req)) {
+      closeSilently(ws);
+      return;
+    }
+    const tokenParam = typeof req.query.token === 'string' ? req.query.token : '';
+    if (!verifyBootToken(tokenParam)) {
+      safeSend(ws, { type: 'error', message: 'invalid or missing boot token' });
       closeSilently(ws);
       return;
     }

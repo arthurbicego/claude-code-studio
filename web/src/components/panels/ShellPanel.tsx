@@ -2,6 +2,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { Terminal as Xterm } from '@xterm/xterm'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { getBootTokenOrThrow, loadBootToken } from '@/lib/bootToken'
 import { PanelContainer } from './PanelContainer'
 
 type Props = {
@@ -29,8 +30,25 @@ export function ShellPanel({ cwd, onClose }: Props) {
     term.open(hostRef.current)
     fit.fit()
 
+    let token: string
+    try {
+      token = getBootTokenOrThrow()
+    } catch {
+      term.write(`\r\n${t('panels.shell.errorPrefix', { message: 'auth token not loaded' })}\r\n`)
+      void loadBootToken().catch(() => {
+        /* token unreachable; user can close and retry */
+      })
+      return () => {
+        try {
+          term.dispose()
+        } catch {
+          /* noop */
+        }
+      }
+    }
     const params = new URLSearchParams()
     if (cwd) params.set('cwd', cwd)
+    params.set('token', token)
     const proto = location.protocol === 'https:' ? 'wss' : 'ws'
     const ws = new WebSocket(`${proto}://${location.host}/pty/shell?${params.toString()}`)
 

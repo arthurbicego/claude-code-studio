@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { Express, Request, Response } from 'express';
+import { getBootToken } from '../auth';
 import { ERR, sendError, sendInternalError } from '../errors';
 import { isAllowedProjectCwd } from '../paths';
 
@@ -26,6 +27,15 @@ function resolveVSCodeBin(): string | null {
 }
 
 export function register(app: Express): void {
+  // The host/origin guards already ensure cross-origin pages cannot read this response under
+  // SOP. The token itself only exists to gate WebSocket upgrades on /pty endpoints, so a
+  // caller that grabbed a sessionKey via the SSE stream still cannot connect to the live PTY
+  // unless it can also read the token file (mode 0600) or sniff a same-origin response.
+  app.get('/api/auth/boot-token', (_req: Request, res: Response) => {
+    res.set('Cache-Control', 'no-store');
+    res.json({ token: getBootToken() });
+  });
+
   app.post('/api/open/vscode', (req: Request, res: Response) => {
     const rawPath = typeof req.body?.path === 'string' ? req.body.path : '';
     const target = isAllowedProjectCwd(rawPath);

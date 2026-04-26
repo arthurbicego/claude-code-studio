@@ -2,6 +2,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { Terminal as Xterm } from '@xterm/xterm'
 import { type ClipboardEvent, type DragEvent, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { getBootTokenOrThrow, loadBootToken } from '@/lib/bootToken'
 import { cn } from '@/lib/utils'
 import type { Attachment, SessionLaunch } from '@/types'
 import { AttachmentChipRow, type UIAttachment } from './AttachmentChip'
@@ -58,10 +59,11 @@ function kindFor(mime: string): UIAttachment['kind'] {
   return 'text'
 }
 
-function buildWsUrl(launch: SessionLaunch, skip?: Props['skipDefaults']) {
+function buildWsUrl(launch: SessionLaunch, token: string, skip?: Props['skipDefaults']) {
   const params = new URLSearchParams()
   params.set('sessionKey', launch.sessionKey)
   params.set('cwd', launch.cwd)
+  params.set('token', token)
   if (launch.resume) {
     params.set('resume', launch.resume)
   } else {
@@ -132,7 +134,28 @@ export function TerminalView({
       }
     })
 
-    const url = buildWsUrl(launch, skipDefaults)
+    // The boot token is normally cached by main.tsx before render. Falling back to a fetch
+    // here keeps the terminal usable if that initial load failed (e.g. network blip).
+    let token: string
+    try {
+      token = getBootTokenOrThrow()
+    } catch {
+      onStatus?.(t('terminal.error', { message: 'auth token not loaded — retrying' }))
+      void loadBootToken().catch(() => {
+        /* surface in onStatus below */
+      })
+      return () => {
+        cancelAnimationFrame(initialFitRaf)
+        try {
+          term.dispose()
+        } catch {
+          /* noop */
+        }
+        termRef.current = null
+        fitRef.current = null
+      }
+    }
+    const url = buildWsUrl(launch, token, skipDefaults)
     const ws = new WebSocket(url)
     wsRef.current = ws
 
