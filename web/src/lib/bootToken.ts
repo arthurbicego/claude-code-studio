@@ -9,18 +9,25 @@ let pending: Promise<string> | null = null
 export async function loadBootToken(): Promise<string> {
   if (token) return token
   if (pending) return pending
-  pending = (async () => {
-    const res = await fetch('/api/auth/boot-token', { cache: 'no-store' })
-    if (!res.ok) throw new Error(`boot token fetch failed: ${res.status}`)
-    const data = (await res.json()) as { token?: unknown }
-    if (typeof data.token !== 'string' || !data.token) {
-      throw new Error('boot token response missing token')
+  const attempt = (async () => {
+    try {
+      const res = await fetch('/api/auth/boot-token', { cache: 'no-store' })
+      if (!res.ok) throw new Error(`boot token fetch failed: ${res.status}`)
+      const data = (await res.json()) as { token?: unknown }
+      if (typeof data.token !== 'string' || !data.token) {
+        throw new Error('boot token response missing token')
+      }
+      token = data.token
+      return token
+    } finally {
+      // Clear the in-flight handle so a rejection does not poison every subsequent
+      // loadBootToken() call. Successive callers retry the fetch from scratch instead of
+      // resolving against a stale rejected promise.
+      pending = null
     }
-    token = data.token
-    pending = null
-    return token
   })()
-  return pending
+  pending = attempt
+  return attempt
 }
 
 export function getBootTokenOrThrow(): string {
