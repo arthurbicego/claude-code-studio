@@ -253,13 +253,19 @@ function SettingsPageInner() {
       }
     }, 600)
     return () => window.clearTimeout(handle)
+    // useClaudeSettings returns `{ ...state, reload, update }` — a fresh object reference on
+    // every render, so depending on `cs` makes the debounce reschedule on every parent
+    // rerender (SSE traffic, prefs saves, etc.) and the 600 ms window can essentially never
+    // elapse. List the specific fields we actually read so the timer fires when sandbox
+    // input changes and stays put otherwise.
   }, [
     sandbox,
     jsonState,
     jsonHasErrors,
     canSaveSandbox,
     sandboxLoading,
-    cs,
+    cs.settings,
+    cs.update,
     setSaving,
     setSaved,
     reportSaveError,
