@@ -9,7 +9,11 @@ import { isAllowedProjectCwd } from '../paths';
 
 function resolveVSCodeBin(): string | null {
   try {
-    const out = execSync('which code', { encoding: 'utf8', env: process.env }).trim();
+    const out = execSync('which code', {
+      encoding: 'utf8',
+      env: process.env,
+      timeout: 5000,
+    }).trim();
     if (out && fs.existsSync(out)) return fs.realpathSync(out);
   } catch {
     // `which` exits non-zero when `code` is not on PATH — fall through.

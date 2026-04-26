@@ -5,7 +5,12 @@ import path from 'node:path';
 
 export function resolveClaudeBin(): string | null {
   try {
-    const out = execSync('which claude', { encoding: 'utf8', env: process.env }).trim();
+    // 5 s timeout in case PATH contains a slow/dead network mount that hangs `which`.
+    const out = execSync('which claude', {
+      encoding: 'utf8',
+      env: process.env,
+      timeout: 5000,
+    }).trim();
     if (out && fs.existsSync(out)) return fs.realpathSync(out);
   } catch {
     // `which` exits non-zero when not found — fall through to candidate list.

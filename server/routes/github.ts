@@ -11,7 +11,7 @@ let cachedGhBin: string | null | undefined;
 function resolveGhBin(): string | null {
   if (cachedGhBin !== undefined) return cachedGhBin;
   try {
-    const out = execFileSync('which', ['gh'], { encoding: 'utf8' }).trim();
+    const out = execFileSync('which', ['gh'], { encoding: 'utf8', timeout: 5000 }).trim();
     if (out && fs.existsSync(out)) {
       cachedGhBin = fs.realpathSync(out);
       return cachedGhBin;
