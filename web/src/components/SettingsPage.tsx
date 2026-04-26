@@ -95,16 +95,7 @@ function SettingsPageInner() {
   }, [config])
 
   useEffect(() => {
-    if (cs.settings) {
-      setSandbox(cs.settings.sandbox)
-      setJsonState({
-        network: { text: toJsonText(cs.settings.sandbox.network), error: null },
-        filesystem: { text: toJsonText(cs.settings.sandbox.filesystem), error: null },
-        ripgrep: { text: toJsonText(cs.settings.sandbox.ripgrep), error: null },
-        seccomp: { text: toJsonText(cs.settings.sandbox.seccomp), error: null },
-      })
-      lastSavedSandboxRef.current = JSON.stringify(cs.settings.sandbox)
-    } else {
+    if (!cs.settings) {
       setSandbox(emptySandbox())
       setJsonState({
         network: { text: '', error: null },
@@ -113,7 +104,23 @@ function SettingsPageInner() {
         seccomp: { text: '', error: null },
       })
       lastSavedSandboxRef.current = null
+      return
     }
+    // useClaudeSettings.update echoes the saved sandbox back into cs.settings on success.
+    // If we always reset state from cs.settings, any keystroke typed in the JSON fields
+    // during the auto-save roundtrip is silently overwritten when the response lands. Skip
+    // the reset when the incoming serialized payload matches what we just saved — that path
+    // is the save echoing itself, not an external change.
+    const incoming = JSON.stringify(cs.settings.sandbox)
+    if (incoming === lastSavedSandboxRef.current) return
+    setSandbox(cs.settings.sandbox)
+    setJsonState({
+      network: { text: toJsonText(cs.settings.sandbox.network), error: null },
+      filesystem: { text: toJsonText(cs.settings.sandbox.filesystem), error: null },
+      ripgrep: { text: toJsonText(cs.settings.sandbox.ripgrep), error: null },
+      seccomp: { text: toJsonText(cs.settings.sandbox.seccomp), error: null },
+    })
+    lastSavedSandboxRef.current = incoming
   }, [cs.settings])
 
   const standbyFactor = standbyUnit === 'minutes' ? 60000 : 1000
