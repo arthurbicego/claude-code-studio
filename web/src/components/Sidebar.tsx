@@ -174,7 +174,7 @@ export function Sidebar({
             className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground"
           />
           <input
-            type="search"
+            type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('sidebar.search')}
@@ -262,6 +262,7 @@ export function Sidebar({
           renderState={renderState}
           applyProjectOrder={applyOrder}
           onReorderProject={moveSlug}
+          searchQuery={trimmedQuery}
         />
 
         {hasArchived ? (
