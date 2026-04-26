@@ -230,37 +230,28 @@ export function register(app: Express): void {
       const targetFile = path.join(dir, `${name}.md`);
       if (previousName && previousName !== name) {
         const oldFile = path.join(dir, `${previousName}.md`);
-        if (fs.existsSync(oldFile)) {
-          // linkSync atomically fails with EEXIST if targetFile already exists, removing the
-          // TOCTOU window between an existsSync check and renameSync (renameSync would
-          // silently overwrite). Then unlink the source to complete the move.
-          try {
-            fs.linkSync(oldFile, targetFile);
-          } catch (err) {
-            if ((err as NodeJS.ErrnoException).code === 'EEXIST') {
-              return sendError(
-                res,
-                409,
-                ERR.AGENT_ALREADY_EXISTS,
-                `an agent named "${name}" already exists`,
-                { name },
-              );
-            }
-            throw err;
+        // Reserve the target name atomically with 'wx' so the rename below cannot silently
+        // overwrite a concurrently-created sibling. Works on every filesystem (no hard-link
+        // dependency). The brief moment where targetFile exists as an empty placeholder is
+        // not observable to other code in a single Node process.
+        try {
+          fs.writeFileSync(targetFile, '', { encoding: 'utf8', flag: 'wx' });
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code === 'EEXIST') {
+            return sendError(
+              res,
+              409,
+              ERR.AGENT_ALREADY_EXISTS,
+              `an agent named "${name}" already exists`,
+              { name },
+            );
           }
-          fs.unlinkSync(oldFile);
-        } else if (fs.existsSync(targetFile)) {
-          return sendError(
-            res,
-            409,
-            ERR.AGENT_ALREADY_EXISTS,
-            `an agent named "${name}" already exists`,
-            { name },
-          );
+          throw err;
+        }
+        if (fs.existsSync(oldFile)) {
+          fs.renameSync(oldFile, targetFile);
         }
       } else if (!previousName) {
-        // 'wx' is the open-create-exclusive flag — write fails with EEXIST if the file is
-        // already there. No existsSync needed.
         try {
           fs.writeFileSync(targetFile, fullContent, { encoding: 'utf8', flag: 'wx' });
           return res.json(agentResponse(name, dir));
@@ -277,8 +268,9 @@ export function register(app: Express): void {
           throw err;
         }
       }
-      // Reached when renaming (target reserved via linkSync above) or when previousName ===
-      // name (in-place edit of an existing agent). The write here just refreshes the contents.
+      // Reached when renaming (target reserved with the placeholder above; rename has moved
+      // old contents on top of it) or when previousName === name (in-place edit). The write
+      // refreshes contents.
       fs.writeFileSync(targetFile, fullContent, 'utf8');
       res.json(agentResponse(name, dir));
     } catch (err) {
@@ -346,27 +338,43 @@ export function register(app: Express): void {
       const targetDir = path.join(dir, name);
       if (previousName && previousName !== name) {
         const oldDir = path.join(dir, previousName);
-        // mkdirSync without `recursive` atomically fails with EEXIST if targetDir already
-        // exists, reserving the name. Then move the old skill's contents over.
-        try {
-          fs.mkdirSync(targetDir);
-        } catch (err) {
-          if ((err as NodeJS.ErrnoException).code === 'EEXIST') {
-            return sendError(
-              res,
-              409,
-              ERR.SKILL_ALREADY_EXISTS,
-              `a skill named "${name}" already exists`,
-              { name },
-            );
-          }
-          throw err;
-        }
         if (fs.existsSync(oldDir)) {
-          for (const entry of fs.readdirSync(oldDir)) {
-            fs.renameSync(path.join(oldDir, entry), path.join(targetDir, entry));
+          // POSIX renameSync of a directory is atomic when the target does not exist or is
+          // empty — fails with EEXIST/ENOTEMPTY when the target already holds a non-empty
+          // skill, with EXDEV if the source and target live on different filesystems. The
+          // previous mkdir+walk-by-entry could leave the skill split across both names if
+          // the process crashed mid-walk.
+          try {
+            fs.renameSync(oldDir, targetDir);
+          } catch (err) {
+            const code = (err as NodeJS.ErrnoException).code;
+            if (code === 'EEXIST' || code === 'ENOTEMPTY') {
+              return sendError(
+                res,
+                409,
+                ERR.SKILL_ALREADY_EXISTS,
+                `a skill named "${name}" already exists`,
+                { name },
+              );
+            }
+            throw err;
           }
-          fs.rmdirSync(oldDir);
+        } else {
+          // Source missing — treat as create.
+          try {
+            fs.mkdirSync(targetDir);
+          } catch (err) {
+            if ((err as NodeJS.ErrnoException).code === 'EEXIST') {
+              return sendError(
+                res,
+                409,
+                ERR.SKILL_ALREADY_EXISTS,
+                `a skill named "${name}" already exists`,
+                { name },
+              );
+            }
+            throw err;
+          }
         }
       } else if (!previousName) {
         try {
