@@ -100,9 +100,22 @@ export function MemoryEditor({
   const lastSavedTextRef = useRef<string>('')
 
   useEffect(() => {
-    const initial = data?.content ?? ''
-    setText(initial)
-    lastSavedTextRef.current = initial
+    if (!data) {
+      setText('')
+      lastSavedTextRef.current = ''
+      setShowExpanded(false)
+      setExpand(null)
+      setExpandError(null)
+      return
+    }
+    // useGlobalMemory/useProjectMemory.save echoes the content back into state.data on
+    // success. If we always reset text from data.content, any keystroke typed during the
+    // server roundtrip is silently overwritten when the response arrives. Skip the reset
+    // when the incoming content matches what we just saved — only adopt data.content when
+    // it represents an external change (initial load, reload, or external edit).
+    if (data.content === lastSavedTextRef.current) return
+    setText(data.content)
+    lastSavedTextRef.current = data.content
     setShowExpanded(false)
     setExpand(null)
     setExpandError(null)
