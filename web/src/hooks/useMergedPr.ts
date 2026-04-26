@@ -15,6 +15,7 @@ export function useMergedPr(cwd: string | null, branch: string | null): GhPrResu
     setData(null)
     if (!cwd || !branch) return
     let cancelled = false
+    let stopped = false
     let timer: number | null = null
     const controller = new AbortController()
 
@@ -29,11 +30,17 @@ export function useMergedPr(cwd: string | null, branch: string | null): GhPrResu
         const payload = (await res.json()) as GhPrResult
         if (cancelled) return
         setData(payload)
-        if (!payload.supported) return // gh missing or repo unauthenticated — stop polling
+        // The previous version put this `return` inside the try block, so the finally below
+        // still scheduled the next tick. Set a flag instead and gate the reschedule on it,
+        // so machines without `gh` actually stop hitting the endpoint.
+        if (!payload.supported) {
+          stopped = true
+          return
+        }
       } catch {
         // swallow — keep showing previous value, retry on next tick
       } finally {
-        if (!cancelled) timer = window.setTimeout(tick, POLL_MS)
+        if (!cancelled && !stopped) timer = window.setTimeout(tick, POLL_MS)
       }
     }
     tick()
