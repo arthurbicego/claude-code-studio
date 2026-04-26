@@ -4,7 +4,12 @@ import type { MemoryFile, MemoryHierarchyEntry, MemoryVariant } from '@shared/ty
 import type { Express, Request, Response } from 'express';
 import { ERR, sendError, sendInternalError } from '../errors';
 import { expandImports } from '../memory-expand';
-import { GLOBAL_CLAUDE_MD, HOME_DIR_REAL, isAllowedProjectCwd } from '../paths';
+import {
+  GLOBAL_CLAUDE_MD,
+  HOME_DIR_REAL,
+  isAllowedProjectCwd,
+  isProjectScopedCwd,
+} from '../paths';
 
 const PROJECT_MEMORY_VARIANTS: Record<MemoryVariant, string> = {
   shared: 'CLAUDE.md',
@@ -89,8 +94,10 @@ export function register(app: Express): void {
 
   app.get('/api/memory/project', (req: Request, res: Response) => {
     res.set('Cache-Control', 'no-store');
-    const cwd = isAllowedProjectCwd(req.query.cwd);
-    if (!cwd) return sendError(res, 400, ERR.CWD_INVALID, 'invalid cwd or outside home');
+    // Reading project CLAUDE.md leaks contents back to the caller, so apply the strict
+    // "must look like a real project" check rather than the looser anything-inside-home rule.
+    const cwd = isProjectScopedCwd(req.query.cwd);
+    if (!cwd) return sendError(res, 400, ERR.CWD_INVALID, 'invalid cwd or not a project');
     const variant: MemoryVariant = req.query.variant === 'local' ? 'local' : 'shared';
     const filePath = path.join(cwd, projectMemoryFileName(variant));
     try {
@@ -102,8 +109,11 @@ export function register(app: Express): void {
   });
 
   app.put('/api/memory/project', (req: Request, res: Response) => {
-    const cwd = isAllowedProjectCwd(req.body?.cwd);
-    if (!cwd) return sendError(res, 400, ERR.CWD_INVALID, 'invalid cwd or outside home');
+    // Writing CLAUDE.md is prompt-injection persistent for any future Claude session in that
+    // tree. Only allow the write when the cwd looks like a real project so a stray caller
+    // cannot plant directives anywhere under $HOME.
+    const cwd = isProjectScopedCwd(req.body?.cwd);
+    if (!cwd) return sendError(res, 400, ERR.CWD_INVALID, 'invalid cwd or not a project');
     const content = typeof req.body?.content === 'string' ? req.body.content : null;
     if (content == null)
       return sendError(res, 400, ERR.CONTENT_REQUIRED, 'content is required (string)');

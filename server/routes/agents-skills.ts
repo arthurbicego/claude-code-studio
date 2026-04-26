@@ -12,7 +12,7 @@ import type {
 import type { Express, Request, Response } from 'express';
 import { ERR, sendError, sendInternalError } from '../errors';
 import { buildFrontmatter, parseFrontmatter } from '../frontmatter';
-import { isAllowedProjectCwd, USER_AGENTS_DIR, USER_SKILLS_DIR } from '../paths';
+import { isProjectScopedCwd, USER_AGENTS_DIR, USER_SKILLS_DIR } from '../paths';
 import { isValidName } from '../validators';
 
 const KNOWN_TOOLS = [
@@ -44,7 +44,9 @@ function resolveScopeDir(scope: unknown, kind: Kind, rawCwd: unknown): string | 
     return kind === 'agent' ? USER_AGENTS_DIR : USER_SKILLS_DIR;
   }
   if (scope === 'project') {
-    const cwd = isAllowedProjectCwd(rawCwd);
+    // Project agents/skills are loaded automatically by Claude Code in any subtree, so a write
+    // outside a real project would still be picked up later. Restrict to actual project dirs.
+    const cwd = isProjectScopedCwd(rawCwd);
     if (!cwd) return null;
     return path.join(cwd, '.claude', kind === 'agent' ? 'agents' : 'skills');
   }

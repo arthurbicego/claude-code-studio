@@ -11,7 +11,7 @@ import {
   validateConfig,
 } from '../config';
 import { ERR, sendError, sendInternalError } from '../errors';
-import { isAllowedProjectCwd, USER_CLAUDE_DIR } from '../paths';
+import { isProjectScopedCwd, USER_CLAUDE_DIR } from '../paths';
 
 const SANDBOX_SCOPES: SandboxScope[] = ['user', 'user-local', 'project', 'project-local'];
 
@@ -34,7 +34,10 @@ function resolveSandboxSettingsPath(scope: SandboxScope, rawCwd: unknown): strin
   if (scope === 'user') return path.join(USER_CLAUDE_DIR, 'settings.json');
   if (scope === 'user-local') return path.join(USER_CLAUDE_DIR, 'settings.local.json');
   if (scope === 'project' || scope === 'project-local') {
-    const cwd = isAllowedProjectCwd(rawCwd);
+    // Project-scoped sandbox settings can grant filesystem/network capabilities to a future
+    // Claude session; only allow real project directories (with .git or a registered slug)
+    // so a stray caller cannot plant settings.json deep in $HOME.
+    const cwd = isProjectScopedCwd(rawCwd);
     if (!cwd) return null;
     const file = scope === 'project' ? 'settings.json' : 'settings.local.json';
     return path.join(cwd, '.claude', file);
