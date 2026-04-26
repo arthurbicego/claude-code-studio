@@ -111,6 +111,8 @@ export function register(app: Express): void {
       return sendError(res, 400, ERR.WORKTREE_PATH_OUTSIDE_CWD, 'worktree path outside cwd');
     }
     const force = req.query.force === '1' || req.query.force === 'true';
+    const confirmDirty =
+      req.query.confirmDirty === '1' || req.query.confirmDirty === 'true';
     const entries = listWorktrees(cwd);
     const main = pickMainWorktree(entries);
     if (main && realpathSafe(main.path) === realpathSafe(resolved)) {
@@ -129,6 +131,21 @@ export function register(app: Express): void {
         ERR.WORKTREE_HAS_ACTIVE_SESSIONS,
         'there are active sessions in this worktree',
       );
+    }
+    // `git worktree remove` already refuses dirty worktrees, but `--force` silently throws
+    // away uncommitted changes. Require an explicit second confirmation so a UI typo or a
+    // stray caller cannot destroy work without the user opting in.
+    if (force) {
+      const status = worktreeStatus(resolved);
+      if (!status.clean && !confirmDirty) {
+        return sendError(
+          res,
+          409,
+          ERR.WORKTREE_NOT_CLEAN,
+          'worktree has uncommitted changes — pass confirmDirty=1 to force-remove anyway',
+          { which: 'worktree', modifiedCount: status.modifiedCount },
+        );
+      }
     }
     const entry = entries.find((e) => realpathSafe(e.path) === realpathSafe(resolved)) ?? null;
     const branch = entry?.branch && BRANCH_NAME_RE.test(entry.branch) ? entry.branch : null;
