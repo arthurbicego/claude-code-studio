@@ -1,6 +1,6 @@
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal as Xterm } from '@xterm/xterm'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getBootTokenOrThrow, loadBootToken } from '@/lib/bootToken'
 import { PanelContainer } from './PanelContainer'
@@ -13,8 +13,11 @@ type Props = {
 export function ShellPanel({ cwd, onClose }: Props) {
   const { t } = useTranslation()
   const hostRef = useRef<HTMLDivElement | null>(null)
+  // Bumping retryToken re-runs the effect, which re-creates the WS. Used to recover after a
+  // boot-token fetch that originally failed eventually succeeds.
+  const [retryToken, setRetryToken] = useState(0)
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reconnect the shell WS only when cwd changes; adding translations/onClose would tear down the shell on every parent rerender
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reconnect the shell WS only when cwd / retryToken changes; adding translations/onClose would tear down the shell on every parent rerender
   useEffect(() => {
     if (!hostRef.current) return
 
@@ -34,11 +37,17 @@ export function ShellPanel({ cwd, onClose }: Props) {
     try {
       token = getBootTokenOrThrow()
     } catch {
-      term.write(`\r\n${t('panels.shell.errorPrefix', { message: 'auth token not loaded' })}\r\n`)
-      void loadBootToken().catch(() => {
-        /* token unreachable; user can close and retry */
-      })
+      term.write(`\r\n${t('panels.shell.errorPrefix', { message: 'auth token not loaded — retrying' })}\r\n`)
+      let cancelled = false
+      void loadBootToken()
+        .then(() => {
+          if (!cancelled) setRetryToken((n) => n + 1)
+        })
+        .catch(() => {
+          /* token unreachable; user can close and retry */
+        })
       return () => {
+        cancelled = true
         try {
           term.dispose()
         } catch {
@@ -78,6 +87,15 @@ export function ShellPanel({ cwd, onClose }: Props) {
         /* noop */
       }
     }
+    // Surface connection failures (server gone, auth rejected, network blip) so the panel
+    // does not look frozen. Without these the WS could close silently and the user would
+    // see a blank terminal that no longer responds to input.
+    ws.onerror = () => {
+      term.write(`\r\n${t('panels.shell.errorPrefix', { message: 'connection error' })}\r\n`)
+    }
+    ws.onclose = () => {
+      term.write(`\r\n${t('panels.shell.errorPrefix', { message: 'connection closed' })}\r\n`)
+    }
 
     const dataDisp = term.onData((d) => safeSend({ type: 'input', data: d }))
     const resizeDisp = term.onResize(({ cols, rows }) => safeSend({ type: 'resize', cols, rows }))
@@ -109,7 +127,7 @@ export function ShellPanel({ cwd, onClose }: Props) {
         /* noop */
       }
     }
-  }, [cwd])
+  }, [cwd, retryToken])
 
   return (
     <PanelContainer title={t('panels.shell.title')} onClose={onClose}>
