@@ -230,7 +230,26 @@ export function register(app: Express): void {
       const targetFile = path.join(dir, `${name}.md`);
       if (previousName && previousName !== name) {
         const oldFile = path.join(dir, `${previousName}.md`);
-        if (fs.existsSync(targetFile)) {
+        if (fs.existsSync(oldFile)) {
+          // linkSync atomically fails with EEXIST if targetFile already exists, removing the
+          // TOCTOU window between an existsSync check and renameSync (renameSync would
+          // silently overwrite). Then unlink the source to complete the move.
+          try {
+            fs.linkSync(oldFile, targetFile);
+          } catch (err) {
+            if ((err as NodeJS.ErrnoException).code === 'EEXIST') {
+              return sendError(
+                res,
+                409,
+                ERR.AGENT_ALREADY_EXISTS,
+                `an agent named "${name}" already exists`,
+                { name },
+              );
+            }
+            throw err;
+          }
+          fs.unlinkSync(oldFile);
+        } else if (fs.existsSync(targetFile)) {
           return sendError(
             res,
             409,
@@ -239,16 +258,27 @@ export function register(app: Express): void {
             { name },
           );
         }
-        if (fs.existsSync(oldFile)) fs.renameSync(oldFile, targetFile);
-      } else if (!previousName && fs.existsSync(targetFile)) {
-        return sendError(
-          res,
-          409,
-          ERR.AGENT_ALREADY_EXISTS,
-          `an agent named "${name}" already exists`,
-          { name },
-        );
+      } else if (!previousName) {
+        // 'wx' is the open-create-exclusive flag — write fails with EEXIST if the file is
+        // already there. No existsSync needed.
+        try {
+          fs.writeFileSync(targetFile, fullContent, { encoding: 'utf8', flag: 'wx' });
+          return res.json(agentResponse(name, dir));
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code === 'EEXIST') {
+            return sendError(
+              res,
+              409,
+              ERR.AGENT_ALREADY_EXISTS,
+              `an agent named "${name}" already exists`,
+              { name },
+            );
+          }
+          throw err;
+        }
       }
+      // Reached when renaming (target reserved via linkSync above) or when previousName ===
+      // name (in-place edit of an existing agent). The write here just refreshes the contents.
       fs.writeFileSync(targetFile, fullContent, 'utf8');
       res.json(agentResponse(name, dir));
     } catch (err) {
@@ -316,26 +346,47 @@ export function register(app: Express): void {
       const targetDir = path.join(dir, name);
       if (previousName && previousName !== name) {
         const oldDir = path.join(dir, previousName);
-        if (fs.existsSync(targetDir)) {
-          return sendError(
-            res,
-            409,
-            ERR.SKILL_ALREADY_EXISTS,
-            `a skill named "${name}" already exists`,
-            { name },
-          );
+        // mkdirSync without `recursive` atomically fails with EEXIST if targetDir already
+        // exists, reserving the name. Then move the old skill's contents over.
+        try {
+          fs.mkdirSync(targetDir);
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code === 'EEXIST') {
+            return sendError(
+              res,
+              409,
+              ERR.SKILL_ALREADY_EXISTS,
+              `a skill named "${name}" already exists`,
+              { name },
+            );
+          }
+          throw err;
         }
-        if (fs.existsSync(oldDir)) fs.renameSync(oldDir, targetDir);
-      } else if (!previousName && fs.existsSync(targetDir)) {
-        return sendError(
-          res,
-          409,
-          ERR.SKILL_ALREADY_EXISTS,
-          `a skill named "${name}" already exists`,
-          { name },
-        );
+        if (fs.existsSync(oldDir)) {
+          for (const entry of fs.readdirSync(oldDir)) {
+            fs.renameSync(path.join(oldDir, entry), path.join(targetDir, entry));
+          }
+          fs.rmdirSync(oldDir);
+        }
+      } else if (!previousName) {
+        try {
+          fs.mkdirSync(targetDir);
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code === 'EEXIST') {
+            return sendError(
+              res,
+              409,
+              ERR.SKILL_ALREADY_EXISTS,
+              `a skill named "${name}" already exists`,
+              { name },
+            );
+          }
+          throw err;
+        }
+      } else {
+        // previousName === name: in-place edit of an existing skill.
+        fs.mkdirSync(targetDir, { recursive: true });
       }
-      fs.mkdirSync(targetDir, { recursive: true });
       fs.writeFileSync(path.join(targetDir, 'SKILL.md'), fullContent, 'utf8');
       res.json(skillResponse(name, dir));
     } catch (err) {
