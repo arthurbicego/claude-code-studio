@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { ProjectWorktreeRef } from '../shared/types';
 import { type NumStat, parseNumstat, runGitArgs, runGitArgsOrThrow } from './git';
 import { realpathSafe } from './paths';
+import { BRANCH_NAME_RE } from './validators';
 
 export type WorktreeEntry = {
   path: string;
@@ -141,10 +142,16 @@ export function pickMainWorktree(
       }
     }
   }
+  // Fallback heuristic — used when `--git-common-dir` failed (extremely unusual repo layout).
+  // Skip bare repos because the original "first non-detached, non-bare, non-prunable" rule
+  // would silently classify a linked worktree as main inside a bare-with-worktrees layout,
+  // and skip prunable entries too. Returning null is preferable to a wrong answer because
+  // callers compare realpaths and a wrong "main" would let DELETE/discard remove the actual
+  // main worktree.
   for (const e of entries) {
     if (!e.detached && !e.bare && !e.prunable) return e;
   }
-  return entries[0] || null;
+  return null;
 }
 
 const GHOST_WORKTREE_SEGMENT_RE = /(.+)\/\.claude\/worktrees\/[^/]+\/?$/;
@@ -233,10 +240,16 @@ export function pushBranch(cwd: string, branch: string): { remote: string; ref: 
   if (upstream) {
     const [remote, ...rest] = upstream.split('/');
     const ref = rest.join('/') || branch;
-    runGitArgsOrThrow(cwd, ['push', remote, `${branch}:${ref}`]);
+    // Re-validate the upstream-derived ref the same way as deleteRemoteBranch — git config
+    // can carry hand-edited refs, and even though the `branch:ref` form does not start with
+    // `-`, refusing pathological refs early gives a clearer error than git's own.
+    if (!BRANCH_NAME_RE.test(ref)) {
+      throw new Error(`refusing to push to remote ref with unsafe name: ${ref}`);
+    }
+    runGitArgsOrThrow(cwd, ['push', remote, '--', `${branch}:${ref}`]);
     return { remote, ref };
   }
-  runGitArgsOrThrow(cwd, ['push', '-u', 'origin', branch]);
+  runGitArgsOrThrow(cwd, ['push', '-u', 'origin', '--', branch]);
   return { remote: 'origin', ref: branch };
 }
 
@@ -249,6 +262,14 @@ export function deleteRemoteBranch(cwd: string, branch: string): { remote: strin
   if (!upstream) throw new Error('no upstream configured for this branch');
   const [remote, ...rest] = upstream.split('/');
   const ref = rest.join('/') || branch;
-  runGitArgsOrThrow(cwd, ['push', remote, '--delete', ref]);
+  // The upstream string comes from git-stored config and could be anything the user wrote
+  // there manually (e.g. `origin/-rf` if they ran `git branch --set-upstream-to=origin/-rf`).
+  // Without re-validation, a `ref` that starts with `-` would be interpreted by `git push`
+  // as a flag. BRANCH_NAME_RE rejects refs starting with `-` (and other refs git itself
+  // refuses).
+  if (!BRANCH_NAME_RE.test(ref)) {
+    throw new Error(`refusing to delete remote ref with unsafe name: ${ref}`);
+  }
+  runGitArgsOrThrow(cwd, ['push', remote, '--delete', '--', ref]);
   return { remote, ref };
 }
