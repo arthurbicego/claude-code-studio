@@ -1,5 +1,5 @@
 import { Check, Copy } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Tooltip } from '@/components/ui/Tooltip'
 
@@ -12,12 +12,27 @@ type Props = {
 export function CopyableField({ label, value, copyAriaLabel }: Props) {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
+  const resetTimerRef = useRef<number | null>(null)
+
+  // Clear the copy-confirmation timer on unmount so React does not warn about state updates
+  // on an unmounted component (e.g. when the dialog containing the field closes within 1.2 s
+  // of the click).
+  useEffect(
+    () => () => {
+      if (resetTimerRef.current !== null) window.clearTimeout(resetTimerRef.current)
+    },
+    [],
+  )
 
   const onCopy = async () => {
     try {
       await navigator.clipboard.writeText(value)
       setCopied(true)
-      setTimeout(() => setCopied(false), 1200)
+      if (resetTimerRef.current !== null) window.clearTimeout(resetTimerRef.current)
+      resetTimerRef.current = window.setTimeout(() => {
+        resetTimerRef.current = null
+        setCopied(false)
+      }, 1200)
     } catch {
       /* noop */
     }
