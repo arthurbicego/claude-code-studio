@@ -487,4 +487,8 @@ export type MaintenanceCleanupResult = {
   skipped: MaintenanceCleanupSkipped[];
 };
 
-export const MAINTENANCE_MAX_ITEMS_PER_REQUEST = 1000;
+// Each item triggers a recursive rmSync, so 1000 was a way to amplify accidental or
+// adversarial cleanup requests into a multi-GB I/O storm. 100 still covers normal cleanup
+// flows (the UI batches user-selected items) without giving a single request that much
+// blast radius.
+export const MAINTENANCE_MAX_ITEMS_PER_REQUEST = 100;
