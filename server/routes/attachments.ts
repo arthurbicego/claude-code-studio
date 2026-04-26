@@ -13,6 +13,7 @@ import {
 import { ERR, sendError, sendInternalError } from '../errors';
 import { liveSessions } from '../live-sessions';
 import { ATTACHMENTS_DIR } from '../paths';
+import { findSessionFile } from '../sessions-meta';
 import { UUID_RE } from '../validators';
 
 const SAFE_NAME_RE = /[^A-Za-z0-9._-]+/g;
@@ -165,7 +166,13 @@ export function cleanupOrphanAttachments(activeKeys: Set<string>): void {
   const maxAgeMs = 24 * 60 * 60 * 1000;
   const now = Date.now();
   for (const name of entries) {
+    // A session that was live before the last server restart still has a .jsonl on disk; the
+    // user may not have reopened it yet, so it won't be in `activeKeys` at boot. Treating it
+    // as orphan and deleting its attachments destroys files the user expected to find when
+    // they reopen the session. Look up findSessionFile so we only purge directories with no
+    // backing .jsonl AND not currently live.
     if (activeKeys.has(name)) continue;
+    if (findSessionFile(name)) continue;
     const full = path.join(ATTACHMENTS_DIR, name);
     try {
       const st = fs.statSync(full);
