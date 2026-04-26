@@ -1,7 +1,6 @@
-import { ArrowLeft } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router'
+import { Modal } from '@/components/Modal'
 import { AgentsTab } from '@/components/settings/AgentsTab'
 import { GeralTab } from '@/components/settings/GeralTab'
 import { MemoryTab } from '@/components/settings/MemoryTab'
@@ -21,8 +20,6 @@ import { SessionsTab, type StandbyUnit } from '@/components/settings/SessionsTab
 import { SidebarPrefsTab } from '@/components/settings/SidebarPrefsTab'
 import { SkillsTab } from '@/components/settings/SkillsTab'
 import { Tabs } from '@/components/settings/Tabs'
-import { Button } from '@/components/ui/Button'
-import { Tooltip } from '@/components/ui/Tooltip'
 import { useClaudeSettings } from '@/hooks/useClaudeSettings'
 import { useConfig } from '@/hooks/useConfig'
 import { SaveStatusProvider, useSaveStatus } from '@/hooks/useSaveStatus'
@@ -31,18 +28,22 @@ import type { SandboxPlatform, SandboxScope, SandboxSettings } from '@/types'
 
 type TabId = 'geral' | 'sessions' | 'sandbox' | 'memory' | 'agents' | 'skills' | 'sidebar'
 
-export function SettingsPage() {
+type Props = {
+  open: boolean
+  onClose: () => void
+}
+
+export function SettingsModal({ open, onClose }: Props) {
+  if (!open) return null
   return (
     <SaveStatusProvider>
-      <SettingsPageInner />
+      <SettingsModalInner open={open} onClose={onClose} />
     </SaveStatusProvider>
   )
 }
 
-function SettingsPageInner() {
+function SettingsModalInner({ open, onClose }: Props) {
   const { t } = useTranslation()
-  const navigate = useNavigate()
-  const goBack = useCallback(() => navigate('/'), [navigate])
   const { config, defaults, bounds, loading, error, update } = useConfig()
   const sessions = useSessionList()
   const projects = useMemo(
@@ -279,16 +280,7 @@ function SettingsPageInner() {
   ])
 
   return (
-    <div className="flex h-full flex-col bg-background">
-      <header className="flex items-center gap-3 border-b border-border px-4 py-3">
-        <Tooltip content={t('common.back')}>
-          <Button variant="ghost" size="icon" onClick={goBack} aria-label={t('common.back')}>
-            <ArrowLeft size={16} />
-          </Button>
-        </Tooltip>
-        <h1 className="flex-1 text-sm font-semibold text-foreground">{t('settings.title')}</h1>
-        <SaveStatusIndicator />
-      </header>
+    <Modal open={open} onClose={onClose} title={t('settings.title')} size="lg">
       <div className="flex min-h-0 flex-1 flex-col">
         <Tabs
           tabs={[
@@ -302,6 +294,7 @@ function SettingsPageInner() {
           ]}
           active={tab}
           onChange={setTab}
+          rightSlot={<SaveStatusIndicator />}
         />
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto divide-y divide-border">
           {loading ? (
@@ -352,6 +345,6 @@ function SettingsPageInner() {
           ) : null}
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }

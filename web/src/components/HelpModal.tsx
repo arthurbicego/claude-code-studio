@@ -43,12 +43,7 @@ export function HelpModal({ open, onClose }: Props) {
   }
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={t('help.title')}
-      className="!w-[min(960px,96vw)] !max-h-[88vh]"
-    >
+    <Modal open={open} onClose={onClose} title={t('help.title')} size="lg">
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <nav
           className="flex w-56 flex-col gap-1 overflow-y-auto border-r border-border bg-black/20 p-3"

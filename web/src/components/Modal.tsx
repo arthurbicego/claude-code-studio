@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { cn } from '@/lib/utils'
 
+type ModalSize = 'sm' | 'lg'
+
 type Props = {
   open: boolean
   onClose: () => void
@@ -11,9 +13,15 @@ type Props = {
   children: ReactNode
   footer?: ReactNode
   className?: string
+  size?: ModalSize
 }
 
-export function Modal({ open, onClose, title, children, footer, className }: Props) {
+const SIZE_CLASSES: Record<ModalSize, string> = {
+  sm: 'max-h-[86vh] w-[min(560px,94vw)]',
+  lg: 'h-[75vh] w-[75vw]',
+}
+
+export function Modal({ open, onClose, title, children, footer, className, size = 'sm' }: Props) {
   const { t } = useTranslation()
   useEffect(() => {
     if (!open) return
@@ -40,7 +48,8 @@ export function Modal({ open, onClose, title, children, footer, className }: Pro
     >
       <div
         className={cn(
-          'flex max-h-[86vh] w-[min(560px,94vw)] flex-col overflow-hidden rounded-lg border border-border bg-card shadow-2xl',
+          'flex flex-col overflow-hidden rounded-lg border border-border bg-card shadow-2xl',
+          SIZE_CLASSES[size],
           className,
         )}
       >

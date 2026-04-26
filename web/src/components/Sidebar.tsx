@@ -12,9 +12,9 @@ import {
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router'
 import { HelpModal } from '@/components/HelpModal'
 import { SessionsSection } from '@/components/SessionsSection'
+import { SettingsModal } from '@/components/SettingsModal'
 import { Button } from '@/components/ui/Button'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { useFormatTime } from '@/hooks/useFormatDate'
@@ -110,9 +110,9 @@ export function Sidebar({
 }: Props) {
   const { t } = useTranslation()
   const formatTime = useFormatTime()
-  const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [helpOpen, setHelpOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const trimmedQuery = searchQuery.trim()
   const openSessionKeys = useMemo(() => new Set(openSessions.keys()), [openSessions])
   const hasOpen = openSessions.size > 0
@@ -160,7 +160,7 @@ export function Sidebar({
             </Button>
           </Tooltip>
           <Tooltip content={t('sidebar.settings')}>
-            <Button size="xs" variant="ghost" onClick={() => navigate('/settings')}>
+            <Button size="xs" variant="ghost" onClick={() => setSettingsOpen(true)}>
               <Settings size={14} />
             </Button>
           </Tooltip>
@@ -296,6 +296,7 @@ export function Sidebar({
         ) : null}
       </div>
       <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </aside>
   )
 }

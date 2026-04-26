@@ -241,7 +241,7 @@ export function NewSessionModal({
       open={open}
       onClose={onClose}
       title={t('newSession.title')}
-      className="w-[min(720px,94vw)]"
+      size="lg"
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
