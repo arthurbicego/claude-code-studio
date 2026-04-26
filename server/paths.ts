@@ -67,7 +67,16 @@ function cwdToProjectSlug(cwd: string): string {
   return cwd.replace(/\//g, '-');
 }
 
-const PROJECT_SCOPED_RESERVED_DIRS = [USER_CLAUDE_DIR, CONFIG_DIR];
+// Reserved dirs need to be compared against `resolved`, which has been through realpath in
+// isAllowedProjectCwd. On macOS `$HOME` is typically `/Users/<name>` but its realpath is
+// `/private/Users/<name>`; USER_CLAUDE_DIR / CONFIG_DIR are joined off un-realpath'd HOME_DIR
+// so they keep the `/Users/<name>/...` prefix, and the startsWith comparison would never
+// match. Compute the reserved set off HOME_DIR_REAL instead so both sides share the same
+// canonical prefix even when $HOME is a symlink.
+const PROJECT_SCOPED_RESERVED_DIRS = [
+  path.join(HOME_DIR_REAL, '.claude'),
+  path.join(HOME_DIR_REAL, '.cockpit-for-claude-code'),
+];
 
 /**
  * Stricter form of `isAllowedProjectCwd` used by routes that mutate project-scoped artifacts
@@ -94,9 +103,19 @@ export function isProjectScopedCwd(rawCwd: unknown): string | null {
   } catch {
     // Permission errors fall through to the slug check.
   }
+  // Slug check: Claude Code stores sessions under ~/.claude/projects/<slug>, where slug
+  // comes from the cwd the CLI was launched with. That cwd may have been the un-realpath'd
+  // path ($HOME-prefixed) — on macOS $HOME is typically a symlink so realpath rewrites it
+  // — and the slug we'd derive from `resolved` (post-realpath) wouldn't match. Try both.
   try {
-    const slugPath = path.join(CLAUDE_PROJECTS, cwdToProjectSlug(resolved));
-    if (fs.existsSync(slugPath)) return resolved;
+    const candidates = new Set<string>([cwdToProjectSlug(resolved)]);
+    if (resolved === HOME_DIR_REAL || resolved.startsWith(HOME_DIR_REAL + path.sep)) {
+      const relative = resolved.slice(HOME_DIR_REAL.length);
+      candidates.add(cwdToProjectSlug(`${HOME_DIR}${relative}`));
+    }
+    for (const slug of candidates) {
+      if (fs.existsSync(path.join(CLAUDE_PROJECTS, slug))) return resolved;
+    }
   } catch {
     // Fall through.
   }
