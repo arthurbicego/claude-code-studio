@@ -36,6 +36,12 @@ export function register(app: Express): void {
     if (appState.archived.has(id)) {
       return res.json({ ok: true, archived: true });
     }
+    // Refuse archive of an id that has no .jsonl on disk. Without this, a caller can spam
+    // archive with arbitrary FOOTER_ID_RE-valid strings (any 1–128-char id passes the regex),
+    // and each one becomes a permanent entry in appState.archived → state.json grows without
+    // bound and the maintenance regex (PROJECT_SLUG_RE-style) would not necessarily clean it.
+    if (!findSessionFile(id))
+      return sendError(res, 404, ERR.SESSION_NOT_FOUND, 'session not found');
     appState.archived.set(id, Date.now());
     saveState(appState);
     broadcastInvalidate();
@@ -65,6 +71,18 @@ export function register(app: Express): void {
     if (!fpath) return sendError(res, 404, ERR.SESSION_NOT_FOUND, 'session not found');
     // Kill the PTY first so it cannot re-materialize the .jsonl after we unlink it.
     await terminateLiveSession(id);
+    // The terminate has a 3 s timeout; if the PTY did not exit and the user re-opened a
+    // session with the same id during that window, liveSessions.has(id) is true again. In
+    // that case we must NOT unlink the freshly-recreated .jsonl — same defense the M4 fix
+    // added to the purge loop.
+    if (liveSessions.has(id)) {
+      return sendError(
+        res,
+        409,
+        ERR.SESSION_NOT_LIVE,
+        'session is live again — try again',
+      );
+    }
     try {
       fs.unlinkSync(fpath);
     } catch (err) {
