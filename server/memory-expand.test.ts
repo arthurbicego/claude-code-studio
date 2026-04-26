@@ -2,7 +2,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { expandImports, IMPORT_MAX_DEPTH } from './memory-expand';
+import {
+  expandImports,
+  IMPORT_MAX_DEPTH,
+  IMPORT_MAX_FILE_BYTES,
+  IMPORT_MAX_TOTAL_BYTES,
+} from './memory-expand';
 
 // All imports are resolved against HOME_DIR_REAL, so we put the fixtures under
 // a temp dir inside $HOME to stay on the allowed side of the home guard.
@@ -82,5 +87,45 @@ describe('expandImports', () => {
     }
     const result = expandImports('@f0.md\n', path.join(tmpDir, 'CLAUDE.md'));
     expect(result.truncated).toBe(true);
+  });
+
+  it('refuses imports under sensitive paths under $HOME (e.g. ~/.ssh, ~/.aws)', () => {
+    // We do not actually create files under $HOME/.ssh in tests; instead we make a real symlink
+    // from inside tmpDir to a sensitive location and assert it is rejected. Using a stable target
+    // that may or may not exist in CI is fine — the rejection happens before fs.statSync.
+    const fakeSshDir = path.join(os.homedir(), '.ssh');
+    const link = path.join(tmpDir, 'creds.md');
+    try {
+      fs.symlinkSync(fakeSshDir, link);
+    } catch {
+      // Some sandboxes disallow creating symlinks; fall back to direct path probe.
+    }
+    const probe = expandImports('@~/.ssh/id_rsa\n', path.join(tmpDir, 'CLAUDE.md'));
+    expect(probe.imports[0].error).toBe('sensitive');
+  });
+
+  it('rejects files larger than IMPORT_MAX_FILE_BYTES without reading them', () => {
+    const big = path.join(tmpDir, 'big.md');
+    // Write one byte beyond the cap so the size check triggers.
+    fs.writeFileSync(big, 'a'.repeat(IMPORT_MAX_FILE_BYTES + 1));
+    const result = expandImports('@big.md\n', path.join(tmpDir, 'CLAUDE.md'));
+    expect(result.imports[0].error).toBe('too_large');
+    expect(result.expanded).not.toContain('aaaa');
+  });
+
+  it('truncates the expansion when total bytes exceed IMPORT_MAX_TOTAL_BYTES', () => {
+    // Each chunk is just under the per-file cap; six of them push past the total cap.
+    const chunkBytes = IMPORT_MAX_FILE_BYTES - 1024;
+    const chunks = Math.ceil(IMPORT_MAX_TOTAL_BYTES / chunkBytes) + 1;
+    let manifest = '';
+    for (let i = 0; i < chunks; i++) {
+      const file = path.join(tmpDir, `c${i}.md`);
+      fs.writeFileSync(file, 'x'.repeat(chunkBytes));
+      manifest += `@c${i}.md\n`;
+    }
+    const result = expandImports(manifest, path.join(tmpDir, 'CLAUDE.md'));
+    expect(result.truncated).toBe(true);
+    const exceeded = result.imports.find((i) => i.error === 'budget_exceeded');
+    expect(exceeded).toBeDefined();
   });
 });

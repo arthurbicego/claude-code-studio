@@ -7,6 +7,45 @@ export const IMPORT_MAX_DEPTH = 5;
 export const IMPORT_LINE_RE = /^(\s*)@(\S+)\s*$/;
 export const FENCE_RE = /^\s*(```|~~~)/;
 
+// Hard limit per file and aggregate ceiling across the whole expansion. Memory expand is reachable
+// over a localhost-only API with no auth, so a malicious local caller could otherwise dump a large
+// file into the response or chain @imports until the server runs out of memory.
+export const IMPORT_MAX_FILE_BYTES = 1 * 1024 * 1024;
+export const IMPORT_MAX_TOTAL_BYTES = 5 * 1024 * 1024;
+
+// @imports are validated to live inside $HOME, but $HOME also stores credentials and SSH/GPG/AWS
+// keys that have no business being inlined into a CLAUDE.md preview. Refuse anything under these
+// well-known sensitive locations so the expand endpoint cannot be used as an exfiltration primitive.
+const SENSITIVE_REL_PATHS = [
+  '.ssh',
+  '.gnupg',
+  '.aws',
+  '.azure',
+  '.kube',
+  '.config/gh',
+  '.config/gh-cli',
+  '.config/git',
+  '.config/op',
+  '.config/1Password',
+  '.cargo/credentials',
+  '.cargo/credentials.toml',
+  '.docker/config.json',
+  '.netrc',
+  '.npmrc',
+  '.pypirc',
+  '.gitconfig',
+  '.claude/.credentials.json',
+] as const;
+
+export function isSensitiveImportPath(realResolved: string): boolean {
+  for (const rel of SENSITIVE_REL_PATHS) {
+    const target = path.join(HOME_DIR_REAL, rel);
+    if (realResolved === target) return true;
+    if ((realResolved + path.sep).startsWith(target + path.sep)) return true;
+  }
+  return false;
+}
+
 export function resolveImportPath(raw: string, basePath: string): string | null {
   if (!raw) return null;
   if (raw.startsWith('~/') || raw === '~') {
@@ -25,10 +64,11 @@ export type ExpandResult = {
 export function expandImports(
   content: string,
   basePath: string,
-  options: { depth?: number; visited?: Set<string> } = {},
+  options: { depth?: number; visited?: Set<string>; budget?: { remaining: number } } = {},
 ): ExpandResult {
   const depth = options.depth || 0;
   const visited = options.visited || new Set<string>();
+  const budget = options.budget || { remaining: IMPORT_MAX_TOTAL_BYTES };
   const imports: MemoryImportEntry[] = [];
 
   if (depth >= IMPORT_MAX_DEPTH) {
@@ -92,6 +132,13 @@ export function expandImports(
       continue;
     }
 
+    if (isSensitiveImportPath(realResolved)) {
+      entry.error = 'sensitive';
+      imports.push(entry);
+      out.push(`<!-- @${rawPath} — caminho sensível, ignorado -->`);
+      continue;
+    }
+
     if (visited.has(resolved)) {
       entry.error = 'cycle';
       imports.push(entry);
@@ -112,6 +159,23 @@ export function expandImports(
       continue;
     }
 
+    if (stat.size > IMPORT_MAX_FILE_BYTES) {
+      entry.error = 'too_large';
+      entry.exists = true;
+      imports.push(entry);
+      out.push(`<!-- @${rawPath} — arquivo excede limite por arquivo, ignorado -->`);
+      continue;
+    }
+
+    if (stat.size > budget.remaining) {
+      entry.error = 'budget_exceeded';
+      entry.exists = true;
+      imports.push(entry);
+      out.push(`<!-- @${rawPath} — limite total de expansão atingido, truncado -->`);
+      truncated = true;
+      break;
+    }
+
     entry.exists = true;
     let inner: string;
     try {
@@ -123,9 +187,15 @@ export function expandImports(
       continue;
     }
 
+    budget.remaining -= stat.size;
+
     const nextVisited = new Set(visited);
     nextVisited.add(resolved);
-    const sub = expandImports(inner, resolved, { depth: depth + 1, visited: nextVisited });
+    const sub = expandImports(inner, resolved, {
+      depth: depth + 1,
+      visited: nextVisited,
+      budget,
+    });
     imports.push(entry, ...sub.imports);
     if (sub.truncated) truncated = true;
     out.push(sub.expanded);
