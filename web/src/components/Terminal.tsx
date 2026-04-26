@@ -95,6 +95,19 @@ export function TerminalView({
   const isActiveRef = useRef(isActive)
   isActiveRef.current = isActive
 
+  // The PTY effect only re-runs when `launch` changes (intentional — we don't want to tear
+  // down the WebSocket on every parent rerender). But onStatus/onExit/t can change between
+  // renders (e.g. parent flips them when this session is no longer active, or locale flips),
+  // and the WS handlers must read the current callbacks rather than the ones captured when
+  // the WS opened. Forwarding them through refs keeps the effect stable while still letting
+  // the latest values reach the handlers.
+  const onStatusRef = useRef(onStatus)
+  const onExitRef = useRef(onExit)
+  const tRef = useRef(t)
+  onStatusRef.current = onStatus
+  onExitRef.current = onExit
+  tRef.current = t
+
   const [attachments, setAttachments] = useState<UIAttachment[]>([])
   const [dragActive, setDragActive] = useState(false)
   const [previewTempId, setPreviewTempId] = useState<string | null>(null)
@@ -140,7 +153,7 @@ export function TerminalView({
     try {
       token = getBootTokenOrThrow()
     } catch {
-      onStatus?.(t('terminal.error', { message: 'auth token not loaded — retrying' }))
+      onStatusRef.current?.(tRef.current('terminal.error', { message: 'auth token not loaded — retrying' }))
       void loadBootToken().catch(() => {
         /* surface in onStatus below */
       })
@@ -170,10 +183,10 @@ export function TerminalView({
     }
 
     ws.onopen = () => {
-      onStatus?.(
+      onStatusRef.current?.(
         launch.resume
           ? (launch.label ?? launch.resume)
-          : t('terminal.newSessionAt', { cwd: launch.cwd }),
+          : tRef.current('terminal.newSessionAt', { cwd: launch.cwd }),
       )
       safeSend({ type: 'resize', cols: term.cols, rows: term.rows })
       safeSend({ type: 'focus', active: isActiveRef.current })
@@ -190,17 +203,17 @@ export function TerminalView({
           | { type: 'error'; message: string }
         if (msg.type === 'data') term.write(msg.data)
         else if (msg.type === 'exit') {
-          onExit?.(msg.exitCode)
-          onStatus?.(t('terminal.processExited', { code: msg.exitCode }))
+          onExitRef.current?.(msg.exitCode)
+          onStatusRef.current?.(tRef.current('terminal.processExited', { code: msg.exitCode }))
         } else if (msg.type === 'error') {
-          onStatus?.(t('terminal.error', { message: msg.message }))
+          onStatusRef.current?.(tRef.current('terminal.error', { message: msg.message }))
         }
       } catch {
         /* noop */
       }
     }
-    ws.onclose = () => onStatus?.(t('terminal.connectionClosed'))
-    ws.onerror = () => onStatus?.(t('terminal.wsError'))
+    ws.onclose = () => onStatusRef.current?.(tRef.current('terminal.connectionClosed'))
+    ws.onerror = () => onStatusRef.current?.(tRef.current('terminal.wsError'))
 
     const dataDisposer = term.onData((d) => safeSend({ type: 'input', data: d }))
     const resizeDisposer = term.onResize(({ cols, rows }) =>
